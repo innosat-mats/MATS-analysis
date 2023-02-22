@@ -3,8 +3,9 @@ This is a replacement for the old intrument_analysis repo. Here every member of 
 
 # Recommended structure for MATS project folder is
 
-MATS/
+MATS-root/
+
   MATS-Analysis/
   MATS-L1-processing/
-  MATS-utility-functions(
-  MATS-Data/ 
+  MATS-utility-functions/
+  MATS-Data/
