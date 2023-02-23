@@ -22,9 +22,14 @@ class CenterStrip:
     "Makes a strip object from the image"
     def makestrip(self):
         "Number of columns in the image"
-        center = math.ceil(len(self.image[0])/2)
-        self.strip = self.image[:,int(center-self.width/2):int(center+self.width/2)]
-        return self.strip
+        #center = math.ceil(len(self.image[0])/2)
+        #self.strip = self.image[:,int(center-self.width/2):int(center+self.width/2)]
+
+        #changed to horizontal strip
+        center = math.ceil(len(self.image)/2)
+        self.strip = self.image[int(center-self.width/2):int(center+self.width/2),:]
+       
+        return  np.transpose(self.strip)
 
 #%%  Make a keogram of a specific channel and CCD-objects
 def makeStripMatrix(df, channel_type, width):
@@ -43,8 +48,6 @@ def makeStripMatrix(df, channel_type, width):
   
     return np.transpose(strips_matrix)
     
-
-# %%
 def getLatitudes(df, channel_type):
     IR_list = df[df['channel'] == channel_type]
     listoflatitudes= []
@@ -57,7 +60,7 @@ def getLatitudes(df, channel_type):
 
 # %%
 start_time = DT.datetime(2023,2,8,19,15,0)
-stop_time = DT.datetime(2023,2,8,20,00,0)
+stop_time = DT.datetime(2023,2,8,20,30,0)
 df = read_MATS_data(start_time,stop_time)
 
 #Can add filter in read Mats data filter = {"TPlat":[-20,20]}
@@ -76,15 +79,15 @@ def plotKeogram(df, channels, width):
     matrix = makeStripMatrix(df,channels[i],width)
     latitudes, dates = getLatitudes(df,channels[i])
    
-    axs[0].pcolormesh(dates,range(matrix.shape[0]),matrix,vmax=8000)
+    axs[0].pcolormesh(dates,range(matrix.shape[0]),matrix)
     axs[0].set_title(f"Channel {channels[i]}")
-
+    axs[1].set_xlabel('Time')
+    axs[1].set_ylabel('Latitude')
     axs[1].plot(dates,latitudes,'.')
     axs[1].set_xlim(dates[0],dates[-1])
 
     plt.tight_layout()
     plt.gcf().autofmt_xdate()
     plt.show()
-
 
 # %%
