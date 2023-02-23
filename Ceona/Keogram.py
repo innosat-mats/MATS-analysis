@@ -79,15 +79,9 @@ def plotKeogram(df, channels, width):
     axs[0].pcolormesh(dates,range(matrix.shape[0]),matrix,vmax=8000)
     axs[0].set_title(f"Channel {channels[i]}")
 
-    tick_locs = np.arange(0,5,len(latitudes))
-    #tick_labels = np.arange(latitudes[0],10,latitudes[-1])
-    # Define a custom tick formatter
-    #tick_formatter = ticker.FixedFormatter(tick_labels)
     axs[1].plot(dates,latitudes,'.')
     axs[1].set_xlim(dates[0],dates[-1])
-    # Set the tick locations and formatter for the colorbar
-    #axs[1].set_xticks(tick_locs)
-    #axs.xaxis.set_major_formatter(tick_formatter)
+
     plt.tight_layout()
     plt.gcf().autofmt_xdate()
     plt.show()
