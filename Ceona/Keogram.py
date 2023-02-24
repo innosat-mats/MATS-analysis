@@ -6,9 +6,7 @@ import sys
 import numpy as np
 import math
 import matplotlib.pyplot as plt 
-from matplotlib import ticker
-from mats_utils.geolocation.coordinates import TPpos, satpos
-from mats_utils.plotting.plotCCD import simple_plot, plot_image, orbit_plot, all_channels_plot
+from mats_utils.geolocation.coordinates import TPpos
 
 #%%
 class CenterStrip:
@@ -16,7 +14,7 @@ class CenterStrip:
         self.image = CCDobject['IMAGE']
         self.width = width
         self.strip = []
-        self.latitude = TPpos(CCDobject)[0] 
+        self.latitude = TPpos(CCDobject)[0]  #the first position of TPpos gives the latitude
         self.time =  pd.to_datetime(CCDobject['EXPDate'])
 
     "Makes a strip object from the image"
