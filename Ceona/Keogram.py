@@ -10,8 +10,8 @@ from mats_utils.geolocation.coordinates import TPpos
 
 #%%
 class CenterStrip:
+    def __init__(self, CCDobject):
         self.image = CCDobject['IMAGE']
-        self.width = width
         self.strip = []
         self.latitude = TPpos(CCDobject)[0]  #the first position of TPpos gives the latitude
         self.time =  pd.to_datetime(CCDobject['EXPDate'])
@@ -20,16 +20,16 @@ class CenterStrip:
     def makeVerticalStrip(self):
         "finds the center pixel"
         center = math.ceil(len(self.image[0])/2)
-        self.strip = self.image[:,int(center-self.width/2):int(center+self.width/2)]
+        self.strip = self.image[:,int(center)]
         return  self.strip
     
     def makeHorizontalStrip(self):
         center = math.ceil(len(self.image)/2)
-        self.strip = self.image[int(center-self.width/2):int(center+self.width/2),:]
+        self.strip = self.image[int(center),:]
         return  np.transpose(self.strip)
 
 #%%  Make a keogram of a specific channel and CCD-objects
-def makeStripMatrix(df, channel_type, width, strip_dir):
+def makeStripMatrix(df, channel_type, strip_dir):
 
     IR_list = df[df['channel'] == channel_type]
     strips_matrix = []  #matrix of concatenated strips
@@ -38,20 +38,18 @@ def makeStripMatrix(df, channel_type, width, strip_dir):
     if strip_dir == 'v':
         #iterates through the CCDobjects (each row) and creates a strip
         for index, row in IR_list.iterrows():
-            new_strip = CenterStrip(row, width) #creates strip object
+            new_strip = CenterStrip(row) #creates strip object
             new_strip.makeVerticalStrip()
-            for i in range(width):
-                strips_matrix.append(new_strip.strip[:,i])
+            strips_matrix.append(new_strip.strip)
         strips_matrix = np.array(strips_matrix)
 
     #creates a matrix from horizontal strips
     if strip_dir== 'h':
            #iterates through the CCDobjects (each row) and creates a strip
         for index, row in IR_list.iterrows():
-            new_strip = CenterStrip(row, width)  #creates strip object
+            new_strip = CenterStrip(row)  #creates strip object
             new_strip.makeHorizontalStrip()
-            for i in range(width):
-                strips_matrix.append(new_strip.strip[:,i])
+            strips_matrix.append(new_strip.strip)
         strips_matrix = np.array(strips_matrix)
     return np.transpose(strips_matrix)
     
@@ -65,7 +63,7 @@ def getLatitudes(df, channel_type):
     return  listoflatitudes, listofexpdates
 
 
- # %% Read data
+# %% Read data
 start_time = DT.datetime(2023,2,18,18,30,0)
 stop_time = DT.datetime(2023,2,18,22,30,0)
 df = read_MATS_data(start_time,stop_time)
@@ -74,16 +72,15 @@ df = read_MATS_data(start_time,stop_time)
 # %%  Settings to run
 channels = ['IR1']
 strip_dir = 'v'
-width = 1
 
 # %% Makes a plot of the matrix made with makeStripMatrix()
-def plotKeogram(df, channels, width, strip_dir):
+def plotKeogram(df, channels, strip_dir):
 
     #gives two plots, one with the matrix and one with the latitudes
     if len(channels)==1 :
         fig,axs = plt.subplots(nrows=2, ncols=1)
         latitudes, dates = getLatitudes(df,channels[0])
-        matrix = makeStripMatrix(df,channels[0],width,strip_dir)
+        matrix = makeStripMatrix(df,channels[0],strip_dir)
         axs[0].pcolormesh(dates,range(matrix.shape[0]),matrix)
         axs[0].set_title(f"Channel {channels[0]}")
         axs[1].set_xlabel('Time')
@@ -101,7 +98,7 @@ def plotKeogram(df, channels, width, strip_dir):
         for i in range(len(channels)):
             latitudes, dates = getLatitudes(df,channels[i])
             print(len(dates))
-            matrix = makeStripMatrix(df,channels[i],width,strip_dir)  
+            matrix = makeStripMatrix(df,channels[i],strip_dir)  
             axs[i].pcolormesh(dates,range(matrix.shape[0]),matrix)
             axs[i].set_title(f"Channel {channels[i]}")
             plt.gcf().autofmt_xdate()
@@ -112,3 +109,7 @@ def plotKeogram(df, channels, width, strip_dir):
     plt.show()
 
 # %%
+timedelta = stop_time-start_time #number of days
+def days_Keogram(df, channels, strip_dir):
+    fig, axs = plt.subplots(nrows=len(timedelta.days), ncols=1)
+    df = read_MATS_data(start_time,stop_time)
