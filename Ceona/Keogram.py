@@ -10,7 +10,6 @@ from mats_utils.geolocation.coordinates import TPpos
 
 #%%
 class CenterStrip:
-    def __init__(self, CCDobject, width):
         self.image = CCDobject['IMAGE']
         self.width = width
         self.strip = []
