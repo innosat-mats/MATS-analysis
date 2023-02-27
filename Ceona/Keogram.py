@@ -1,7 +1,9 @@
 #%%
 from mats_utils.rawdata.read_data import read_MATS_data
 import datetime as DT
+from datetime import timedelta
 import pandas as pd 
+from pandas import Timestamp
 import sys
 import numpy as np
 import math
@@ -45,7 +47,7 @@ def makeStripMatrix(df, channel_type, strip_dir):
 
     #creates a matrix from horizontal strips
     if strip_dir== 'h':
-           #iterates through the CCDobjects (each row) and creates a strip
+        #iterates through the CCDobjects (each row) and creates a strip
         for index, row in IR_list.iterrows():
             new_strip = CenterStrip(row)  #creates strip object
             new_strip.makeHorizontalStrip()
@@ -64,9 +66,9 @@ def getLatitudes(df, channel_type):
 
 
 # %% Read data
-start_time = DT.datetime(2023,2,18,18,30,0)
-stop_time = DT.datetime(2023,2,18,22,30,0)
-df = read_MATS_data(start_time,stop_time)
+start_time = DT.datetime(2023,2,18,19,30,0)
+stop_time = DT.datetime(2023,2,18,23,30,0)
+df = read_MATS_data(start_time,stop_time,version=0.5,level='1a')
 #Can add filter in read Mats data filter = {"TPlat":[-20,20]}
 
 # %%  Settings to run
@@ -97,7 +99,6 @@ def plotKeogram(df, channels, strip_dir):
         axs[len(channels)].set_xlim(dates[0],dates[-1])
         for i in range(len(channels)):
             latitudes, dates = getLatitudes(df,channels[i])
-            print(len(dates))
             matrix = makeStripMatrix(df,channels[i],strip_dir)  
             axs[i].pcolormesh(dates,range(matrix.shape[0]),matrix)
             axs[i].set_title(f"Channel {channels[i]}")
@@ -109,7 +110,32 @@ def plotKeogram(df, channels, strip_dir):
     plt.show()
 
 # %%
-timedelta = stop_time-start_time #number of days
-def days_Keogram(df, channels, strip_dir):
-    fig, axs = plt.subplots(nrows=len(timedelta.days), ncols=1)
-    df = read_MATS_data(start_time,stop_time)
+start_time = DT.datetime(2023,2,22,19,30,0)
+stop_time = DT.datetime(2023,2,24,19,30,0)
+tdelta = stop_time-start_time #number of days
+channel = 'IR2'
+strip_dir = 'v'
+
+df = read_MATS_data(start_time,stop_time,version=0.5,level='1a')
+
+# %% Creates a figure with keograms for each day
+def days_Keogram(df, channel, strip_dir):
+    fig, axs = plt.subplots(nrows=tdelta.days, ncols=1)
+    for day in range(1,tdelta.days+1): 
+        print(day)
+        mask_day = (df['EXPDate'] >= pd.to_datetime(start_time + timedelta(days=day-1),utc=True)) & (df['EXPDate'] <= pd.to_datetime(start_time + timedelta(days=day),utc=True))
+        CCD_day = df.loc[mask_day]
+        mask_night = (df['EXPDate']>= pd.to_datetime(timedelta(hours=19))) & (df['EXPDate']<= pd.to_datetime(timedelta(hours=23)))
+        CCD_nighttime = CCD_day.loc[mask_night]
+        print(len(CCD_day))
+        latitudes, dates = getLatitudes(CCD_nighttime,channel)
+        matrix = makeStripMatrix(CCD_nighttime,channel,strip_dir)  
+        axs[day].pcolormesh(latitudes,range(matrix.shape[0]),matrix)
+        axs[day].set_title(f"Channel {channel}")
+    plt.gcf().autofmt_xdate()
+    plt.tight_layout()
+    plt.show()
+    return fig 
+
+
+# %%
