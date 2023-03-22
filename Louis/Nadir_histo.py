@@ -1,10 +1,13 @@
 # script for studying the number of saturated pixels in NADIR images as a function of solare zenith angle 
 
 #%% Import modules
+%matplotlib qt5
 from mats_utils.rawdata.read_data import read_MATS_data
 import datetime as DT
 from mats_utils.plotting.plotCCD import *
 from mats_utils.statistiscs.images_functions import create_imagecube
+from tqdm import tqdm
+from mats_utils.geolocation.coordinates import NADIR_geolocation
 
 
 #%% local variables
@@ -12,8 +15,11 @@ from mats_utils.statistiscs.images_functions import create_imagecube
 sat_val = 32880
 
 # times for start and stop
-start_time = DT.datetime(2023, 3, 3, 9, 30, 0)
-stop_time = DT.datetime(2023, 3, 3, 11, 30, 0)
+start_time = DT.datetime(2023, 3, 20, 12, 0, 0)
+stop_time = DT.datetime(2023, 3, 21, 13, 0, 0)
+
+start_time = DT.datetime(2022, 12, 20, 20, 30, 0)
+stop_time = DT.datetime(2022, 12, 20, 22, 0, 0)
 
 # filter selecting Nadir chanel
 filter={'CCDSEL': [7,7]}
@@ -22,6 +28,10 @@ filter={'CCDSEL': [7,7]}
 #%% reading mesurements
 df1a= read_MATS_data(start_time, stop_time,filter,level='1a',version='0.5')
 print(len(df1a))
+
+# displaying keys
+pd.set_option('display.max_rows', 100)
+df1a.dtypes
 
 
 #%% computing the saturation level of a ccd item
@@ -72,24 +82,35 @@ def saturation_level_imagecube(imagecube, sat_val = 32880):
     return(sat_prop)
 
 
-
-
-
-#%%
+#%% computing solar zenith angles for each image 
 NADIR_SZAS = [] # list of nadir solar zenih angles
 SAT_LEV = [] # list of saturation level (proportion of saturated pixels)
-for i in range(len(df1a)):
+LAT = [] # list of latitude points
+n = len(df1a)
+for i in tqdm(range(n)):
     ccditem = df1a.iloc[i]
     nadir_sza, TPsza, TPssa, TPlt = coordinates.angles(ccditem)   
     NADIR_SZAS.append(nadir_sza) 
     SAT_LEV.append(saturation_level(ccditem)) 
+    LAT.append(ccditem['satlat'])
 
 print(f"{np.average(SAT_LEV)*100:.1f} % of saturated pixels over the whole image set")
 print(f"{np.sum(SAT_LEV==np.ones_like(SAT_LEV))/len(SAT_LEV)*100:.1f} % of completely saturated images over the whole image set")
 
+
+#%% plotting
 # plotting NADIR SZA
+plt.figure()
 plt.plot(df1a['EXPDate'],NADIR_SZAS,linestyle=' ',marker='.')
 plt.ylabel('NADIR SZA (deg)')
+
+# plotting Latitude and SZA
+plt.figure()
+plt.plot(NADIR_SZAS,LAT,linestyle=' ',marker='.')
+m = len(LAT)
+plt.arrow(NADIR_SZAS[m//2-1],LAT[m//2-1],NADIR_SZAS[m//2]-NADIR_SZAS[m//2-1],LAT[m//2]-LAT[m//2-1], shape='full', lw=0, length_includes_head=False, head_width=.5, head_length=5)
+plt.ylabel('NADIR latitude')
+plt.xlabel('NADIR SZA (deg)')
 
 # plotting the histogram of saturation levels
 plt.figure()
@@ -105,16 +126,81 @@ plt.title(f"Proportion of saturated pixels in each NADIR image ('TEXPMS'={df1a.i
 plt.ylabel('Proportion of saturated pixels')
 plt.xlabel('Zenith angle (deg)')
 
+plt.show()
 
-#%% filtering out completely saturated images
+#%% computing solar zenith angles for each pixel 
+n = len(df1a)
+a,b = np.shape(df1a.iloc[0]['IMAGE'])
+lat_points = np.zeros((n,a,b))
+lon_points = np.zeros((n,a,b))
+sza_points = np.zeros((n,a,b))
+im_points = np.zeros((n,a,b))
 
-# a,b = np.shape(df1a.iloc[0]['IMAGE'])
-# saturated_im = sat_val*np.ones_like(df1a.iloc[0]['IMAGE']) # completely saturated image
+for i in tqdm(range(n)):
+    ccditem = df1a.iloc[i]
+    im = ccditem['IMAGE']
+    lat_map,lon_map,sza_map = NADIR_geolocation(ccditem,x_step=8,y_step=4,interp_method='cubic')
+    lat_points[i,:,:] = lat_map
+    lon_points[i,:,:] = lon_map
+    sza_points[i,:,:] = sza_map
+    im_points [i,:,:] = im
 
-# SATURATED = []
-# for i in range(len(df1a)):
-#     ccditem = df1a.iloc[i]
-#     SATURATED.append(np.array_equal(df1a.iloc[i]['IMAGE'],saturated_im))
 
-# df1a_nonsat = df1a[[not sat for sat in SATURATED]]
-# df1a_sat = df1a[SATURATED]
+#%%
+
+nb_bin = 30
+sza_bin_lim = np.linspace(np.min(sza_points),np.max(sza_points),nb_bin+1)
+step = sza_bin_lim[1]-sza_bin_lim[0]
+sza_bin = np.linspace(sza_bin_lim[0]+0.5*step,sza_bin_lim[-1]-0.5*step,nb_bin)
+VALUES = []
+NB_SAT = np.zeros(nb_bin)
+NB_ZERO = np.zeros(nb_bin)
+data = []
+
+for i in tqdm(range(nb_bin)):
+    sza_min = sza_bin_lim[i]
+    sza_max = sza_bin_lim[i+1]
+    SZAS = []
+    VALUES = []
+    for j in range(n):
+        for k in range(a):
+            for l in range(b):
+                if sza_min <= sza_points[j,k,l] and sza_points[j,k,l] <= sza_max :
+                    SZAS.append(sza_points[j,k,l])
+                    VALUES.append(im_points[j,k,l])
+                    if im_points[j,k,l] == sat_val:
+                        NB_SAT[i] += 1
+                    
+    NB_SAT[i] = NB_SAT[i]/len(VALUES)
+    data.append(VALUES)
+    # plt.figure()
+    # plt.hist(VALUES)
+    # plt.title(f"Histogram of pixel values for  {sza_min:.2f}deg < sza < {sza_max:.2f}deg  ('TEXPMS'={df1a.iloc[0]['TEXPMS']}ms)")
+    # plt.xlabel('Proportion of pixels')
+    # plt.ylabel('Pixel values')
+    # plt.show()
+    
+
+plt.figure()
+plt.plot(sza_bin,NB_SAT,linestyle=' ',marker='o')
+plt.title(f"Proportion of saturated pixels ('TEXPMS'={df1a.iloc[0]['TEXPMS']}ms)")
+plt.xlabel('SZA')
+plt.ylabel('Proportion of saturated pixels')
+plt.show()
+
+
+xlabels = []
+for lab in sza_bin:
+    xlabels.append(f"{lab:.1f}")
+
+ax = plt.figure()
+plt.boxplot(data,whis=[5,95],showfliers=False)
+plt.title(f"Pixel values ('TEXPMS'={df1a.iloc[0]['TEXPMS']}ms)")
+plt.xlabel('SZA')
+plt.xticks(range(1,nb_bin+1),xlabels)
+plt.ylabel('Pixel value')
+plt.show()
+
+
+
+# %%
