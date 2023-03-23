@@ -9,9 +9,9 @@ from mats_l1_processing.experimental_utils import plot_CCDimage
 
 calibration_file='/Users/lindamegner/MATS/MATS-retrieval/MATS-L1-processing/scripts/calibration_data_linda.toml'
 
+start_time=DT.datetime(2023,2,13,9,5,0)
+stop_time=DT.datetime(2023,2,13,9,15,0)
 
-start_time = DT.datetime(2023,2,15,0,0,0)
-stop_time = DT.datetime(2023,2,15,11,5,0)
 df = read_MATS_data(start_time,stop_time,version='0.4')
 CCDitems = dataframe_to_ccd_items(df)
 #%%
@@ -29,7 +29,7 @@ def calibrate(CCDitem, instrument):
     image_desmeared, image_dark_sub, 
     image_calib_nonflipped, image_calibrated, errors) = L1_calibrate(CCDitem,instrument)
     return image_calibrated
-n=895
+n=0
 plt.close('all')
 ir1cal=calibrate(ir1[n],instrument)
 ir2cal=calibrate(ir2[n],instrument)
