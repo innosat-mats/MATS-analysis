@@ -1,12 +1,17 @@
-#%% Import modules
+
+
+#%% Plotting and modules
+
+%matplotlib qt5 
 from mats_utils.rawdata.read_data import read_MATS_data
 import datetime as DT
 from mats_utils.plotting.plotCCD import *
 from math import *
 from mats_l1_processing.pointing import pix_deg
+from mats_utils.geolocation.coordinates import NADIR_geolocation
 import numpy as np
 import pandas as pd
-import matplotlib.pylab as plt
+import matplotlib.pyplot as plt
 from scipy.spatial.transform import Rotation as R
 from scipy.optimize import minimize_scalar
 from skyfield.positionlib import ICRF
@@ -14,264 +19,47 @@ from skyfield.api import wgs84
 from skyfield.units import Distance
 from skyfield import api as sfapi
 from scipy.interpolate import RegularGridInterpolator
-
-
-#%% Functions
-def pix_deg2(ccditem, xpixel, ypixel):
-    """
-    Function to get the x and y angle from a pixel relative to the center of the CCD
-    WARNING : no images are flipped in this function
-    
-    Parameters
-    ----------
-    ccditem : CCDitem
-        measurement
-    xpixel : int or array[int]
-        x coordinate of the pixel(s) in the image
-    ypixel : int or array[int]
-        y coordinate of the pixel(s) in the image
-        
-    Returns
-    -------
-    xdeg : float or array[float]
-        angular deviation along the x axis in degrees (relative to the center of the CCD)
-    ydeg : float or array[float]
-        angular deviation along the y axis in degrees (relative to the center of the CCD) 
-    """
-    h = 6.9 # height of the CCD in mm
-    d = 27.6 # width of the CCD in mm
-    # selecting effective focal length
-    if (ccditem['CCDSEL']) == 7: # NADIR channel
-        f = 50.6 # effective focal length in mm
-    else: # LIMB channels
-        f = 261    
-    
-    ncskip = ccditem['NCSKIP']
-    try:
-        ncbin = ccditem['NCBIN CCDColumns']
-    except:
-        ncbin = ccditem['NCBINCCDColumns']
-    nrskip = ccditem['NRSKIP']
-    nrbin = ccditem['NRBIN']
-        
-    yCCDpix = (nrskip + nrbin * (ypixel+0.5)) # y position of the pixel on the CCD (0.5 at the bottom, 510.5 on top)
-    xCCDpix = (ncskip + ncbin * (xpixel+0.5)) # x position of the pixel on the CCD (0.5 on the left, 2047.5 on the right)
-    
-    xdeg = (180/pi)*np.arctan(d*(xCCDpix/2048-0.5)/f) # angular deviation along the x axis in degrees
-    ydeg = (180/pi)*np.arctan(h*(yCCDpix/511-0.5)/f) # angular deviation along the y axis in degrees
-    return xdeg, ydeg
-
-def deg_map(ccditem):
-    """
-    Function to get the x and y angular deviation map for each pixel of the image. 
-    The deviation is given in degrees relative to the center of the CCD
-    WARNING : no images are flipped before calculating the angular deviation
-    
-    Parameters
-    ----------
-    ccditem : CCDitem
-        measurement
-            
-    Returns
-    -------
-    xmap : array[float]
-        angular deviation map along the x axis in degrees (relative to the center of the CCD)
-    ymap : array[float]
-        angular deviation map along the y axis in degrees (relative to the center of the CCD) 
-    """    
-    im = ccditem['IMAGE']
-
-    a,b = np.shape(im)
-    X = range(b)
-    Y = range(a)
-    xpixel, ypixel = np.meshgrid(X,Y)
-    xmap,ymap = pix_deg2(ccditem, xpixel, ypixel)
-    return xmap,ymap
-
-
-def funheight(s, t, pos, FOV):
-    """
-    Function to get the distance between a point at position pos + s*FOV and the surface of the Geoid (wgs84 model),
-     at time t.
-    
-    
-    Parameters
-    ----------
-    s : float
-        length along the straight line
-    t : skyfield.timelib.Time
-        time
-    pos : array[float]
-        position in space where the line starts (~position of MATS). Array of 3 position coordinates in m in the ICRF reference frame
-    FOV : array[float]
-        angle of the line (direction of the line), array of 3 elements in the IFRC reference frame
-            
-    Returns
-    -------
-    elevation**2 : float
-        elevation squared of the point pos+s*FOV in m**2
-    """
-    newp = pos + s * FOV
-    newp = ICRF(Distance(m=newp).au, t=t, center=399)
-    return wgs84.subpoint(newp).elevation.m**2
-
-
-def findsurface(t, pos, FOV):
-    """
-    Function to get the distance between a point at position pos and the surface of the Geoid (wgs84 model),
-     at time t, along the line oriented along the FOV direction and starting at position pos
-    
-    
-    Parameters
-    ----------
-    t : skyfield.timelib.Time
-        time
-    pos : array[float]
-        position in space where the line starts (~position of MATS). Array of 3 position coordinates in m in the ICRF reference frame
-    FOV : array[float]
-        angle of the line (direction of the line), array of 3 elements in the IFRC reference frame
-            
-    Returns
-    -------
-    res : OptimizeResult object
-        res.x is the distance found in m   
-    """
-    res = minimize_scalar(funheight, args=(t, pos, FOV), bracket=(3e5, 8e5))
-    return res
-
-
-def NADIR_geolocation(ccditem,x_step=2,y_step=2):
-    """
-    Function to get the latitude, longitude and solar zenith angle map for each pixel of the image.
-    The values are calculated for some points and then interpolated for each pixel.
-    WARNING : no images are flipped
-    
-    Parameters
-    ----------
-    ccditem : CCDitem
-        measurement
-    x_step : int
-        step along the x-axis in the image between 2 sampled points used for interpolation. The default value is 2.
-    y_step : int
-        step along the y-axis in the image between 2 sampled points used for interpolation. The default value is 2.
-            
-    Returns
-    -------
-    lat_map : array[float]
-        map giving the latitude for each pixel in the image
-    lon_map : array[float]
-        map giving the longitude for each pixel in the image
-    sza_map : array[float]
-        map giving the solar zenith angle for each pixel in the image
-    """
-    im = ccditem['IMAGE']
-    x_deg_map, y_deg_map = deg_map(ccditem) # creating angle deviation map for each pixel (degress)
-    a,b = np.shape(im)
-
-    metoOHB  = R.from_matrix([[0,0,-1],[0,-1,0],[-1,0,0]])
-    ts=sfapi.load.timescale()
-    t=ts.from_datetime(ccditem['EXPDate'].replace(tzinfo=sfapi.utc)) # exposure time  
-    q=ccditem.afsAttitudeState
-    quat=R.from_quat(np.roll(q,-1)) # quaternion of MATS attitude (for the LIMB imager) 
-    pos=ccditem.afsGnssStateJ2000[0:3] # position of MATS
-    
-    xd = range(0,b,x_step) # sampled pixels on the x axis
-    yd = range(0,a,y_step) # sampled pixels on the y axis
-    LAT = np.zeros((len(yd),len(xd)))
-    LON = np.zeros((len(yd),len(xd)))
-    SZA = np.zeros((len(yd),len(xd)))
-
-    # computing the latitude, longitude and solar zenith angles at the intersection of the line of sight and the earth surface
-    # only the line of sights from some sampled pixels are computed
-    for i in range(len(yd)):
-        for j in range(len(xd)):
-                x = xd[j]
-                y = yd[i]
-                # angular transformations
-                # rotation from the line of sight of the LIMB imager to the line of sight of the NADIR pixel
-                angle = R.from_euler('XYZ', [x_deg_map[y,x],-(90-23)+y_deg_map[y,x],0] , degrees=True).apply([1, 0, 0])
-                FOV = quat.apply(metoOHB.apply(angle)) # attitude state for the line of sight of the NADIR pixel    
-                # finding the distance between the point pos and the Geoid along the line of sight
-                res = findsurface(t,pos,FOV)
-                newp = pos + res.x * FOV 
-                newp = ICRF(Distance(m=newp).au, t=t, center=399) # point at the intersection between the line of sight at the pixel and the Geoid surface
-                LAT[i,j]=wgs84.subpoint(newp).latitude.degrees # latitude of the point
-                LON[i,j]=wgs84.subpoint(newp).longitude.degrees # longitude of the point    
-
-                # finding the solar zenith angle of the point
-                planets = sfapi.load('de421.bsp')
-                earth=planets['Earth']
-                sun=planets['Sun']
-                SZA[i,j]=90-((earth+wgs84.subpoint(newp)).at(t).observe(sun).apparent().altaz())[0].degrees
-    
-    # interpolating the results along all the pixels
-    interp_lat = RegularGridInterpolator((yd,xd),LAT,method="quintic",bounds_error=False,fill_value=None) 
-    interp_lon = RegularGridInterpolator((yd,xd),LON,method="quintic",bounds_error=False,fill_value=None)
-    interp_sza = RegularGridInterpolator((yd,xd),SZA,method="quintic",bounds_error=False,fill_value=None)
-
-    X_map,Y_map = np.meshgrid(range(b),range(a))
-    lat_map = interp_lat((Y_map,X_map))
-    lon_map = interp_lon((Y_map,X_map))
-    sza_map = interp_sza((Y_map,X_map))
-
-    return(lat_map,lon_map,sza_map)
-
-
+from scipy.interpolate import griddata
+from tqdm import tqdm
 
 #%% local variables
 # value of a saturated pixel 
 sat_val = 32880
 
 # times for start and stop
-start_time = DT.datetime(2023, 1, 12, 5, 0, 0)
-stop_time = DT.datetime(2023, 1, 12, 7, 0, 0)
-
+start_time = DT.datetime(2023, 1, 12, 3, 30, 0)
+stop_time = DT.datetime(2023, 1, 12, 4, 0, 0)
+start_time = DT.datetime(2023, 3, 13, 3, 27, 0)
+stop_time = DT.datetime(2023, 3, 13, 3, 29, 0)
+start_time = DT.datetime(2023, 3, 20, 12, 0, 0)
+stop_time = DT.datetime(2023, 3, 20, 13, 0, 0)
+start_time = DT.datetime(2022, 12, 20, 20, 30, 0)
+stop_time = DT.datetime(2022, 12, 20, 22, 0, 0)
 # filter selecting Nadir chanel
 filter={'CCDSEL': [7,7]}
 
-
 #%% reading mesurements
-df1a= read_MATS_data(start_time, stop_time,filter,level='1a',version='0.5')
-print(len(df1a))
+df1a_tot= read_MATS_data(start_time, stop_time,filter,level='1a',version='0.5')
+print(len(df1a_tot))
 
 # displaying keys
 pd.set_option('display.max_rows', 100)
-df1a.dtypes
+df1a_tot.dtypes
+df1a = df1a_tot
 
 
-# %% 
-ccditem = df1a.iloc[1]
-ccditem['IMAGE'] = np.fliplr(ccditem['IMAGE'])
-im = ccditem['IMAGE']
-a,b = np.shape(im)
-X = range(b)
-Y = range(a)
-xpixel, ypixel = np.meshgrid(X,Y)
+#%% selecting interesting ccditems in df1a
+# df1a = df1a_tot[df1a_tot['nadir_sza']>105.7]
+df1a = df1a_tot[df1a_tot['satlon']>179]
+df1a = df1a[df1a['satlon']<181]
+print(len(df1a))
+for i in range(len(df1a)):
+    print(df1a.iloc[i]['satlon'])
+df1a = df1a_tot[:50]
 
-#%%
-XDEG2,YDEG2 = deg_map(ccditem)
 
-# %%
-lat_map,lon_map,sza_map = NADIR_geolocation(ccditem,x_step=4,y_step=2)
+#%% geolocating images
 
-# %% plotting
-
-plt.figure()
-plt.title('Latitude')
-plt.imshow(lat_map)
-plt.colorbar()
-
-plt.figure()
-plt.title('Longitude')
-plt.imshow(lon_map)
-plt.colorbar()
-
-plt.figure()
-plt.title('Solar Zenith Angle')
-plt.imshow(sza_map)
-plt.colorbar()
-
-#%%
 n = len(df1a)
 a,b = np.shape(df1a.iloc[0]['IMAGE'])
 lat_points = np.zeros((n,a,b))
@@ -280,27 +68,110 @@ sza_points = np.zeros((n,a,b))
 im_points = np.zeros((n,a,b))
 
 
-for i in range(n):
+for i in tqdm(range(n)):
     ccditem = df1a.iloc[i]
     im = ccditem['IMAGE']
-    lat_map,lon_map,sza_map = NADIR_geolocation(ccditem,x_step=4,y_step=2)
+    lat_map,lon_map,sza_map = NADIR_geolocation(ccditem,x_sample=6,y_sample=6,interp_method='quintic')
     lat_points[i,:,:] = lat_map
-    lon_points[i,:,:] = lon_map
+    lon_points[i,:,:] = lon_map    
     sza_points[i,:,:] = sza_map
-    im_points[i,:,:] = im
-    print(f"image n# {i}/{n}")
+    im_points[i,:,:] = im    
+
+
 
 #%%
 
-##%matplotlib qt
-plt.figure('map')
-ax = plt.axes(projection=ccrs.PlateCarree())
-plt.figure('map')
-plt.pcolormesh(np.reshape(lon_points,(a,b*n)), np.reshape(lat_points,(a,b*n)), np.reshape(im_points,(a,b*n)))
+def simple_resampler(data,lat,lon,new_lat,new_lon,method='nearest'):
+    points = np.zeros((np.shape(lat.ravel())[0],2))
+    points[:,0] = lon.ravel()
+    points[:,1] = lat.ravel()
+    new_data = griddata(points, data.ravel(), (new_lon, new_lat), method='nearest')
+    return new_data
+
+def average_stacking(data,lat,lon,new_lat,new_lon):
+    lat_step = new_lat[1]-new_lat[0]
+    lon_step = new_lon[1]-new_lon[0]
+    lon_bins = np.linspace(new_lon[0]-lon_step*0.5,new_lon[-1]+lon_step*0.5,len(new_lon))
+    lat_bins = np.linspace(new_lat[0]-lat_step*0.5,new_lat[-1]+lat_step*0.5,len(new_lat))
+    data_points = data.ravel()
+    lon_ind = np.digitize(lon.ravel(),lon_bins)
+    lat_ind = np.digitize(lat.ravel(),lat_bins)
+    new_im = np.zeros((len(lat_bins),len(lon_bins)))
+    new_im_nb = np.zeros((len(lat_bins),len(lon_bins)))
+    for i in tqdm(range(len(lon.ravel()))):
+        new_im[lat_ind[i]-1,lon_ind[i]-1] += data_points[i]
+        new_im_nb[lat_ind[i]-1,lon_ind[i]-1] += 1    
+    for i in tqdm(range(len(lat_bins))):
+        for j in range(len(lon_bins)):
+            if new_im_nb[i,j] > 0:
+                new_im[i,j] = new_im[i,j]/new_im_nb[i,j]
+            else :
+                new_im[i,j] = None
+
+    # data_crs = ccrs.PlateCarree()
+    # plt.figure('average nb')
+    # #projection = ccrs.Robinson()
+    # projection = ccrs.PlateCarree()
+    # #projection = ccrs.Orthographic(central_latitude=-90,central_longitude=0)
+    # ax = plt.axes(projection=projection)
+    # ax.set_global()
+    # ax.coastlines()
+    # ax.gridlines()
+    # c= ax.pcolor(new_lon,new_lat,new_im_nb, transform=data_crs)
+    # plt.colorbar(c,ax=ax)
+    # plt.show()    
+    return (new_im[:-1,:-1])
+
+
+#%%
+latmin,latmax = np.min(lat_points),np.max(lat_points)
+lonmin,lonmax = np.min(lon_points),np.max(lon_points)
+nb_lat = ceil((latmax-latmin)/0.05)
+nb_lon = ceil((lonmax-lonmin)/0.05)
+
+lo = np.linspace(lonmin,lonmax,nb_lon)
+la = np.linspace(latmin,latmax,nb_lat)
+new_lon,new_lat = np.meshgrid(lo,la)
+
+
+new_im3 = average_stacking(im_points,lat_points,lon_points,la,lo)
+
+
+#%% lat/lon projection
+data_crs = ccrs.PlateCarree()
+projection = ccrs.PlateCarree()
+plt.close('average')
+plt.figure('average')
+ax = plt.axes(projection=projection)
+ax.set_global()
 ax.coastlines()
-plt.show()   
+ax.gridlines()
+c = ax.pcolor(new_lon,new_lat,new_im3, transform=data_crs)
+plt.colorbar(c,ax=ax)
+plt.show()
 
 
+#%% polar projection
+data_crs = ccrs.PlateCarree()
+projection = ccrs.Orthographic(central_latitude=80,central_longitude=-170)
+plt.close('average polar')
+plt.figure('average polar')
+ax = plt.axes(projection=projection)
+ax.set_global()
+ax.coastlines()
+ax.gridlines()
+c = ax.pcolor(new_lon,new_lat,new_im3, transform=data_crs)
+plt.colorbar(c,ax=ax)
+plt.show()
 
-
+plt.close('mosaic polar')
+plt.figure('mosaic polar')
+ax = plt.axes(projection=projection)
+ax.set_global()
+ax.coastlines()
+ax.gridlines()
+for i in tqdm(range(0,n,5)):
+    c = ax.pcolor(lon_points[i,:,:],lat_points[i,:,:],im_points[i,:,:], transform=data_crs)
+plt.colorbar(c,ax=ax)
+plt.show() 
 # %%
