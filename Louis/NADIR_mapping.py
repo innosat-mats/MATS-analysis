@@ -19,7 +19,7 @@ from skyfield.units import Distance
 from skyfield import api as sfapi
 from scipy.interpolate import RegularGridInterpolator
 from scipy.interpolate import griddata
-import time
+from datetime import timedelta
 from tqdm import tqdm
 
 #%% local variables
@@ -27,8 +27,8 @@ from tqdm import tqdm
 sat_val = 32880
 
 # times for start and stop
-start_time = DT.datetime(2023, 3, 23, 2, 40, 0)
-stop_time = DT.datetime(2023, 3, 23, 4, 0, 0)
+start_time = DT.datetime(2023, 3, 22, 3, 0, 0)
+stop_time = DT.datetime(2023, 3, 22, 3, 15, 0)
 # filter selecting Nadir chanel
 filter={'CCDSEL': [7,7]}
 
@@ -406,7 +406,7 @@ ax.set_global()
 ax.coastlines()
 ax.gridlines()
 for i in tqdm(range(0,n,5)):
-    c = ax.pcolor(lon_points[i,:,:],lat_points[i,:,:],im_points[i,:,:], transform=data_crs)
+    c = ax.pcolor(lon_points[i,:,:],lat_points[i,:,:],im_points[i,:,:], transform=data_crs,vmin = np.min(im_points),vmax = np.max(im_points))
 plt.colorbar(c,ax=ax)
 plt.show()
 
@@ -420,7 +420,7 @@ ax.set_global()
 ax.coastlines()
 ax.gridlines()
 for i in tqdm(range(0,n,5)):
-    c = ax.pcolor(lon_points[i,:,:],lat_points[i,:,:],im_points[i,:,:], transform=data_crs)
+    c = ax.pcolor(lon_points[i,:,:],lat_points[i,:,:],im_points[i,:,:], transform=data_crs,vmin = np.min(im_points),vmax = np.max(im_points))
 plt.colorbar(c,ax=ax)
 plt.show()
 
