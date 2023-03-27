@@ -134,7 +134,11 @@ plt.xlabel('Zenith angle (deg)')
 plt.show()
 
 #%% computing solar zenith angles for each pixel
-df1a = df1a_tot[::10]
+win_mod = '15..4'
+df1a = df1a_tot[df1a_tot['WDWInputDataWindow'] == win_mod]
+df1a = df1a[::10]
+
+df1a = df1a_tot[:20]
 n = len(df1a)
 a,b = np.shape(df1a.iloc[0]['IMAGE'])
 lat_points = np.zeros((n,a,b))
@@ -209,25 +213,69 @@ plt.show()
 
 
 # %%
-DataWindow = ['13..2','14..3','15..2']
-MAX_VAL = [[],[],[]]
+
+
 ang_lim = 105
+
+
+mean_im = np.mean(im_points,axis=0)
+
+im_points_cal = im_points
+
+# selecting images where there are pixels with sza over 105 to compute the mean
+mean_im = np.zeros_like(im_points[0,:,:])
+nb_im = 0
+for i in range(n):
+    if np.max(im_points[i,:,:])>ang_lim:
+        mean_im += im_points[i,:,:]
+        nb_im += 1
+mean_im = mean_im/nb_im
+
+plt.figure()
+plt.title(f"Mean image ; window mode {win_mod} ; SZA over {ang_lim} deg")
+plt.imshow(mean_im)
+plt.colorbar()
+
+
+# for j in range(n):
+#     im_points_cal[j,:,:] = im_points_cal[j,:,:] - B
+
+# im_points_cal = im_points_cal*(im_points_cal>0)    
+
+DataWindow = ['13..2','14..3','15..4']
+MAX_VAL = [[],[],[]]
+MEAN_SZA = [[],[],[]]
+ARTIFACT = [[],[],[]]
+MEAN_PIX = [[],[],[]]
+VAL95 = [[],[],[]]
+
 for i in range(len(DataWindow)):
     for j in range(n):
         max_val = 0
-        if df1a.iloc[j]['WDWInputDataWindow']:
+        if df1a.iloc[j]['WDWInputDataWindow'] == DataWindow[i]:
+            maxk,maxl = 0,0
+            TMP95 = []
             for k in range(a):
                 for l in range(b):
-                    if im_points[j,k,l] > max_val and sza_points[j,k,l] > ang_lim :
-                            max_val = im_points[j,k,l]
+                    MEAN_PIX[i].append(im_points_cal[j,k,l])
+                    if sza_points[j,k,l] > ang_lim :
+                        TMP95.append(im_points_cal[j,k,l])
+                    if im_points_cal[j,k,l] > max_val and sza_points[j,k,l] > ang_lim :
+                            max_val = im_points_cal[j,k,l]
                             maxk = k
                             maxl = l
+            print(DataWindow[i])
             print(maxk,maxl,max_val)
+            print(len(TMP95))
+            ARTIFACT[i].append(im_points_cal[j,10,17])
+            MEAN_SZA[i].append(np.mean(sza_points[j,:,:]))
+            if len(TMP95) > 0:
+                VAL95[i].append(np.percentile(TMP95,95))
             if max_val != 0:
                 MAX_VAL[i].append(max_val)
         
 
-AVG = np.average(im_points,axis=0)
+
 
 # plt.figure()
 # plt.boxplot(MAX_VAL,whis=[0,100],showfliers=False)
@@ -245,5 +293,70 @@ plt.xlabel('Window mode')
 plt.xticks([1,2,3],xlabels)
 plt.ylabel('Maximum pixel value')
 plt.show()
+
+
+xlabels = []
+for i in range(len(DataWindow)):
+    xlabels.append(f"{DataWindow[i]}|{len(MEAN_SZA[i])} images")
+plt.figure('MEAN_SZA')
+plt.boxplot(MEAN_SZA,whis=[0,100],showfliers=False)
+plt.title(f"Mean solar zenith angle ('TEXPMS'={df1a.iloc[0]['TEXPMS']}ms)")
+plt.xlabel('Window mode')
+plt.xticks([1,2,3],xlabels)
+plt.ylabel('Mean solar zenith angle')
+plt.show()
+
+xlabels = []
+for i in range(len(DataWindow)):
+    xlabels.append(f"{DataWindow[i]}|{len(MEAN_PIX[i])} images")
+plt.figure('MEAN_PIXEL')
+plt.boxplot(MEAN_PIX,whis=[0,100],showfliers=False)
+plt.title(f"Pixel value ('TEXPMS'={df1a.iloc[0]['TEXPMS']}ms)")
+plt.xlabel('Window mode')
+plt.xticks([1,2,3],xlabels)
+plt.ylabel('Pixel value')
+plt.show()
+
+xlabels = []
+for i in range(len(DataWindow)):
+    xlabels.append(f"{DataWindow[i]}|{len(ARTIFACT[i])} images")
+plt.figure('MEAN_ARTIFACT')
+plt.boxplot(ARTIFACT,whis=[0,100],showfliers=False)
+plt.title(f"Pixel value at the artifact ('TEXPMS'={df1a.iloc[0]['TEXPMS']}ms)")
+plt.xlabel('Window mode')
+plt.xticks([1,2,3],xlabels)
+plt.ylabel('Pixel value')
+plt.show()
+
+
+xlabels = []
+for i in range(len(DataWindow)):
+    xlabels.append(f"{DataWindow[i]}|{len(VAL95[i])} images")
+plt.figure('VAL95')
+plt.boxplot(VAL95,whis=[0,100],showfliers=False)
+plt.title(f"95 percentile pixel value ('TEXPMS'={df1a.iloc[0]['TEXPMS']}ms)")
+plt.xlabel('Window mode')
+plt.xticks([1,2,3],xlabels)
+plt.ylabel('Pixel value')
+plt.show()
+
+plt.figure()
+plt.title(f"")
+plt.imshow(np.mean(im_points,axis=0))
+plt.colorbar()
+
+im = ccditem['IMAGE']
+a,b = np.shape(im)
+saturated_im = sat_val*np.ones_like(im)
+A = im_points
+for j in range(len(df1a)):
+    if np.all(A[j,:,:]==saturated_im):
+        A[j,:,:] = np.zeros_like(im)
+
+
+plt.figure()
+plt.imshow(np.mean(A,axis=0))
+plt.colorbar()
+
 
 # %%
