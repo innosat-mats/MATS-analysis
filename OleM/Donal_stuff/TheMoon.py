@@ -29,16 +29,18 @@ from skyfield.positionlib import Geocentric
 from pandas import concat, DataFrame, read_pickle
 
 #%%
-starttime = datetime(2023,2, 13, 0, 30, 0)
-endtime = datetime(2023, 2, 13, 12, 45, 0)
+starttime = DT.datetime(2023,3, 28, 0, 0, 0)   
+endtime = DT.datetime(2023, 3, 28, 10, 0, 0)
+#starttime = datetime(2023,2, 13, 0, 30, 0)
+#endtime = datetime(2023, 2, 13, 12, 45, 0)
 ccd_data = read_MATS_data(starttime, endtime,filter=None,level='1a',version='0.5')
 
-#%%
-calibration_file ="/home/olemar/Projects/Universitetet/MATS/MATS-analysis/OleM/Donal_stuff/calibration_data.toml"    
-instrument = Instrument(calibration_file)
+# #%%
+#calibration_file ="/home/olemar/Projects/Universitetet/MATS/MATS-analysis/OleM/Donal_stuff/calibration_data.toml"    
+#instrument = Instrument(calibration_file)
 
-#%%
-l1b_data = calibrate_dataframe(ccd_data,instrument)
+# #%%
+#l1b_data = calibrate_dataframe(ccd_data,instrument)
 # %%
 ccd_data_cal = read_MATS_data(starttime, endtime,filter=None,level='1b',version='0.4')
 
