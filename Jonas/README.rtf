@@ -1,1 +1,3 @@
 The two .mat files used in calibrate_pm.py can be found on Box, at MATS>Calibration>Photometer>Photometer Calibration LuTs>Latest\
+
+Note that the photometer signal you get is in units photons cm-2 str-1 s-1, i.e. it is integrated over the filter pass band. If you want them in nm-1 also you need to divide by the filter width. The FWHM of the (double) filters in the photometers are 3.357 nm (Background channel, 754 nm) and 6.827 nm (A-band channel, 763 nm). And then to get true Witts, divide by 10^9.
