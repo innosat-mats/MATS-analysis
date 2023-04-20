@@ -1,16 +1,13 @@
 #%%
 from mats_utils.rawdata.read_data import read_MATS_data
 import datetime as DT
-from datetime import timedelta
 import pandas as pd 
-from pandas import Timestamp
-import sys
 import numpy as np
 import math
 import matplotlib.pyplot as plt 
-from mats_utils.geolocation.coordinates import TPpos
+from mats_utils.geolocation.coordinates import TPpos, satpos
+from matplotlib.backends.backend_pdf import PdfPages
 
-#%%
 class CenterStrip:
     def __init__(self, CCDobject):
         self.image = CCDobject['IMAGE']
@@ -30,7 +27,7 @@ class CenterStrip:
         self.strip = self.image[int(center),:]
         return  np.transpose(self.strip)
 
-#%%  Make a keogram of a specific channel and CCD-objects
+# Make a keogram of a specific channel and CCD-objects
 def makeStripMatrix(df, channel_type, strip_dir):
 
     IR_list = df[df['channel'] == channel_type]
@@ -54,34 +51,24 @@ def makeStripMatrix(df, channel_type, strip_dir):
             strips_matrix.append(new_strip.strip)
         strips_matrix = np.array(strips_matrix)
     return np.transpose(strips_matrix)
-    
-def getLatitudes(df, channel_type):
-    IR_list = df[df['channel'] == channel_type]
+
+#Get a list of latitudes and dates for TP
+def getTimePos(df):
     listoflatitudes= []
     listofexpdates = []
-    for index, row in IR_list.iterrows():
+    for index, row in df.iterrows():
         listoflatitudes.append(TPpos(row)[0])
         listofexpdates.append(row['EXPDate'])
-    return  listoflatitudes, listofexpdates
+    return listoflatitudes, listofexpdates
 
-
-# %% Read data
-start_time = DT.datetime(2023,2,18,19,30,0)
-stop_time = DT.datetime(2023,2,18,23,30,0)
-df = read_MATS_data(start_time,stop_time,version=0.5,level='1a')
-#Can add filter in read Mats data filter = {"TPlat":[-20,20]}
-
-# %%  Settings to run
-channels = ['IR1']
-strip_dir = 'v'
-
-# %% Makes a plot of the matrix made with makeStripMatrix()
+# Makes a plot of the matrix made with makeStripMatrix()
 def plotKeogram(df, channels, strip_dir):
-
-    #gives two plots, one with the matrix and one with the latitudes
+    
+    #gives at least 2 plots, one from image-matrix and one with the latitudes
     if len(channels)==1 :
+        IR_list = df[df['channel'] == channels[0]]
         fig,axs = plt.subplots(nrows=2, ncols=1)
-        latitudes, dates = getLatitudes(df,channels[0])
+        latitudes, dates = getTimePos(IR_list)
         matrix = makeStripMatrix(df,channels[0],strip_dir)
         axs[0].pcolormesh(dates,range(matrix.shape[0]),matrix)
         axs[0].set_title(f"Channel {channels[0]}")
@@ -92,15 +79,18 @@ def plotKeogram(df, channels, strip_dir):
         axs[1].grid(linestyle='-')
     else:
         fig,axs = plt.subplots(nrows=len(channels)+1, ncols=1)
-        latitudes, dates = getLatitudes(df,channels[0])
+        IR1_list = df[df['channel'] == channels[0]]
+        # gets the latitudes from objects only for the first channel.
+        latitudes, dates = getTimePos(IR1_list)
         axs[len(channels)].set_xlabel('Time')
         axs[len(channels)].set_ylabel('Latitude')
         axs[len(channels)].plot(dates,latitudes,'.')
         axs[len(channels)].set_xlim(dates[0],dates[-1])
         for i in range(len(channels)):
-            latitudes, dates = getLatitudes(df,channels[i])
+            IR_objects =  df[df['channel'] == channels[i]]
+            latitudes, dates = getTimePos(IR_objects)
             matrix = makeStripMatrix(df,channels[i],strip_dir)  
-            axs[i].pcolormesh(dates,range(matrix.shape[0]),matrix)
+            axs[i].pcolormesh(dates,range(matrix.shape[0]),matrix, vmax=1500)
             axs[i].set_title(f"Channel {channels[i]}")
             plt.gcf().autofmt_xdate()
             plt.tight_layout()
@@ -109,33 +99,11 @@ def plotKeogram(df, channels, strip_dir):
     plt.gcf().autofmt_xdate()
     plt.show()
 
-# %%
-start_time = DT.datetime(2023,2,22,19,30,0)
-stop_time = DT.datetime(2023,2,24,19,30,0)
-tdelta = stop_time-start_time #number of days
-channel = 'IR2'
-strip_dir = 'v'
-
+# %%  Settings to run for normal plot with various channels
+start_time = DT.datetime(2023,2,19,18,30,0)
+stop_time = DT.datetime(2023,2,20,18,30,0)
+channels = ['IR1']  #list of what channels we want to plot
+strip_dir = 'v'  #vertical 'v' or horiozontal 'h' direction of the strip
 df = read_MATS_data(start_time,stop_time,version=0.5,level='1a')
-
-# %% Creates a figure with keograms for each day
-def days_Keogram(df, channel, strip_dir):
-    fig, axs = plt.subplots(nrows=tdelta.days, ncols=1)
-    for day in range(1,tdelta.days+1): 
-        print(day)
-        mask_day = (df['EXPDate'] >= pd.to_datetime(start_time + timedelta(days=day-1),utc=True)) & (df['EXPDate'] <= pd.to_datetime(start_time + timedelta(days=day),utc=True))
-        CCD_day = df.loc[mask_day]
-        mask_night = (df['EXPDate']>= pd.to_datetime(timedelta(hours=19))) & (df['EXPDate']<= pd.to_datetime(timedelta(hours=23)))
-        CCD_nighttime = CCD_day.loc[mask_night]
-        print(len(CCD_day))
-        latitudes, dates = getLatitudes(CCD_nighttime,channel)
-        matrix = makeStripMatrix(CCD_nighttime,channel,strip_dir)  
-        axs[day].pcolormesh(latitudes,range(matrix.shape[0]),matrix)
-        axs[day].set_title(f"Channel {channel}")
-    plt.gcf().autofmt_xdate()
-    plt.tight_layout()
-    plt.show()
-    return fig 
-
 
 # %%
