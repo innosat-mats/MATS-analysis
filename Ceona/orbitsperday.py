@@ -10,8 +10,8 @@ from matplotlib.backends.backend_pdf import PdfPages
 import numpy as np
 
 # Determine the main time span and settings for multiple plots
-start_time = DT.datetime(2023,2,19,18,30,0)
-stop_time = DT.datetime(2023,2,21,18,30,0)
+start_time = DT.datetime(2023,2,27,00,00,0)
+stop_time = DT.datetime(2023,2,28,23,59,0)
 channel = 'IR1'
 strip_dir = 'v'
 filename = "february.pdf"
@@ -33,11 +33,11 @@ def getSatDates(objects):
 
 # %% puts data in file temp_data
 df = read_MATS_data(start_time,stop_time,version=0.5,level='1a',filter={"TPlat":[50,90]})
-df.to_pickle('polar_data')
+df.to_pickle('28febdata')
 "change latitude filter depending on if you want to look at north or south pole."
 
 #%% Reads in data from file
-items = pd.read_pickle('polar_data')
+items = pd.read_pickle('28febdata')
 items = items[items['channel'] == channel]
 
 # %% Saves keograms for every orbit per day on a pdf page.
@@ -53,11 +53,11 @@ def orbit_pdf(items, channel, strip_dir, filename, numdays, Tperiod):
         fig, axs = plt.subplots(nrows=maxorbits, ncols=1, figsize=(8.27,40), gridspec_kw={'height_ratios': [2]*maxorbits})
         
         #makes a list of the CCD items from the day specified in mask range.
-        mask_day = (items['EXPDate'] >= pd.to_datetime(daystart + timedelta(days=day-1),utc=True)) & (items['EXPDate'] <= pd.to_datetime(daystart + timedelta(days=day),utc=True))
+        mask_day = (items['EXPDate'] >= pd.to_datetime(starttime + timedelta(days=day-1),utc=True)) & (items['EXPDate'] <= pd.to_datetime(starttime + timedelta(days=day),utc=True))
         CCD_day = items.loc[mask_day]
-        print("numdays",len(CCD_day))
-        print(CCD_day.iloc[0].EXPDate)
-        print(CCD_day.iloc[-1].EXPDate)
+        print("len of days",len(CCD_day))
+        #print(CCD_day.iloc[0].EXPDate)
+        #print(CCD_day.iloc[-1].EXPDate)
 
         n = 0
         #the first plot number
@@ -101,14 +101,15 @@ def orbit_pdf(items, channel, strip_dir, filename, numdays, Tperiod):
             axs[0].set_title((starttime + timedelta(days=day-1)).date(), fontsize=16)
             print(orbnum)
            
-            axs[orbnum].pcolormesh(dates,range(matrix.shape[0]),matrix, vmax=5000)
+            axs[orbnum].pcolormesh(dates,range(matrix.shape[0]),matrix)  #vmax = 4500
             axs[orbnum].set_title(f"Orbit {orbnum}")
             #axs[orbnum].set_xticks(dates)
-            #axs[orbnum].set_xticklabels(times_strings[::len(times_strings)/20])                axs[orbnum].set_xlabel('Time')
+            #axs[orbnum].set_xticklabels(times_strings) 
+            # Test adding a comment for git               
+            axs[orbnum].set_xlabel('Time')
             plt.tight_layout(h_pad=1)
             orbnum = orbnum + 1
-            
-        plt.gcf().autofmt_xdate()
+
         pdf.savefig(fig)
         plt.close()
         plt.show()
