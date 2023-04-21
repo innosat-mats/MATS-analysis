@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from Keogram import makeStripMatrix
 from matplotlib.backends.backend_pdf import PdfPages
 import numpy as np
-
+from matplotlib import ticker
 # Determine the main time span and settings for multiple plots
 start_time = DT.datetime(2023,2,27,00,00,0)
 stop_time = DT.datetime(2023,2,28,23,59,0)
@@ -67,39 +67,41 @@ def orbit_pdf(items, channel, strip_dir, filename, numdays, Tperiod):
             if deltat < Tperiod/2:
                 continue
             if deltat > Tperiod/2:  #if this is True, next image will belong to next orbit.                         
-                print(n,i)
+                #print(n,i)
                 #creates orbit from index n to i
                 orbit = items.iloc[n:i] 
-                print(len(orbit))
+                #print(len(orbit))
 
                 dates = getSatDates(orbit)
-                times_strings = [dt.strftime("%H:%M:%S") for dt in dates]  #as strings
+                times_strings = [dt.strftime("%H:%M") for dt in dates]  #as strings
                 satlatitudes = getTPLatitudes(orbit)
                 #gets the matrix corresponding to that orbit
                 matrix = makeStripMatrix(orbit,channel,strip_dir)
                 
                 #settings for the latitude plot vs time.
+                axs[0].plot(dates,satlatitudes,'.')
+                axs[0].set_title((daystart + timedelta(days=day-1)).date(), fontsize=16)
                 axs[0].set_xlabel('Time')
                 axs[0].set_ylabel('Latitude')
-                axs[0].plot(dates,satlatitudes,'.')
-                axs[0].set_xlim(dates[0],dates[-1])
+                axs[0].set_xticks(dates[::20])
+                axs[0].set_xticklabels(times_strings[::20], rotation = 30) 
                 axs[0].grid(linestyle='-')
-                axs[0].set_title((daystart + timedelta(days=day-1)).date(), fontsize=16)
                 
+                
+                #plots the orbit found from n to current i
                 axs[orbnum].pcolormesh(dates,range(matrix.shape[0]),matrix)  #vmax = 4500
                 axs[orbnum].set_title(f"Orbit {orbnum}")
-                #axs[orbnum].set_xticks(dates)
-                #axs[orbnum].set_xticklabels(times_strings)  
-                axs[orbnum].set_xlabel('Time')
+                axs[orbnum].set_xticks(dates[::20])
+                axs[orbnum].set_xticklabels(times_strings[::20], rotation = 30) 
                 plt.tight_layout(h_pad=1)
                 
                 orbnum = orbnum + 1
                 n = i+1 #start number for next orbit
                 nextorbit_startdate = items.iloc[n].EXPDate
 
-                #comparing the day at start of the active orbit with the previous day.
+                #comparing the day at start of the new orbit with the active orbits start.
                 if orbit_startdate.day != nextorbit_startdate.day:
-                    #then we want to quit the for loop and start a new day
+                    #then we want to quit this for loop and start a new day
                     print("new day")
                     break
         pdf.savefig(fig)
