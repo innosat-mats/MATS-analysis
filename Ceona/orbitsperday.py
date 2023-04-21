@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from Keogram import makeStripMatrix
 from matplotlib.backends.backend_pdf import PdfPages
 import numpy as np
-from matplotlib import ticker
+
 # Determine the main time span and settings for multiple plots
 start_time = DT.datetime(2023,2,27,00,00,0)
 stop_time = DT.datetime(2023,2,28,23,59,0)
@@ -77,17 +77,17 @@ def orbit_pdf(items, channel, strip_dir, filename, numdays, Tperiod):
                 satlatitudes = getTPLatitudes(orbit)
                 #gets the matrix corresponding to that orbit
                 matrix = makeStripMatrix(orbit,channel,strip_dir)
-                
-                #settings for the latitude plot vs time.
-                axs[0].plot(dates,satlatitudes,'.')
-                axs[0].set_title((daystart + timedelta(days=day-1)).date(), fontsize=16)
-                axs[0].set_xlabel('Time')
-                axs[0].set_ylabel('Latitude')
-                axs[0].set_xticks(dates[::20])
-                axs[0].set_xticklabels(times_strings[::20], rotation = 30) 
-                axs[0].grid(linestyle='-')
-                
-                
+                if orbnum == 1:
+                    #plotting latitude vs time for the first orbit
+                    axs[0].plot(dates,satlatitudes,'.')
+                    axs[0].set_xlabel('Time')
+                    axs[0].set_ylabel('Latitude')
+                    axs[0].set_xlim(dates[0],dates[-1])
+                    axs[0].grid(linestyle='-')
+                    axs[0].set_title((daystart + timedelta(days=day-1)).date(), fontsize=16)
+                    axs[0].set_xticks(dates[::20])
+                    axs[0].set_xticklabels(times_strings[::20], rotation = 30) 
+                    
                 #plots the orbit found from n to current i
                 axs[orbnum].pcolormesh(dates,range(matrix.shape[0]),matrix)  #vmax = 4500
                 axs[orbnum].set_title(f"Orbit {orbnum}")
