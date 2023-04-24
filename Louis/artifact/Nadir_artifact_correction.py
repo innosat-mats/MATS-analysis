@@ -337,14 +337,12 @@ def azimuth_masks_plot(azimuth_masks,angles):
         
         fig, (ax1, ax2) = plt.subplots(1, 2, layout='constrained')
         fig.suptitle(f"{az_min:.2f} deg < solar azimuth angle < {az_max:.2f} deg")
-        ax1 = plt.subplot(121)
         fig = ax1.imshow(mask,origin='lower')
         ax1.set_title('bias mask')
-        plt.colorbar(fig,ax=ax1)
+        plt.colorbar(fig,ax=ax1,fraction=0.02)
             
-        ax2 = plt.subplot(122)
-        fig = ax2.imshow(R2,vmin=0.8,vmax=1.0,origin='lower')
-        plt.colorbar(fig,ax=ax2)
+        fig = ax2.imshow(R2,vmin=0.5,vmax=1.0,origin='lower')
+        plt.colorbar(fig,ax=ax2,fraction=0.02)
         ax2.set_title('R2 values')
         plt.show()
         
@@ -356,40 +354,6 @@ def azimuth_masks_plot(azimuth_masks,angles):
 
 
 
-# %%
 
-start_time_mask = DT.datetime(2023, 4, 13, 3, 30, 0)
-stop_time_mask = DT.datetime(2023, 4, 13, 4, 30, 0)
-
-start_time_mask_1day = DT.datetime(2023, 4, 13, 0, 0, 0)
-stop_time_mask_1day = DT.datetime(2023, 4, 14, 0, 0, 0)
-
-start_time = DT.datetime(2023, 4, 14, 0, 0, 0)
-stop_time = DT.datetime(2023, 4, 14, 2, 0, 0)
-
-# filter selecting Nadir chanel
-filter={'CCDSEL': [7,7]}
-
-df1a_tot= read_MATS_data(start_time, stop_time,filter,level='1a',version='0.5')
-df1a_tot_mask= read_MATS_data(start_time_mask, stop_time_mask,filter,level='1a',version='0.5')
-df1a_tot_mask_1day= read_MATS_data(start_time_mask_1day, stop_time_mask_1day,filter,level='1a',version='0.5')
-df1a_tot = df1a_tot[~np.isnan(df1a_tot['satlat'])]
-df1a_tot_mask = df1a_tot_mask[~np.isnan(df1a_tot_mask['satlat'])]
-df1a_tot_mask_1day = df1a_tot_mask_1day[~np.isnan(df1a_tot_mask_1day['satlat'])]
-print(len(df1a_tot))
-df1a = df1a_tot
-print(len(df1a_tot_mask))
-df1a_mask = df1a_tot_mask
-print(len(df1a_tot_mask_1day))
-df1a_mask_1day = df1a_tot_mask_1day
-
-#%%
-azimuth_masks = azimuth_bias_mask(df1a_mask,-6000,az_step = 1.0)
-
-azimuth_masks_5deg = azimuth_bias_mask(df1a_mask,-6000,az_step = 5.0)
-
-azimuth_masks_1day = azimuth_bias_mask(df1a_mask_1day,-6000,az_step = 1.0)
-
-df_corr = azimuth_corr_mask(df1a,azimuth_masks)
 
 # %%

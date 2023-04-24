@@ -121,6 +121,8 @@ def nadir_az(ccditem):
 
 
 #%%
+
+
 NADIR_AZ = [] # list of nadir solar azimuth angles
 n = len(df1a)
 for i in tqdm(range(n)):

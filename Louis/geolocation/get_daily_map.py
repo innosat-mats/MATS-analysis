@@ -80,8 +80,8 @@ def parallel_geolocating(part,ccditems):
 
 
 #%%
-start_time = DT.datetime(2023, 4, 2, 0, 0, 0)
-stop_time = DT.datetime(2023, 4, 2, 4, 0, 0)
+start_time = DT.datetime(2023, 4, 6, 0, 0, 0)
+stop_time = DT.datetime(2023, 4, 7, 0, 0, 0)
 
 print("\n\n\n #####################################################")
 print(f"\n Loading images from {start_time} to {stop_time}")
@@ -90,8 +90,10 @@ print(f"\n Loading images from {start_time} to {stop_time}")
 filter={'CCDSEL': [7,7]}
 
 # reading mesurements
-df1a_tot= read_MATS_data(start_time, stop_time,filter,level='1a',version='0.5')
+df1a_tot= read_MATS_data(start_time, stop_time,filter,level='1a',version='0.5').sort_values('EXPDate')
+df1a_tot.sort_values('EXPDate')
 df1a = df1a_tot[:]
+
 
 #%% 
 # slice orbite by orbit
@@ -110,8 +112,8 @@ for i in range(len(df1a)-1):
         orb_ind.append((ind_start,ind_end))
         orb_start = df1a.iloc[i+1]['EXPDate']
         ind_start = i+1
-orb_times.append((orb_start,df1a.iloc[-1]['EXPDate']))
-orb_ind.append((ind_start,len(df1a)))
+orb_times.append([orb_start,df1a.iloc[-1]['EXPDate']])
+orb_ind.append([ind_start,len(df1a)])
 
 #%% 
 # geolocating
@@ -147,8 +149,8 @@ for i in range(len(orb_times)):
 # stack orbit by orbit
 
 # defining the new coordinate grids for the stacked image
-lonmin,lonmax = -180,+180
-latmin, latmax = -90,-70
+lonmin,lonmax = 0,+360
+latmin, latmax = -90,-10
 
 nb_lat = ceil((latmax-latmin)/0.05) # number of latitude steps, by default we use a latitude resolution of .05 deg (~ same as NADIR images)
 nb_lon = ceil((lonmax-lonmin)/0.05) # number of longitude steps, , by default we use a longitude resolution of .05 deg (~ same as NADIR images)
@@ -159,12 +161,18 @@ stacked_lon,stacked_lat = np.meshgrid(lo,la)
 
 stacked_im_tot = np.full((nb_lat-1,nb_lon-1),np.nan)
 
-#for j in range(len(orb_times)):
-for j in range(1,2): 
-    
-    sets = 10
+for j in range(0,len(orb_ind)):
+   
+    print('#################')
+    print(f"Loading and stacking orbit number {j}/{len(orb_ind)} ({orb_times[j][0]} to {orb_times[j][1]})")
+
+    sets = 11
 
     temp_dir=f"/home/louis/MATS/MATS-Data/nadir_animation_corrected/{start_time.strftime('%Y_%m_%d')}_orb{j}"
+    temp_dir=f"/home/louis/MATS/MATS-Data/EGU_OM/{start_time.strftime('%Y_%m_%d')}_orb{j}"
+    temp_dir=f"/home/louis/MATS/MATS-Data/EGU_OM/2023_04_06/{start_time.strftime('%Y_%m_%d')}_orb{j}"
+    # temp_dir=f"/home/louis/MATS/MATS-Data/EGU_OM/2023_04_07/"
+    
     print(temp_dir)
 
     for i in range(0,sets):
@@ -188,15 +196,17 @@ for j in range(1,2):
             print("I/O error({0}): {1}".format(e.errno, e.strerror))
             continue 
         
-    
+        lon_points = lon_points%360
      
-
+    print('stacking')
     # stacking images (surprisingly fast)
     stacked_im = average_stacking(im_points,lat_points,lon_points,la,lo,no_holes = True)
 
-    stacked_im_tot = stacked_im
-    #stacked_im_tot = np.where(~np.isnan(stacked_im),stacked_im,stacked_im_tot)
+    print('adding the orbit path to the global image')
+    #stacked_im_tot = stacked_im
+    stacked_im_tot = np.where(~np.isnan(stacked_im),stacked_im,stacked_im_tot)
     
+# stacked_lon = stacked_lon%360
 
 
 
@@ -212,35 +222,29 @@ ortho_projection = ccrs.Orthographic(central_latitude=-90,central_longitude=0) #
 #%% 
 # projecting stacked image on a lat/lon projection (fastest)
 plt.close('Stacked latlon')
-plt.figure('Stacked latlon')
+plt.figure('Stacked latlon',figsize=(20,20))
 ax = plt.axes(projection=latlon_projection)
 ax.set_global()
 ax.coastlines()
 ax.gridlines()
-c = ax.pcolorfast(stacked_lon,stacked_lat,stacked_im_tot, transform=data_crs,cmap='hsv',figsize=[12.8,9.6],dpi=500)
+c = ax.pcolormesh(stacked_lon,stacked_lat,stacked_im_tot, transform=data_crs,cmap='hsv')
 plt.colorbar(c,ax=ax)
-plt.savefig(f'{temp_dir}/test.png', format='png',dpi=1000)
+plt.savefig(f'{temp_dir}/test.png', format='png')
 plt.show()
-
-
 
 
 #%% projecting stacked image on an orthographic projection (slow)
 plt.close('Stacked Orthographic corrected')
-plt.figure('Stacked Othographic corrected')
+plt.figure('Stacked Othographic corrected',figsize=(20,20))
 ax = plt.axes(projection=ortho_projection)
 ax.set_global()
 ax.coastlines()
 ax.gridlines()
 # c = ax.pcolorfast(stacked_lon,stacked_lat,stacked_im, transform=data_crs,cmap='hsv')
-c = ax.pcolor(stacked_lon,stacked_lat,stacked_im, transform=data_crs)
+c = ax.pcolormesh(stacked_lon,stacked_lat,stacked_im_tot, transform=data_crs)
 plt.colorbar(c,ax=ax)
-plt.savefig(f'{temp_dir}/test.png', format='png',dpi=1000)
+plt.savefig(f'{temp_dir}/test.png', format='png',dpi=500)
 plt.show()
-
-
-
-
 
 
 # %%
