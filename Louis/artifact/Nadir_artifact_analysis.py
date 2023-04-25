@@ -72,6 +72,8 @@ plt.plot(range(len(df1a)),df1a['EXPDate'])
 
 # df1a.dropna(inplace=True)
 
+df1a = df1a_mask_1day
+
 df1a = df1a[~np.isnan(df1a['satlat'])]
 
 n = len(df1a)
@@ -136,7 +138,7 @@ plt.plot(df1a['EXPDate'],NADIR_AZ,'.')
 # %% 1 pixel, 1 angle range
 
 ang_min = -90
-ang_max = ang_min + 1
+ang_max = ang_min+0.5
 step = 3
 x_art = 17
 y_art = 10
@@ -198,8 +200,8 @@ plt.show()
 
 
 # %% all the image, 1 angle range
-ang_min = -90
-ang_max = ang_min + 1
+ang_min = -80.17
+ang_max = -80.07
 im_R = np.ones_like(im_points[0,:,:])
 im_bias = np.zeros_like(im_points[0,:,:])
 im_slope = np.ones_like(im_points[0,:,:])
@@ -273,10 +275,15 @@ plt.imshow(im_R[:,:],origin='lower',vmin = 0.8,vmax=1)
 plt.colorbar()
 plt.show()
 
+plt.figure()
+plt.title(f'Bias histogram ')
+plt.hist(im_bias.ravel(),30)
+plt.show()
+
 # %% 1 pixel, several angles
 ang_min = -105
-ang_max = -75
-ang_step = 0.5
+ang_max = -71
+ang_step = 0.1
 ANG = np.linspace(ang_min,ang_max,int((ang_max-ang_min)//ang_step))
 BIAS = []
 R2 = []
@@ -290,7 +297,6 @@ for ang in ANG:
     ang_max = ang + ang_step
     X = im_points[step:-1,y_dark,x_dark]
     Y = im_points[0:-(step+1),y_art,x_art]
- 
 
     # indexes = (~np.isnan(X)) & (~np.isnan(Y)) & (df1a.iloc[:-(step+1)]['nadir_sza']>ang_min) & (df1a.iloc[:-(step+1)]['nadir_sza']<ang_max)
     indexes = (~np.isnan(X)) & (~np.isnan(Y)) & (NADIR_AZ[:-(step+1)]>ang_min) & (NADIR_AZ[:-(step+1)]<ang_max)
@@ -332,7 +338,7 @@ for ang in ANG:
 plt.figure()
 plt.title(f'Bias value (Pixel ({x_art},{y_art}))')
 plt.title(f'Bias value')
-plt.plot(ANG,BIAS)
+plt.plot(ANG,BIAS,'.')
 plt.xlabel('Azimuth angle (deg)')
 plt.ylabel('Bias value')
 plt.show()
@@ -345,6 +351,8 @@ plt.xlabel('Azimuth angle (deg)')
 plt.ylabel('R squared value')
 plt.ylim([0.5,1.05])
 plt.show()
+
+
 # %%  dependency 
 
 

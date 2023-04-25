@@ -93,6 +93,7 @@ filter={'CCDSEL': [7,7]}
 df1a_tot= read_MATS_data(start_time, stop_time,filter,level='1a',version='0.5').sort_values('EXPDate')
 df1a_tot.sort_values('EXPDate')
 df1a = df1a_tot[:]
+df1a = df1a[~np.isnan(df1a['satlat'])]
 
 
 #%% 
@@ -109,11 +110,11 @@ for i in range(len(df1a)-1):
         orb_end = df1a.iloc[i]['EXPDate']
         ind_end = i
         orb_times.append([orb_start,orb_end])
-        orb_ind.append((ind_start,ind_end))
+        orb_ind.append([ind_start,ind_end])
         orb_start = df1a.iloc[i+1]['EXPDate']
         ind_start = i+1
 orb_times.append([orb_start,df1a.iloc[-1]['EXPDate']])
-orb_ind.append([ind_start,len(df1a)])
+orb_ind.append([ind_start,len(df1a)-1])
 
 #%% 
 # geolocating
@@ -164,7 +165,7 @@ stacked_im_tot = np.full((nb_lat-1,nb_lon-1),np.nan)
 for j in range(0,len(orb_ind)):
    
     print('#################')
-    print(f"Loading and stacking orbit number {j}/{len(orb_ind)} ({orb_times[j][0]} to {orb_times[j][1]})")
+    print(f"Loading and stacking orbit number {j+1}/{len(orb_ind)} ({orb_times[j][0]} to {orb_times[j][1]})")
 
     sets = 11
 
@@ -197,6 +198,21 @@ for j in range(0,len(orb_ind)):
             continue 
         
         lon_points = lon_points%360
+
+    # quick artifact fix
+    k = np.shape(im_points)[0]
+    print(k)
+        
+    mask_cube = np.array([mask])
+    for i in range(k-1):
+        mask_cube = np.append(mask_cube,np.array([mask]),axis=0)
+        
+    im_points = im_points[~mask_cube]
+    lon_points = lon_points[~mask_cube]
+    lat_points = lat_points[~mask_cube]
+    sza_points = sza_points[~mask_cube]
+
+        
      
     print('stacking')
     # stacking images (surprisingly fast)
@@ -236,14 +252,24 @@ plt.show()
 #%% projecting stacked image on an orthographic projection (slow)
 plt.close('Stacked Orthographic corrected')
 plt.figure('Stacked Othographic corrected',figsize=(20,20))
+plt.title(f"{len(orb_times)} orbits between {orb_times[0][0].strftime('%Y-%m-%d %H:%M:%S')} and {orb_times[-1][1].strftime('%Y-%m-%d %H:%M:%S')}")
 ax = plt.axes(projection=ortho_projection)
 ax.set_global()
 ax.coastlines()
 ax.gridlines()
 # c = ax.pcolorfast(stacked_lon,stacked_lat,stacked_im, transform=data_crs,cmap='hsv')
 c = ax.pcolormesh(stacked_lon,stacked_lat,stacked_im_tot, transform=data_crs)
+for i in range(len(orb_times)):
+    orb_start = orb_times[i][0]
+    orb_end = orb_times[i][1]
+    ind_start = orb_ind[i][0]
+    ind_end = orb_ind[i][1]
+    ax.text(df1a.iloc[ind_start]['satlon'],df1a.iloc[ind_start]['satlat'],f"{orb_start.strftime('%H:%M:%S')}",transform=data_crs)
+    ax.text(df1a.iloc[ind_end]['satlon'],df1a.iloc[ind_end]['satlat'],f"{orb_end.strftime('%H:%M:%S')}",transform=data_crs)
+
 plt.colorbar(c,ax=ax)
-plt.savefig(f'{temp_dir}/test.png', format='png',dpi=500)
+#ax.axis('off')
+plt.savefig(f'{temp_dir}/test.png', format='png',dpi=250)
 plt.show()
 
 

@@ -52,14 +52,19 @@ df1a_tot_mask_1day = df1a_tot_mask_1day[~np.isnan(df1a_tot_mask_1day['satlat'])]
 print(len(df1a_tot_mask_1day))
 df1a_mask_1day = df1a_tot_mask_1day
 
+# displaying keys
+pd.set_option('display.max_rows', 500)
+
 #%%
 # calculate masks
 
-azimuth_masks = azimuth_bias_mask(df1a_mask,-6000,az_step = 1.0)
+azimuths = np.concatenate((np.linspace(-105,-85.5,41),np.linspace(-85,-74,111),np.linspace(-73.5,-70,8)))
 
-azimuth_masks_5deg = azimuth_bias_mask(df1a_mask,-6000,az_step = 5.0)
+azimuth_masks = azimuth_bias_mask2(df1a_mask,-6000,azimuths)
 
-azimuth_masks_1day = azimuth_bias_mask(df1a_mask_1day,-6000,az_step = 1.0)
+azimuth_masks_5deg = azimuth_bias_mask2(df1a_mask,-6000,azimuths)
+
+azimuth_masks_1day = azimuth_bias_mask2(df1a_mask_1day,-6000,azimuths)
 
 #%%
 # correcting images
@@ -74,6 +79,7 @@ df_corr_1day = azimuth_corr_mask(df1a,azimuth_masks_1day)
 # plotting masks
 
 angles = [-100,-90,-85,-80,-79,-78,-77-76,-75,-70]
+angles = azimuths[::10]
 
 azimuth_masks_plot(azimuth_masks,angles)
 azimuth_masks_plot(azimuth_masks_5deg,angles)
@@ -83,7 +89,7 @@ azimuth_masks_plot(azimuth_masks_1day,angles)
 vmax = 32000.0
 vmin = 0.0
 
-i = 250
+i = 568
 
 
 plt.figure()
@@ -103,4 +109,6 @@ plt.imshow(df_corr_1day.iloc[i]['IMAGE'],vmin=vmin,vmax=vmax,origin='lower')
 plt.show()
 
 
+# %%
+azimuth_masks_1day = azimuth_bias_mask2(df1a_mask,-6000,np.linspace(-80,-74,61))
 # %%
