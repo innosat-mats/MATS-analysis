@@ -39,7 +39,7 @@ start_time = DT.datetime(2023, 4, 2, 0, 0, 0)
 stop_time = DT.datetime(2023, 4, 3, 0, 0, 0)
 
 start_time = DT.datetime(2023, 4, 7, 0, 0, 0)
-stop_time = DT.datetime(2023, 4, 8, 0, 0, 0)
+stop_time = DT.datetime(2023, 4, 7, 0, 10, 0)
 
 # start_time = DT.datetime(2022, 12, 21, 0, 0, 0)
 # stop_time = DT.datetime(2022, 12, 22, 0, 0, 0)

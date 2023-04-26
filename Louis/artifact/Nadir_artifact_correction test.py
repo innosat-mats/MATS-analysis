@@ -2,7 +2,7 @@
 
 #%% Import modules
 #%matplotlib qt5
-from Nadir_artifact_correction import *
+#from Nadir_artifact_correction import *
 from mats_utils.rawdata.read_data import read_MATS_data
 import datetime as DT
 from tqdm import tqdm
@@ -89,7 +89,7 @@ azimuth_masks_plot(azimuth_masks_1day,angles)
 vmax = 32000.0
 vmin = 0.0
 
-i = 568
+i = 9568
 
 
 plt.figure()

@@ -99,13 +99,13 @@ def nadir_mask(ccditems,bias_threshold):
     def func(X,b):
         return X+b
 
-    for x_art in range(0,b):
-        for y_art in range(3,a): # skipping the first 3 "reference" rows
+    for x_cor in range(0,b):
+        for y_cor in range(3,a): # skipping the first 3 "reference" rows
 
             # calculating the position of the reference pixel and the number of images offset
-            step = int(y_art//pixel_shift) # images offset between the reference and corrected pixel
-            x_dark = x_art
-            y_dark = int(round(y_art%pixel_shift))
+            step = int(y_cor//pixel_shift) # images offset between the reference and corrected pixel
+            x_dark = x_cor
+            y_dark = int(round(y_cor%pixel_shift))
 
             X = []
             Y = []
@@ -118,7 +118,7 @@ def nadir_mask(ccditems,bias_threshold):
                 #check if the image taken as reference is indeed taken the right amount of time after the other image
                 if (ccditem_ref['EXPDate'] - ccditem_art['EXPDate'] - step*timedelta(seconds=2)) < timedelta(seconds= 0.01):
                     X.append(ccditem_ref['IMAGE'][y_dark,x_dark])
-                    Y.append(ccditem_art['IMAGE'][y_art,x_art])
+                    Y.append(ccditem_art['IMAGE'][y_cor,x_cor])
             
 
             if len(X) + len(Y) > 0:
@@ -132,8 +132,8 @@ def nadir_mask(ccditems,bias_threshold):
                 return None,None 
 
 
-            im_R2[y_art,x_art] = rsquare
-            im_bias[y_art,x_art] = intercept
+            im_R2[y_cor,x_cor] = rsquare
+            im_bias[y_cor,x_cor] = intercept
 
     # thresholding the correction
     mask = im_bias>bias_threshold       
@@ -321,27 +321,40 @@ def azimuth_bias_mask2(ccditems,bias_threshold,az_list):
         im_R2 = np.ones_like(im_points[0,:,:]) # R2 values for each pixel
         im_bias = np.zeros_like(im_points[0,:,:]) # bias value for each pixel
 
-        for x_art in range(0,56):
-            for y_art in range(3,14): # the first 3 rows are taken as reference
+        for x_cor in range(0,56):
+            if (x_cor<40) or (43<x_cor):
+                y0 = 0 # lower row index of the reference zone (first 3 rows in the image)
+                corrected_rows = [3,4,5,6,7,8,9,10,11,12,13] # row index of the corrected pixels
+            else :
+                y0 = 8 # lower row index of the reference zone
+                corrected_rows = [0,1,2,3,4,5,6,7,11,12,13] # row index of the corrected pixels
+            
 
+            for y_cor in corrected_rows: 
                 # calculating the position of the reference pixel and the number of images offset
-                step = int(y_art//pixel_shift) # images offset between the reference and corrected pixel
-                x_ref= x_art
-                y_ref = int(round(y_art%2.6))
+                step = int((y_cor-y0)//pixel_shift) # images offset between the reference and corrected pixel
+                x_ref= x_cor
+                y_ref = int(round((y_cor-y0)%2.6+y0)) # row index of the pixel taken as reference
+
+                print(x_cor,y_cor,step,y_ref)
 
                 X = [] # list of reference pixel values
                 Y = [] # list of artifact pixel values
 
-                az_index_art = (az_min < NADIR_AZ) & (NADIR_AZ < az_max) # indices for the images with in the given azimuth angle interval (the pixels to be corrected are taken from these images)
-                art_indices = np.arange(n)[az_index_art][:-step] # indices of the corresponding reference images where the reference pixel is taken
-                
-                if len(art_indices) > 0 : 
-                    for art_ind in art_indices: # iterating over the images (image index of the artifact pixel)
+                az_index_cor = (az_min < NADIR_AZ) & (NADIR_AZ < az_max) # indices for the images with in the given azimuth angle interval (the pixels to be corrected are taken from these images)
+                if step > 0:
+                    cor_indexes = np.arange(n)[az_index_cor][:-step] # indices of the corresponding reference images where the reference pixel is taken
+                else:
+                    cor_indexes = np.arange(n)[az_index_cor][step:] # indices of the corresponding reference images where the reference pixel is taken
+
+
+                if len(cor_indexes) > 0 : 
+                    for art_ind in cor_indexes: # iterating over the images (image index of the artifact pixel)
                         ref_ind = art_ind + step # image index of the reference 
                         #check if the image taken as reference is indeed taken the right amount of time after the other image
                         if (EXP_DATE[art_ind] - EXP_DATE[ref_ind] - step*timedelta(seconds=2)) < timedelta(seconds= 0.01):
                             X.append(im_points[ref_ind,y_ref,x_ref])
-                            Y.append(im_points[art_ind,y_art,x_art])
+                            Y.append(im_points[art_ind,y_cor,x_cor])
 
                 if len(X) + len(Y) > 0:
                 # linear regression, the slope is set to 1 
@@ -349,11 +362,11 @@ def azimuth_bias_mask2(ccditems,bias_threshold,az_list):
                     abs_err = Y-func(X,fit_param[0])
                     rsquare = 1.0 - (np.var(abs_err)/np.var(Y))
                     intercept = fit_param[0]
-                    im_R2[y_art,x_art] = rsquare
-                    im_bias[y_art,x_art] = intercept
+                    im_R2[y_cor,x_cor] = rsquare
+                    im_bias[y_cor,x_cor] = intercept
                 else : 
-                    im_R2[y_art,x_art] = None
-                    im_bias[y_art,x_art] = None               
+                    im_R2[y_cor,x_cor] = None
+                    im_bias[y_cor,x_cor] = None               
         
         # thresholding the correction
         mask = im_bias>bias_threshold       
@@ -394,6 +407,7 @@ def azimuth_corr_mask(ccditems, azimuth_masks):
     corrected_ccditems = ccditems.copy()
 
     IMAGES = [] # list of corrected images
+    MASK_AZIMUTH = azimuth_masks['azimuth']
 
     for index in tqdm(ccditems.index):
         azimuth = nadir_az(ccditems.loc[index])
@@ -403,9 +417,9 @@ def azimuth_corr_mask(ccditems, azimuth_masks):
         distance = 360.0
         best_ind = 0
         for j in range(m):
-            if abs(azimuth_masks.iloc[j]['azimuth']-azimuth) < distance and (type(azimuth_masks.iloc[j]['bias_mask']) != type(None)):
+            if abs(MASK_AZIMUTH[j]-azimuth) < distance:
                 best_ind = j
-                distance = abs(azimuth_masks.iloc[j]['azimuth']-azimuth)
+                distance = abs(MASK_AZIMUTH[j]-azimuth)
         mask = azimuth_masks['bias_mask'][best_ind]
 
         # substracting the mask
