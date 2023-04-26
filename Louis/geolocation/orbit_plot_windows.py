@@ -29,8 +29,8 @@ from skyfield import api as sfapi
 
 # parameters to change
 
-orb_dir = "/home/louis/MATS/MATS-Data/Geolocation_storage"
-map_dir = "/home/louis/MATS/MATS-Data/Polar_plot_test"
+orb_dir = "/home/louis/MATS/MATS-Data/Geolocation_storage" # directory where the computed geolocation data is stored
+map_dir = "/home/louis/MATS/MATS-Data/Polar_plot_test" # directory where the plots are stored
 
 start_time = DT.datetime(2023, 4, 11, 13, 0, 0)
 stop_time = DT.datetime(2023, 4, 11, 17, 0, 0)
