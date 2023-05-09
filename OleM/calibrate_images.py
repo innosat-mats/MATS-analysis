@@ -7,16 +7,24 @@ from mats_l1_processing.instrument import Instrument
 from mats_l1_processing.read_parquet_functions import dataframe_to_ccd_items
 
 #%% 
-calibration_file ="/home/olemar/Projects/Universitetet/MATS/MATS-L1-processing/scripts/calibration_data.toml"    
+calibration_file ="/home/ochri/Projects/MATS/MATS-L1-processing/scripts/calibration_data.toml"    
 instrument = Instrument(calibration_file)
 
 #%% Select on explicit time
-start_time = DT.datetime(2023,2,12,1,5,0)
-stop_time = DT.datetime(2023,2,12,2,10,0)
+start_time = DT.datetime(2023, 5, 4, 3, 0)
+stop_time = DT.datetime(2023, 5, 4, 3, 10)
 
-df = read_MATS_data(start_time,stop_time,version='0.4',level='1a')
+df = read_MATS_data(start_time,stop_time,version='0.5',level='1a')
 CCDitems = dataframe_to_ccd_items(df)
+
+#%%
+L1_calibrate(CCDitems[0],instrument)
+L1_calibrate(CCDitems[1],instrument)
+L1_calibrate(CCDitems[2],instrument)
 L1_calibrate(CCDitems[3],instrument)
+L1_calibrate(CCDitems[4],instrument)
+L1_calibrate(CCDitems[5],instrument)
+L1_calibrate(CCDitems[6],instrument)
 
 
 #%%
@@ -25,7 +33,7 @@ L1_calibrate(CCDitems[3],instrument)
 # %%
 #for i in range(len(CCDitems)):
 I = 1
-image_lsb, image_bias_sub, image_linear, image_desmeared, image_dark_sub, image_calib_nonflipped, image_calibrated, errors = L1_calibrate(CCDitems[I],instrument)
+image_lsb, image_bias_sub, image_desmeared, image_dark_sub, image_calib_nonflipped, image_calibrated, errors = L1_calibrate(CCDitems[I],instrument)
 
 # %%
 from matplotlib import pyplot as plt
