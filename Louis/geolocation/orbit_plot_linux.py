@@ -4,9 +4,7 @@ from mats_utils.rawdata.read_data import read_MATS_data
 import datetime as DT
 import argparse
 from datetime import date, timedelta
-from mats_utils.plotting.plotCCD import all_channels_plot
-#from mats_utils.daily_preview.temp_nadirs import NADIR_geolocation, average_stacking
-from mats_utils.geolocation.temp_nadir import NADIR_geolocation, average_stacking
+from mats_utils.geolocation.coordinates import NADIR_geolocation
 import numpy as np
 import pandas as pd
 import multiprocessing
@@ -17,12 +15,26 @@ import cartopy.crs as ccrs
 import sys
 import os
 from multiprocessing import Manager
-# from nadir_histo.Nadir_artifact_correction import artifact_correction
+from mats_utils.geolocation.temp_nadir import *
 
 #%%
-def parallel_geolocating(part,ccditems):
+
+# parameters to change
+
+orb_dir = "/home/louis/MATS/MATS-Data/Geolocation_storage"
+map_dir = "/home/louis/MATS/MATS-Data/Polar_plot_test"
+
+start_time = DT.datetime(2023, 4, 11, 16, 0, 0)
+stop_time = DT.datetime(2023, 4, 11, 17, 0, 0)
+
+a = 14
+b = 56
+#%%
+def parallel_geolocating(part,ccditems,temp_dir):
 
     global lat_points, lon_points, sza_points, im_points
+
+    n = len(ccditems)
 
     if n > files_per_part:
 
@@ -52,6 +64,8 @@ def parallel_geolocating(part,ccditems):
     
     k = 0
     
+    
+
     # geolocating images
     for i in tqdm(range(start_point, end_point)):
         ccditem = ccditems.iloc[i]
@@ -79,9 +93,12 @@ def parallel_geolocating(part,ccditems):
 
 
 
+
+
+
+
 #%%
-start_time = DT.datetime(2023, 4, 12, 0, 0, 0)
-stop_time = DT.datetime(2023, 4, 13, 0, 0, 0)
+
 
 print("\n\n\n #####################################################")
 print(f"\n Loading images from {start_time} to {stop_time}")
@@ -119,6 +136,8 @@ orb_ind.append([ind_start,len(df1a)-1])
 #%% 
 # geolocating
 
+print(f"Geolocating images")
+
 for i in range(len(orb_times)):
     orb_start = orb_times[i][0]
     orb_end = orb_times[i][1]
@@ -134,15 +153,14 @@ for i in range(len(orb_times)):
     a,b = np.shape(df1a_orb.iloc[0]['IMAGE'])
 
     # parallel processing
-    # temp_dir=f"/home/louis/MATS/MATS-Data/nadir_animation/{start_time.strftime('%Y_%m_%d')}"
-    temp_dir=f"/home/louis/MATS/MATS-Data/nadir_animation_corrected/{start_time.strftime('%Y_%m_%d')}_orb{i}"
+    temp_dir=f"{orb_dir}/{start_time.strftime('%Y_%m_%d')}_orb{i}"
     if not os.path.exists(temp_dir):
         os.mkdir(temp_dir)
     files_per_part = 100
     sets = int(np.ceil(len(df1a_orb)/files_per_part))
     args = []
     for i in range(sets):
-        args.append([i,df1a_orb])
+        args.append([i,df1a_orb,temp_dir])
     pool = multiprocessing.Pool(4)
     pool.starmap(parallel_geolocating,args)
 
@@ -169,12 +187,9 @@ for j in range(0,len(orb_ind)):
 
     sets = 11
 
-    temp_dir=f"/home/louis/MATS/MATS-Data/nadir_animation_corrected/{start_time.strftime('%Y_%m_%d')}_orb{j}"
-    #temp_dir=f"/home/louis/MATS/MATS-Data/EGU_OM/{start_time.strftime('%Y_%m_%d')}_orb{j}"
-    #temp_dir=f"/home/louis/MATS/MATS-Data/EGU_OM/2023_04_10/{start_time.strftime('%Y_%m_%d')}_orb{j}"
-    # temp_dir=f"/home/louis/MATS/MATS-Data/EGU_OM/2023_04_07/"
+    temp_dir=f"{orb_dir}/{start_time.strftime('%Y_%m_%d')}_orb{j}"
+        
     
-    print(temp_dir)
 
     for i in range(0,sets):
         try:
@@ -199,27 +214,13 @@ for j in range(0,len(orb_ind)):
         
         lon_points = lon_points%360
 
-    # quick artifact fix
-    # k = np.shape(im_points)[0]
-    # print(k)
-        
-    # mask_cube = np.array([mask])
-    # for i in range(k-1):
-    #     mask_cube = np.append(mask_cube,np.array([mask]),axis=0)
-        
-    # im_points = im_points[~mask_cube]
-    # lon_points = lon_points[~mask_cube]
-    # lat_points = lat_points[~mask_cube]
-    # sza_points = sza_points[~mask_cube]
-
-        
      
-    print('stacking')
+     
+    print('stacking the images on 1 orbit path')
     # stacking images (surprisingly fast)
     stacked_im = average_stacking(im_points,lat_points,lon_points,la,lo,no_holes = True)
 
     print('adding the orbit path to the global image')
-    #stacked_im_tot = stacked_im
     stacked_im_tot = np.where(~np.isnan(stacked_im),stacked_im,stacked_im_tot)
     
 # stacked_lon = stacked_lon%360
@@ -235,7 +236,7 @@ data_crs = ccrs.PlateCarree() # projection for the geolocation data (latitude/lo
 latlon_projection = ccrs.PlateCarree() # lat/lon projection
 ortho_projectionSP = ccrs.Orthographic(central_latitude=-90,central_longitude=0) # Over the South Pole
 ortho_projectionNP = ccrs.Orthographic(central_latitude=+90,central_longitude=0) # Over the North Pole
-map_dir = "/home/louis/MATS/MATS-Data/Polar_plot"
+
 
 
 
@@ -288,15 +289,5 @@ plt.show()
 
 
 
-#%% 
-# projecting stacked image on a lat/lon projection (fastest)
-plt.close('Stacked latlon')
-plt.figure('Stacked latlon',figsize=(20,20))
-ax = plt.axes(projection=latlon_projection)
-ax.set_global()
-ax.coastlines()
-ax.gridlines()
-c = ax.pcolormesh(stacked_lon,stacked_lat,stacked_im_tot, transform=data_crs,cmap='hsv')
-plt.colorbar(c,ax=ax)
-plt.savefig(f'{temp_dir}/test.png', format='png')
-plt.show()
+
+# %%

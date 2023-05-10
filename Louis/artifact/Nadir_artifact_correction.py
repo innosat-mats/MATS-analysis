@@ -99,26 +99,26 @@ def nadir_mask(ccditems,bias_threshold):
     def func(X,b):
         return X+b
 
-    for x_art in range(0,b):
-        for y_art in range(3,a): # skipping the first 3 "reference" rows
+    for x_cor in range(0,b):
+        for y_cor in range(3,a): # skipping the first 3 "reference" rows
 
             # calculating the position of the reference pixel and the number of images offset
-            step = int(y_art//pixel_shift) # images offset between the reference and coreccted pixel
-            x_dark = x_art
-            y_dark = int(round(y_art%pixel_shift))
+            step = int(y_cor//pixel_shift) # images offset between the reference and corrected pixel
+            x_dark = x_cor
+            y_dark = int(round(y_cor%pixel_shift))
 
             X = []
             Y = []
 
             # Data points for the regression
             for i in range(n-step):
-                ccditem_art = ccditems.iloc[i+step]
-                ccditem_ref = ccditems.iloc[i]
+                ccditem_art = ccditems.iloc[i]
+                ccditem_ref = ccditems.iloc[i+step]
 
                 #check if the image taken as reference is indeed taken the right amount of time after the other image
-                if (ccditem_art['EXPDate'] - ccditem_ref['EXPDate'] - step*timedelta(seconds=2)) < timedelta(seconds= 0.01):
+                if (ccditem_ref['EXPDate'] - ccditem_art['EXPDate'] - step*timedelta(seconds=2)) < timedelta(seconds= 0.01):
                     X.append(ccditem_ref['IMAGE'][y_dark,x_dark])
-                    Y.append(ccditem_art['IMAGE'][y_art,x_art])
+                    Y.append(ccditem_art['IMAGE'][y_cor,x_cor])
             
 
             if len(X) + len(Y) > 0:
@@ -132,8 +132,8 @@ def nadir_mask(ccditems,bias_threshold):
                 return None,None 
 
 
-            im_R2[y_art,x_art] = rsquare
-            im_bias[y_art,x_art] = intercept
+            im_R2[y_cor,x_cor] = rsquare
+            im_bias[y_cor,x_cor] = intercept
 
     # thresholding the correction
     mask = im_bias>bias_threshold       
@@ -166,7 +166,7 @@ def mask_correction(ccditems,mask):
     
 
 
-def azimuth_bias_mask(ccditems,bias_threshold,az_step=5.0):
+def azimuth_bias_mask(ccditems,bias_threshold,az_list):
     """
     Function creating correction masks dependant on solar azimuth angles. The mask
     creation follows the same rules as in the function nadir_mask. The bias and R2 
@@ -177,8 +177,9 @@ def azimuth_bias_mask(ccditems,bias_threshold,az_step=5.0):
             dataframe containing the images
         bias_threshhold : float
             all bias values smaller than this value are not taken into account (set to zero)
-        az_step : float
-            number of degrees in each azimuth angle interval
+        az_list : list of float
+            list of azimuth value. The regression is made on azimuth angle intervalls with the 
+            given angles as center points 
 
     Returns:
         azimuth_masks : Pandas dataframe
@@ -186,10 +187,8 @@ def azimuth_bias_mask(ccditems,bias_threshold,az_step=5.0):
                 thresholded bias for each pixel, has the same shape as the images
             'R2_mask' : np.array[float]
                 R2 value for each pixel, has the same shape as the images
-            'azimuth_min' : float
-                minimal azimuth value in the interval (deg)
-            'azimuth_max' : float
-                maximal azimuth value in the interval (deg)
+            'azimuth' : float
+                center value of each azimuth intervall. This might not be the case 
             
     """
     # only using NADIR images to set the mask values
@@ -200,9 +199,7 @@ def azimuth_bias_mask(ccditems,bias_threshold,az_step=5.0):
     
     IM_BIAS = [] # list of bias masks
     IM_R2 = []  # list of R2 masks
-    AZ_MIN = [] # lower interval limit
-    AZ_MAX = [] # higher interval limit
-
+   
     for i in tqdm(range(n)):
         ccditem = ccditems.iloc[i]
         NADIR_AZ.append(nadir_az(ccditem))      
@@ -210,17 +207,25 @@ def azimuth_bias_mask(ccditems,bias_threshold,az_step=5.0):
     NADIR_AZ = np.array(NADIR_AZ)
 
     
-    az_min = min(NADIR_AZ)
     az_max = max(NADIR_AZ)
-    nb_int = int((az_max-az_min)//az_step) # number of intervals
-    angs = np.linspace(az_min,az_max,nb_int)
 
-    for i in tqdm(range(len(angs)-1)):
-        ang_min = angs[i] # lower interval limit
-        ang_max = angs[i+1] # higher interval limit
+    
+
+    for i in tqdm(range(len(az_list))):
+        
+        if i == 0:
+            az_min = min(NADIR_AZ) # lower interval limit
+        else :
+            az_min = (az_list[i-1] + az_list[i])/2.0 # lower interval limit
+
+        if i == len(az_list)-1:
+            az_max = max(NADIR_AZ) # higher interval limit
+        else :
+            az_max = (az_list[i+1] + az_list[i])/2.0 # higher interval limit
+        
         
         # indexes of ccditems with an angle between ang_min and ang_max
-        indexes = (NADIR_AZ>ang_min) & (NADIR_AZ<ang_max)
+        indexes = (NADIR_AZ>az_min) & (NADIR_AZ<az_max)
 
         if np.any(indexes): # if ccditems exist in this angle interval
             # regression on the selected images
@@ -231,14 +236,151 @@ def azimuth_bias_mask(ccditems,bias_threshold,az_step=5.0):
 
         IM_BIAS.append(bias_mask)
         IM_R2.append(R2_mask)
-        AZ_MIN.append(ang_min)
-        AZ_MAX.append(ang_max)
+        
     
     # creating dataframe
     azimuth_masks = pd.DataFrame({'bias_mask': IM_BIAS,
                                  'R2_mask': IM_R2,
-                                 'azimuth_min': AZ_MIN,
-                                 'azimuth_max': AZ_MAX})
+                                 'azimuth': az_list})
+    return azimuth_masks
+
+
+
+
+def azimuth_bias_mask2(ccditems,bias_threshold,az_list):
+    """
+    Function creating correction masks dependant on solar azimuth angles. The mask
+    creation follows the same rules as in the function nadir_mask. The bias and R2 
+    masks are created for each azimuth angle intervall.     
+   
+    Arguments:
+        ccditems : Panda dataframe
+            dataframe containing the images
+        bias_threshhold : float
+            all bias values smaller than this value are not taken into account (set to zero)
+        az_list : list of float
+            list of azimuth value. The regression is made on azimuth angle intervalls with the 
+            given angles as center points 
+
+    Returns:
+        azimuth_masks : Pandas dataframe
+            'bias_mask' : np.array[float]
+                thresholded bias for each pixel, has the same shape as the images
+            'R2_mask' : np.array[float]
+                R2 value for each pixel, has the same shape as the images
+            'azimuth' : float
+                center value of each azimuth intervall. This might not be the case 
+            
+    """
+    # only using NADIR images to set the mask values
+    ccditems = ccditems[ccditems['CCDSEL'] == 7]
+    n = len(ccditems)
+    a,b = np.shape(ccditems.iloc[0]['IMAGE'])
+
+    pixel_shift = 2.6 # pixel shift along the y axis between 2 consecutive images. For a sampling time of 2s it is equivalent to 2.6 pixels
+    
+    im_points = np.zeros((n,a,b)) # array containing all the pixel values
+    NADIR_AZ = [] # list of nadir solar azimuth angles
+    EXP_DATE = [] # list of exposition dates
+    
+    IM_BIAS = [] # list of bias masks
+    IM_R2 = []  # list of R2 masks
+   
+    # filling the several arrays
+    for i in tqdm(range(n)):
+        ccditem = ccditems.iloc[i]
+        NADIR_AZ.append(nadir_az(ccditem)) 
+        im = ccditem['IMAGE']
+        im_points [i,:,:] = im
+        EXP_DATE.append(ccditem['EXPDate'])
+
+    NADIR_AZ = np.array(NADIR_AZ)
+    EXP_DATE = np.array(EXP_DATE)
+
+    # intermediate function for regression (only the bias is optimized)
+    def func(X,b):
+        return X+b
+    
+
+    for i in tqdm(range(len(az_list))): # looping on the azimuth angle intervals
+        
+        # lower interval limit
+        if i == 0:
+            az_min = min(NADIR_AZ) 
+        else :
+            az_min = (az_list[i-1] + az_list[i])/2.0
+
+        # higher interval limit
+        if i == len(az_list)-1:
+            az_max = max(NADIR_AZ) 
+        else :
+            az_max = (az_list[i+1] + az_list[i])/2.0 
+        
+        
+        # regression on the selected images
+        im_R2 = np.ones_like(im_points[0,:,:]) # R2 values for each pixel
+        im_bias = np.zeros_like(im_points[0,:,:]) # bias value for each pixel
+
+        for x_cor in range(0,56):
+            if (x_cor<40) or (43<x_cor):
+                y0 = 0 # lower row index of the reference zone (first 3 rows in the image)
+                corrected_rows = [3,4,5,6,7,8,9,10,11,12,13] # row index of the corrected pixels
+            else :
+                y0 = 8 # lower row index of the reference zone
+                corrected_rows = [0,1,2,3,4,5,6,7,11,12,13] # row index of the corrected pixels
+            
+
+            for y_cor in corrected_rows: 
+                # calculating the position of the reference pixel and the number of images offset
+                step = int((y_cor-y0)//pixel_shift) # images offset between the reference and corrected pixel
+                x_ref= x_cor
+                y_ref = int(round((y_cor-y0)%2.6+y0)) # row index of the pixel taken as reference
+
+                print(x_cor,y_cor,step,y_ref)
+
+                X = [] # list of reference pixel values
+                Y = [] # list of artifact pixel values
+
+                az_index_cor = (az_min < NADIR_AZ) & (NADIR_AZ < az_max) # indices for the images with in the given azimuth angle interval (the pixels to be corrected are taken from these images)
+                if step > 0:
+                    cor_indexes = np.arange(n)[az_index_cor][:-step] # indices of the corresponding reference images where the reference pixel is taken
+                else:
+                    cor_indexes = np.arange(n)[az_index_cor][step:] # indices of the corresponding reference images where the reference pixel is taken
+
+
+                if len(cor_indexes) > 0 : 
+                    for art_ind in cor_indexes: # iterating over the images (image index of the artifact pixel)
+                        ref_ind = art_ind + step # image index of the reference 
+                        #check if the image taken as reference is indeed taken the right amount of time after the other image
+                        if (EXP_DATE[art_ind] - EXP_DATE[ref_ind] - step*timedelta(seconds=2)) < timedelta(seconds= 0.01):
+                            X.append(im_points[ref_ind,y_ref,x_ref])
+                            Y.append(im_points[art_ind,y_cor,x_cor])
+
+                if len(X) + len(Y) > 0:
+                # linear regression, the slope is set to 1 
+                    fit_param, cov = curve_fit(func,X,Y)
+                    abs_err = Y-func(X,fit_param[0])
+                    rsquare = 1.0 - (np.var(abs_err)/np.var(Y))
+                    intercept = fit_param[0]
+                    im_R2[y_cor,x_cor] = rsquare
+                    im_bias[y_cor,x_cor] = intercept
+                else : 
+                    im_R2[y_cor,x_cor] = None
+                    im_bias[y_cor,x_cor] = None               
+        
+        # thresholding the correction
+        mask = im_bias>bias_threshold       
+        bias_mask = im_bias * mask
+        R2_mask = im_R2 * mask
+            
+        IM_BIAS.append(bias_mask)
+        IM_R2.append(R2_mask)
+        
+    
+    # creating dataframe
+    azimuth_masks = pd.DataFrame({'bias_mask': IM_BIAS,
+                                 'R2_mask': IM_R2,
+                                 'azimuth': az_list})
     return azimuth_masks
 
 
@@ -265,6 +407,7 @@ def azimuth_corr_mask(ccditems, azimuth_masks):
     corrected_ccditems = ccditems.copy()
 
     IMAGES = [] # list of corrected images
+    MASK_AZIMUTH = azimuth_masks['azimuth']
 
     for index in tqdm(ccditems.index):
         azimuth = nadir_az(ccditems.loc[index])
@@ -274,9 +417,9 @@ def azimuth_corr_mask(ccditems, azimuth_masks):
         distance = 360.0
         best_ind = 0
         for j in range(m):
-            if (abs(azimuth_masks.iloc[j]['azimuth_min']-azimuth) < distance or abs(azimuth_masks.iloc[j]['azimuth_max']-azimuth) < distance) and (type(azimuth_masks.iloc[j]['bias_mask']) != type(None)):
+            if abs(MASK_AZIMUTH[j]-azimuth) < distance:
                 best_ind = j
-                distance = min(abs(azimuth_masks.iloc[j]['azimuth_min']-azimuth), abs(azimuth_masks.iloc[j]['azimuth_max']-azimuth))
+                distance = abs(MASK_AZIMUTH[j]-azimuth)
         mask = azimuth_masks['bias_mask'][best_ind]
 
         # substracting the mask
@@ -326,25 +469,23 @@ def azimuth_masks_plot(azimuth_masks,angles):
         distance = 360.0
         best_ind = 0
         for j in range(m):
-            if (abs(azimuth_masks.iloc[j]['azimuth_min']-ang) < distance or abs(azimuth_masks.iloc[j]['azimuth_max']-ang) < distance) and (type(azimuth_masks.iloc[j]['bias_mask']) != type(None)):
+            if abs(azimuth_masks.iloc[j]['azimuth']-ang) < distance and (type(azimuth_masks.iloc[j]['bias_mask']) != type(None)):
                 best_ind = j
-                distance = min(abs(azimuth_masks.iloc[j]['azimuth_min']-ang), abs(azimuth_masks.iloc[j]['azimuth_max']-ang))
+                distance = abs(azimuth_masks.iloc[j]['azimuth']-ang)
         mask = azimuth_masks['bias_mask'][best_ind]
         R2 = azimuth_masks['R2_mask'][best_ind]
-        az_min = azimuth_masks['azimuth_min'][best_ind]
-        az_max = azimuth_masks['azimuth_max'][best_ind]
+        az = azimuth_masks['azimuth'][best_ind]
+        
 
         
         fig, (ax1, ax2) = plt.subplots(1, 2, layout='constrained')
-        fig.suptitle(f"{az_min:.2f} deg < solar azimuth angle < {az_max:.2f} deg")
-        ax1 = plt.subplot(121)
+        fig.suptitle(f" solar azimuth angle : {az:.2f} deg")
         fig = ax1.imshow(mask,origin='lower')
         ax1.set_title('bias mask')
-        plt.colorbar(fig,ax=ax1)
+        plt.colorbar(fig,ax=ax1,fraction=0.02)
             
-        ax2 = plt.subplot(122)
-        fig = ax2.imshow(R2,vmin=0.8,vmax=1.0,origin='lower')
-        plt.colorbar(fig,ax=ax2)
+        fig = ax2.imshow(R2,vmin=0.5,vmax=1.0,origin='lower')
+        plt.colorbar(fig,ax=ax2,fraction=0.02)
         ax2.set_title('R2 values')
         plt.show()
         
@@ -356,40 +497,7 @@ def azimuth_masks_plot(azimuth_masks,angles):
 
 
 
-# %%
 
-start_time_mask = DT.datetime(2023, 4, 13, 3, 30, 0)
-stop_time_mask = DT.datetime(2023, 4, 13, 4, 30, 0)
-
-start_time_mask_1day = DT.datetime(2023, 4, 13, 0, 0, 0)
-stop_time_mask_1day = DT.datetime(2023, 4, 14, 0, 0, 0)
-
-start_time = DT.datetime(2023, 4, 14, 0, 0, 0)
-stop_time = DT.datetime(2023, 4, 14, 2, 0, 0)
-
-# filter selecting Nadir chanel
-filter={'CCDSEL': [7,7]}
-
-df1a_tot= read_MATS_data(start_time, stop_time,filter,level='1a',version='0.5')
-df1a_tot_mask= read_MATS_data(start_time_mask, stop_time_mask,filter,level='1a',version='0.5')
-df1a_tot_mask_1day= read_MATS_data(start_time_mask_1day, stop_time_mask_1day,filter,level='1a',version='0.5')
-df1a_tot = df1a_tot[~np.isnan(df1a_tot['satlat'])]
-df1a_tot_mask = df1a_tot_mask[~np.isnan(df1a_tot_mask['satlat'])]
-df1a_tot_mask_1day = df1a_tot_mask_1day[~np.isnan(df1a_tot_mask_1day['satlat'])]
-print(len(df1a_tot))
-df1a = df1a_tot
-print(len(df1a_tot_mask))
-df1a_mask = df1a_tot_mask
-print(len(df1a_tot_mask_1day))
-df1a_mask_1day = df1a_tot_mask_1day
-
-#%%
-azimuth_masks = azimuth_bias_mask(df1a_mask,-6000,az_step = 1.0)
-
-azimuth_masks_5deg = azimuth_bias_mask(df1a_mask,-6000,az_step = 5.0)
-
-azimuth_masks_1day = azimuth_bias_mask(df1a_mask_1day,-6000,az_step = 1.0)
-
-df_corr = azimuth_corr_mask(df1a,azimuth_masks)
 
 # %%
+
