@@ -35,237 +35,10 @@ map_dir = "/home/louis/MATS/MATS-Data/Polar_plot_test" # directory where the plo
 start_time = DT.datetime(2023, 4, 11, 13, 0, 0)
 stop_time = DT.datetime(2023, 4, 11, 17, 0, 0)
 
+nb_core = 4 # number of CPU cores to use in multiprocessing
+
 
 #%%
-
-def pix_deg(ccditem, xpixel, ypixel):
-    """
-    Function to get the x and y angle from a pixel relative to the center of the CCD
-        
-    Arguments
-    ----------
-    ccditem : CCDitem
-        measurement
-    xpixel : int or array[int]
-        x coordinate of the pixel(s) in the image
-    ypixel : int or array[int]
-        y coordinate of the pixel(s) in the image
-        
-    Returns
-    -------
-    xdeg : float or array[float]
-        angular deviation along the x axis in degrees (relative to the center of the CCD)
-    ydeg : float or array[float]
-        angular deviation along the y axis in degrees (relative to the center of the CCD) 
-    """
-    h = 6.9 # height of the CCD in mm
-    d = 27.6 # width of the CCD in mm
-    # selecting effective focal length
-    if (ccditem['CCDSEL']) == 7: # NADIR channel
-        f = 50.6 # effective focal length in mm
-    else: # LIMB channels
-        f = 261    
-    
-    ncskip = ccditem['NCSKIP']
-    try:
-        ncbin = ccditem['NCBIN CCDColumns']
-    except:
-        ncbin = ccditem['NCBINCCDColumns']
-    nrskip = ccditem['NRSKIP']
-    nrbin = ccditem['NRBIN']
-    ncol = ccditem['NCOL'] # number of columns in the image MINUS 1
-
-    y_disp = (h/(f*511))
-    x_disp = (d/(f*2048))
-  
-    if (ccditem['CCDSEL']) in [1, 3, 5, 6, 7]:
-        xdeg = np.rad2deg(np.arctan(x_disp*((2048-ncskip - (ncol+1)*ncbin + ncbin*(xpixel+0.5)) - 2047./2)))
-    else:
-        xdeg = np.rad2deg(np.arctan(x_disp*(ncskip + ncbin * (xpixel+0.5) - 2047./2)))
-        
-    ydeg = np.rad2deg(np.arctan(y_disp*(nrskip + nrbin * (ypixel+0.5) - 510./2)))
-
-    return xdeg, ydeg
-
-def deg_map(ccditem):
-    """
-    Function to get the x and y angular deviation map for each pixel of the image. 
-    The deviation is given in degrees relative to the center of the CCD
-    
-    
-    Arguments
-    ----------
-    ccditem : CCDitem
-        measurement
-            
-    Returns
-    -------
-    xmap : array[float]
-        angular deviation map along the x axis in degrees (relative to the center of the CCD)
-    ymap : array[float]
-        angular deviation map along the y axis in degrees (relative to the center of the CCD) 
-    """    
-    im = ccditem['IMAGE']
-
-    a,b = np.shape(im)
-    X = range(b)
-    Y = range(a)
-    xpixel, ypixel = np.meshgrid(X,Y)
-    xmap,ymap = pix_deg(ccditem, xpixel, ypixel)
-    return xmap,ymap
-
-
-def funheight_square(s, t, pos, FOV):
-    """
-    Function to get the distance between a point at position pos + s*FOV and the surface of the Geoid (wgs84 model),
-     at time t.
-    
-    
-    Arguments
-    ----------
-    s : float
-        length along the straight line
-    t : skyfield.timelib.Time
-        time
-    pos : array[float]
-        position in space where the line starts (~position of MATS). Array of 3 position coordinates in m in the ICRF reference frame
-    FOV : array[float]
-        angle of the line (direction of the line), array of 3 elements in the IFRC reference frame
-            
-    Returns
-    -------
-    elevation**2 : float
-        elevation squared of the point pos+s*FOV in m**2
-    """
-    newp = pos + s * FOV
-    newp = ICRF(Distance(m=newp).au, t=t, center=399)
-    return wgs84.subpoint(newp).elevation.m**2
-
-
-def findsurface(t, pos, FOV):
-    """
-    Function to get the distance between a point at position pos and the surface of the Geoid (wgs84 model),
-     at time t, along the line oriented along the FOV direction and starting at position pos
-    
-    
-    Arguments
-    ----------
-    t : skyfield.timelib.Time
-        time
-    pos : array[float]
-        position in space where the line starts (~position of MATS). Array of 3 position coordinates in m in the ICRF reference frame
-    FOV : array[float]
-        angle of the line (direction of the line), array of 3 elements in the IFRC reference frame
-            
-    Returns
-    -------
-    res : OptimizeResult object
-        res.x is the distance found in m   
-    """
-    res = minimize_scalar(funheight_square, args=(t, pos, FOV), bracket=(3e5, 8e5))
-    return res
-
-
-def NADIR_geolocation(ccditem,x_sample=None,y_sample=None,interp_method='quintic'):
-    """
-    Function to get the latitude, longitude and solar zenith angle map for each pixel of the image.
-    The values are calculated for some points and then interpolated for each pixel.
-    WARNING : no images are flipped
-    
-    Arguments
-    ----------
-    ccditem : CCDitem
-        measurement
-    x_sample : int
-        number of geolocated points along the x axis used for the interpolation. Default value is None, which means that there is no interpolation along the x-axis (each value is computed)
-    y_step : int
-        number of geolocated points along the y axis used for the interpolation. Default value is None, which means that there is no interpolation along the y-axis (each value is computed)
-    interp_method :
-        interpolation method : 'linear', 'nearest', 'slinear', 'cubic', 'quintic' and 'pchip'
-        WARNING : choose the minimum x and y sampling according to the interpolation method
-            
-    Returns
-    -------
-    lat_map : array[float]
-        map giving the latitude for each pixel in the image
-    lon_map : array[float]
-        map giving the longitude for each pixel in the image
-    sza_map : array[float]
-        map giving the solar zenith angle for each pixel in the image
-    """
-    im = ccditem['IMAGE']
-    x_deg_map, y_deg_map = deg_map(ccditem) # creating angle deviation map for each pixel (degrees)
-    a,b = np.shape(im)
-
-    metoOHB  = R.from_matrix([[0,0,-1],[0,-1,0],[-1,0,0]])
-    ts=sfapi.load.timescale()
-    t=ts.from_datetime((ccditem['EXPDate']+timedelta(seconds=ccditem['TEXPMS']/(2*1000))).replace(tzinfo=sfapi.utc)) # exposure time (middle of the exposure timespan)  
-    q=ccditem.afsAttitudeState
-    quat=R.from_quat(np.roll(q,-1)) # quaternion of MATS attitude (for the satellite frame) 
-    pos=ccditem.afsGnssStateJ2000[0:3] # position of MATS
-    
-    if x_sample == None or x_sample >= b: # no upsampling
-        x_sample = b
-    if y_sample == None or y_sample >= a: # no upsampling
-        y_sample = a
-    
-    interpolation = True
-    if x_sample == b and y_sample == a: # if both axis have enough sampling points, there is no interpolation
-        interpolation = False
-
-    xd = np.linspace(np.min(x_deg_map),np.max(x_deg_map),x_sample) # sampled angles on the x axis
-    yd = np.linspace(np.min(y_deg_map),np.max(y_deg_map),y_sample) # sampled angles on the y axis
-    x_deg_sample,y_deg_sample = np.meshgrid(xd,yd)
-
-    if not interpolation:
-        y_deg_sample,x_deg_sample = y_deg_map,x_deg_map # the sampled angles are the calculated angles for each pixel
-
-    # sampled latitude, longitude and solar zenith angle values
-    LAT = np.zeros((y_sample,x_sample))
-    LON = np.zeros((y_sample,x_sample))
-    SZA = np.zeros((y_sample,x_sample))
-
-    # computing the latitude, longitude and solar zenith angles at the intersection of the line of sight and the earth surface
-    # only the line of sights from some sampled pixels are computed
-    for i in range(y_sample):
-        for j in range(x_sample):
-                # angular transformations
-                # rotation from the line of sight of the LIMB imager to the line of sight of the NADIR pixel
-                angle = R.from_euler('XYZ', [x_deg_sample[i,j],-(90-23)+y_deg_sample[i,j],0] , degrees=True).apply([1, 0, 0])
-                FOV = quat.apply(metoOHB.apply(angle)) # attitude state for the line of sight of the NADIR pixel    
-                # finding the distance between the point pos and the Geoid along the line of sight
-                res = findsurface(t,pos,FOV)
-                newp = pos + res.x * FOV 
-                newp = ICRF(Distance(m=newp).au, t=t, center=399) # point at the intersection between the line of sight at the pixel and the Geoid surface
-                LAT[i,j]=wgs84.subpoint(newp).latitude.degrees # latitude of the point
-                LON[i,j]=wgs84.subpoint(newp).longitude.degrees # longitude of the point E [-180,+180] 
-
-                # finding the solar zenith angle of the point
-                planets = sfapi.load('de421.bsp')
-                earth=planets['Earth']
-                sun=planets['Sun']
-                SZA[i,j]=90-((earth+wgs84.subpoint(newp)).at(t).observe(sun).apparent().altaz())[0].degrees
-    
-    # to get a continuous longitudinal field
-    if np.max(LON)-np.min(LON) > 300: # this condition is met if points are on both sides of the -180/+180 deg line
-        LON = np.where(LON<0,LON+360,LON)
-
-    if interpolation: # interpolating the results along all the pixels
-        # each interpolator object takes as argument an y and x angular deviation and gives a lat/lon/sza value
-        interp_lat = RegularGridInterpolator((yd,xd),LAT,interp_method,bounds_error=False,fill_value=None) 
-        interp_lon = RegularGridInterpolator((yd,xd),LON,interp_method,bounds_error=False,fill_value=None)
-        interp_sza = RegularGridInterpolator((yd,xd),SZA,interp_method,bounds_error=False,fill_value=None)
-        # interpolating on the real angular deviations for each pixel
-        lat_map = interp_lat((y_deg_map,x_deg_map))
-        lon_map = interp_lon((y_deg_map,x_deg_map))
-        sza_map = interp_sza((y_deg_map,x_deg_map))
-    else: # no interpolation       
-        lat_map = LAT
-        lon_map = LON
-        sza_map = SZA
-
-    return(lat_map,lon_map,sza_map)
-
 
 def parallel_geolocating(part,ccditems,temp_dir):
 
@@ -292,6 +65,8 @@ def parallel_geolocating(part,ccditems,temp_dir):
         end_point=n
 
     steps = end_point-start_point
+
+    a,b = np.shape(ccditems.iloc[0]['IMAGE'])
 
     # defining coordinates arrays
     lat_points = np.zeros((steps,a,b))
@@ -488,7 +263,7 @@ for i in range(len(orb_times)):
     args = []
     for i in range(sets):
         args.append([i,df1a_orb,temp_dir])
-    pool = multiprocessing.Pool(4)
+    pool = multiprocessing.Pool(nb_core)
     pool.starmap(parallel_geolocating,args)
 
 #%% 
@@ -588,7 +363,7 @@ for i in range(len(orb_times)):
 
 plt.colorbar(c,ax=ax)
 #ax.axis('off')
-plt.savefig(f"{map_dir}\\nadir_{orb_times[0][0].strftime('%Y_%m_%d')}_NP.png", format='png',dpi=250)
+plt.savefig(f"{map_dir}\\nadir_{orb_times[0][0].strftime('%Y_%m_%d_%H_%M_%S')}_NP.png", format='png',dpi=250)
 plt.show()
 
 
@@ -611,7 +386,7 @@ for i in range(len(orb_times)):
 
 plt.colorbar(c,ax=ax)
 #ax.axis('off')
-plt.savefig(f"{map_dir}\\nadir_{orb_times[0][0].strftime('%Y_%m_%d')}_SP.png", format='png',dpi=250)
+plt.savefig(f"{map_dir}\\nadir_{orb_times[0][0].strftime('%Y_%m_%d_%H_%M_%S')}_SP.png", format='png',dpi=250)
 plt.show()
 
 

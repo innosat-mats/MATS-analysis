@@ -283,7 +283,7 @@ for i in range(len(orb_times)):
 
 plt.colorbar(c,ax=ax)
 #ax.axis('off')
-plt.savefig(f"{map_dir}/nadir_{orb_times[0][0].strftime('%Y_%m_%d')}_SP.png", format='png',dpi=250)
+plt.savefig(f"{map_dir}/nadir_{orb_times[0][0].strftime('%Y_%m_%d')}_SP.png", format='png',dpi=500)
 plt.show()
 
 
@@ -300,3 +300,4 @@ c = ax.pcolormesh(stacked_lon,stacked_lat,stacked_im_tot, transform=data_crs,cma
 plt.colorbar(c,ax=ax)
 plt.savefig(f'{temp_dir}/test.png', format='png')
 plt.show()
+# %%

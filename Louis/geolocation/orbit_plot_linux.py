@@ -22,15 +22,118 @@ from mats_utils.geolocation.temp_nadir import *
 # parameters to change
 
 orb_dir = "/home/louis/MATS/MATS-Data/Geolocation_storage"
-map_dir = "/home/louis/MATS/MATS-Data/Polar_plot_test"
+map_dir = "/home/louis/MATS/MATS-Data/Polar_plot_corrected"
 
-start_time = DT.datetime(2023, 4, 11, 16, 0, 0)
-stop_time = DT.datetime(2023, 4, 11, 17, 0, 0)
+start_time = DT.datetime(2023, 4, 30, 0, 0, 0)
+stop_time = DT.datetime(2023, 5, 1, 0, 0, 0)
 
-a = 14
-b = 56
+
+nb_core = 4 # number of CPU cores to use in multiprocessing
+
+masking = False
+
+simple_mask = np.array([[ True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True],
+       [ True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True],
+       [ True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True],
+       [ True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True],
+       [ True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True],
+       [ True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True, False, False,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True],
+       [ True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True, False, False, False, False,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True],
+       [ True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True, False, False, False, False,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True],
+       [ True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True, False, False, False, False, False,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True],
+       [ True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True, False, False, False, False,
+        False,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True],
+       [ True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True, False, False, False,
+        False,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True],
+       [ True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True, False, False,
+        False,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True],
+       [ True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True],
+       [ True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True,  True,  True,  True,  True,  True,  True,  True,
+         True,  True]])
+
+
 #%%
-def parallel_geolocating(part,ccditems,temp_dir):
+def parallel_geolocating(part,ccditems,temp_dir,geolocation=True):
 
     global lat_points, lon_points, sza_points, im_points
 
@@ -56,6 +159,8 @@ def parallel_geolocating(part,ccditems,temp_dir):
 
     steps = end_point-start_point
 
+    a,b = np.shape(ccditems.iloc[0]['IMAGE'])
+
     # defining coordinates arrays
     lat_points = np.zeros((steps,a,b))
     lon_points = np.zeros((steps,a,b))
@@ -70,16 +175,21 @@ def parallel_geolocating(part,ccditems,temp_dir):
     for i in tqdm(range(start_point, end_point)):
         ccditem = ccditems.iloc[i]
         im = ccditem['IMAGE']
+        if masking:
+            im = im*simple_mask
         try:
-            lat_map,lon_map,sza_map = NADIR_geolocation(ccditem,x_sample=6,y_sample=6,interp_method='quintic')
-            lat_points[k, :, :] = lat_map
-            lon_points[k, :, :] = lon_map   
-            sza_points[k, :, :] = sza_map
-            im_points[k, :, :] = im 
+            if geolocation:
+                lat_map,lon_map,sza_map = NADIR_geolocation(ccditem,x_sample=6,y_sample=6,interp_method='quintic')
+                lat_points[k, :, :] = lat_map
+                lon_points[k, :, :] = lon_map   
+                sza_points[k, :, :] = sza_map
 
-            np.save(arr=lat_points,file=f'{temp_dir}/lat_points{part}')
-            np.save(arr=lon_points,file=f'{temp_dir}/lon_points{part}')
-            np.save(arr=sza_points,file=f'{temp_dir}/sza_points{part}')
+                np.save(arr=lat_points,file=f'{temp_dir}/lat_points{part}')
+                np.save(arr=lon_points,file=f'{temp_dir}/lon_points{part}')
+                np.save(arr=sza_points,file=f'{temp_dir}/sza_points{part}')
+            
+            im_points[k, :, :] = im 
+            
             np.save(arr=im_points,file=f'{temp_dir}/im_points{part}')
 
         except IOError as e:
@@ -112,6 +222,9 @@ df1a_tot.sort_values('EXPDate')
 df1a = df1a_tot[:]
 df1a = df1a[~np.isnan(df1a['satlat'])]
 
+dir_storage = "/home/louis/MATS/MATS-Data/Artifact_correction/mask_04_13_04_23_2000.pkl"
+df1a = artifact_correction(df1a,dir_storage,mode='mask')
+
 
 #%% 
 # slice orbite by orbit
@@ -138,6 +251,9 @@ orb_ind.append([ind_start,len(df1a)-1])
 
 print(f"Geolocating images")
 
+
+geolocation = False
+
 for i in range(len(orb_times)):
     orb_start = orb_times[i][0]
     orb_end = orb_times[i][1]
@@ -160,8 +276,8 @@ for i in range(len(orb_times)):
     sets = int(np.ceil(len(df1a_orb)/files_per_part))
     args = []
     for i in range(sets):
-        args.append([i,df1a_orb,temp_dir])
-    pool = multiprocessing.Pool(4)
+        args.append([i,df1a_orb,temp_dir,geolocation])
+    pool = multiprocessing.Pool(nb_core)
     pool.starmap(parallel_geolocating,args)
 
 #%% 
@@ -169,7 +285,7 @@ for i in range(len(orb_times)):
 
 # defining the new coordinate grids for the stacked image
 lonmin,lonmax = 0,+360
-latmin, latmax = -90,-10
+latmin, latmax = -90,+0
 
 nb_lat = ceil((latmax-latmin)/0.05) # number of latitude steps, by default we use a latitude resolution of .05 deg (~ same as NADIR images)
 nb_lon = ceil((lonmax-lonmin)/0.05) # number of longitude steps, , by default we use a longitude resolution of .05 deg (~ same as NADIR images)
@@ -213,7 +329,7 @@ for j in range(0,len(orb_ind)):
             continue 
         
         lon_points = lon_points%360
-
+        #im_points = sza_points
      
      
     print('stacking the images on 1 orbit path')
@@ -221,8 +337,9 @@ for j in range(0,len(orb_ind)):
     stacked_im = average_stacking(im_points,lat_points,lon_points,la,lo,no_holes = True)
 
     print('adding the orbit path to the global image')
-    stacked_im_tot = np.where(~np.isnan(stacked_im),stacked_im,stacked_im_tot)
-    
+    stacked_im_tot = np.where(~np.isnan(stacked_im) & np.isnan(stacked_im_tot),stacked_im,stacked_im_tot)
+    stacked_im_tot = np.where(~np.isnan(stacked_im) & ~np.isnan(stacked_im_tot) & (stacked_im>stacked_im_tot),stacked_im,stacked_im_tot)
+
 # stacked_lon = stacked_lon%360
 
 
