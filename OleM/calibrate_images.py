@@ -7,7 +7,7 @@ from mats_l1_processing.instrument import Instrument
 from mats_l1_processing.read_parquet_functions import dataframe_to_ccd_items
 
 #%% 
-calibration_file ="/home/ochri/Projects/MATS/MATS-L1-processing/scripts/calibration_data.toml"    
+calibration_file ="/home/olemar/Projects/Universitetet/MATS/MATS-L1-processing/scripts/calibration_data.toml"    
 instrument = Instrument(calibration_file)
 
 #%% Select on explicit time
@@ -19,6 +19,7 @@ df = read_MATS_data(start_time,stop_time,version='0.5',level='1a')
 CCDitems = dataframe_to_ccd_items(df)
 
 #%%
+
 L1_calibrate(CCDitems[0],instrument)
 L1_calibrate(CCDitems[1],instrument)
 L1_calibrate(CCDitems[2],instrument)
@@ -26,6 +27,7 @@ L1_calibrate(CCDitems[3],instrument)
 L1_calibrate(CCDitems[4],instrument)
 L1_calibrate(CCDitems[5],instrument)
 L1_calibrate(CCDitems[6],instrument)
+
 
 
 #%%
