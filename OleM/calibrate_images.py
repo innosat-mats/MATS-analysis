@@ -15,6 +15,7 @@ start_time = DT.datetime(2023, 5, 4, 3, 0)
 stop_time = DT.datetime(2023, 5, 4, 3, 10)
 
 df = read_MATS_data(start_time,stop_time,version='0.5',level='1a')
+
 CCDitems = dataframe_to_ccd_items(df)
 
 #%%

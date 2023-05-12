@@ -58,17 +58,17 @@ def calibrate_pm(df):
     #ijk2=0
 
     for ik in range(0, len(PM1_Sig_bit)-1):
-        index21 = np.where(Temperatur == round(pmBkg_Tpd[ik],1))
-        index22 = np.where(Temperatur == round(pmAband_Tpd[ik],1))
+        index21 = np.where(Temperatur == round(pmBkg_Tpd[ik],1)) #OMC 2023.04.04: Shoud interpolation be used insted of lookup table?
+        index22 = np.where(Temperatur == round(pmAband_Tpd[ik],1)) #OMC 2023.04.04: Shoud interpolation be used insted of lookup table?
     
-        index23 = np.where(bitar == round(PM1_Sig_bit[ik],1))
+        index23 = np.where(bitar == round(PM1_Sig_bit[ik],1)) #OMC 2023.04.04: Shoud interpolation be used insted of lookup table?
         if index23[1].size == 0:
             pmBkg_Sig[ik] = np.NaN
             #ijk1=ijk1+1
         else:
             pmBkg_Sig[ik] = SignFM1_Rad_raw[index21[1], index23[1]]
     
-        index24 = np.where(bitar == round(PM2_Sig_bit[ik],1))
+        index24 = np.where(bitar == round(PM2_Sig_bit[ik],1)) #OMC 2023.04.04: Shoud interpolation be used insted of lookup table?
         if index24[1].size == 0:
             pmAband_Sig[ik] = np.NaN
             #ijk2=ijk2+1
@@ -91,3 +91,4 @@ def calibrate_pm(df):
     df["pm_texp"] = pm_texp # The photometer exposure time [s]
 
     return(df)
+# %%
