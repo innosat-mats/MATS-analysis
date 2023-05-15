@@ -7,9 +7,10 @@ import matplotlib.pyplot as plt
 from Keogram import makeStripMatrix
 from matplotlib.backends.backend_pdf import PdfPages
 import numpy as np
+import time
 
 # Determine the main time span and settings for multiple plots
-start_time = DT.datetime(2023,2,27,00,00,0)
+start_time = DT.datetime(2023,2,26,00,00,0)
 stop_time = DT.datetime(2023,2,28,23,59,0)
 channel = 'IR1'
 strip_dir = 'v'
@@ -32,11 +33,11 @@ def getSatDates(objects):
 
 # %% puts data in file temp_data
 df = read_MATS_data(start_time,stop_time,version=0.5,level='1a',filter={"TPlat":[50,90]})
-df.to_pickle('28febdata')
+df.to_pickle('2627febdata')
 "change latitude filter depending on if you want to look at north or south pole."
 
 #%% Reads in data from file
-items = pd.read_pickle('28febdata')
+items = pd.read_pickle('2627febdata')
 items = items[items['channel'] == channel]
 print(items.iloc[0].TPlat)
 
@@ -46,9 +47,10 @@ def orbit_pdf(items, channel, strip_dir, filename, numdays, Tperiod):
     
     pdf = PdfPages(filename)
     n = 0
+    
     # loop that goes through number of days
     for day in range(1,numdays.days+1):
-        maxorbits = 15 #assumed maximum possible orbits in one day
+        maxorbits = 16 #assumed maximum possible orbits in one day
         fig, axs = plt.subplots(nrows=maxorbits, ncols=1, figsize=(8.27,40), gridspec_kw={'height_ratios': [2]*maxorbits})
         
         #mask_day = (items['EXPDate'] >= pd.to_datetime(starttime + timedelta(days=day-1),utc=True)) & (items['EXPDate'] <= pd.to_datetime(starttime + timedelta(days=day),utc=True))
@@ -56,6 +58,7 @@ def orbit_pdf(items, channel, strip_dir, filename, numdays, Tperiod):
 
         #the first subplot number
         orbnum = 1
+        
 
         #this for loop goes through the images starting from the end of previous orbit
         for i in range(n, len(items)-1):
@@ -70,8 +73,8 @@ def orbit_pdf(items, channel, strip_dir, filename, numdays, Tperiod):
                 #print(n,i)
                 #creates orbit from index n to i
                 orbit = items.iloc[n:i] 
-                #print(len(orbit))
-
+                print(len(orbit))
+                print(orbnum)
                 dates = getSatDates(orbit)
                 times_strings = [dt.strftime("%H:%M") for dt in dates]  #as strings
                 satlatitudes = getTPLatitudes(orbit)
@@ -98,15 +101,19 @@ def orbit_pdf(items, channel, strip_dir, filename, numdays, Tperiod):
                 orbnum = orbnum + 1
                 n = i+1 #start number for next orbit
                 nextorbit_startdate = items.iloc[n].EXPDate
-
+                print(n)
                 #comparing the day at start of the new orbit with the active orbits start.
                 if orbit_startdate.day != nextorbit_startdate.day:
                     #then we want to quit this for loop and start a new day
                     print("new day")
+                    print(orbit_startdate)
+                    
                     break
+        time0 = time.time()   #seems to take around 225 s which is way to slow
+        print('hej')
         pdf.savefig(fig)
         plt.close()
-        plt.show()
+        print(time.time()-time0)
     pdf.close()
   
     return
