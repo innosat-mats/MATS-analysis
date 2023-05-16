@@ -10,8 +10,8 @@ import numpy as np
 import time
 
 # Determine the main time span and settings for multiple plots
-start_time = DT.datetime(2023,2,26,00,00,0)
-stop_time = DT.datetime(2023,2,28,23,59,0)
+start_time = DT.datetime(2023,2,1,00,00,0)
+stop_time = DT.datetime(2023,2,8,00,00,0)
 channel = 'IR1'
 strip_dir = 'v'
 filename = "february.pdf"
@@ -33,11 +33,11 @@ def getSatDates(objects):
 
 # %% puts data in file temp_data
 df = read_MATS_data(start_time,stop_time,version=0.5,level='1a',filter={"TPlat":[50,90]})
-df.to_pickle('2627febdata')
+df.to_pickle('febdata')
 "change latitude filter depending on if you want to look at north or south pole."
 
 #%% Reads in data from file
-items = pd.read_pickle('2627febdata')
+items = pd.read_pickle('febdata')
 items = items[items['channel'] == channel]
 print(items.iloc[0].TPlat)
 
@@ -92,7 +92,7 @@ def orbit_pdf(items, channel, strip_dir, filename, numdays, Tperiod):
                     axs[0].set_xticklabels(times_strings[::20], rotation = 30) 
                     
                 #plots the orbit found from n to current i
-                axs[orbnum].pcolormesh(dates,range(matrix.shape[0]),matrix)  #vmax = 4500
+                axs[orbnum].pcolormesh(dates,range(matrix.shape[0]),matrix, rasterized = True) # rasterized makes a pixel image instead of vector graphic
                 axs[orbnum].set_title(f"Orbit {orbnum}")
                 axs[orbnum].set_xticks(dates[::20])
                 axs[orbnum].set_xticklabels(times_strings[::20], rotation = 30) 
@@ -111,9 +111,11 @@ def orbit_pdf(items, channel, strip_dir, filename, numdays, Tperiod):
                     break
         time0 = time.time()   #seems to take around 225 s which is way to slow
         print('hej')
+        #fig.savefig('plot.png')
         pdf.savefig(fig)
-        plt.close()
         print(time.time()-time0)
+        plt.close(fig)
+        
     pdf.close()
   
     return
