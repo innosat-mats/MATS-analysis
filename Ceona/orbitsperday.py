@@ -32,7 +32,7 @@ def getSatDates(objects):
     return listofdates
 
 # %% puts data in file temp_data
-df = read_MATS_data(start_time,stop_time,version=0.5,level='1a',filter={"TPlat":[50,90]})
+df = read_MATS_data(start_time,stop_time,version=0.5,level='1a',filter={"TPlat":[50,90],'CCDSEL': [1, 1], 'NROW': [0,400]})
 df.to_pickle('12febdata')
 "change latitude filter depending on if you want to look at north or south pole."
 
@@ -76,7 +76,7 @@ def orbit_pdf(items, channel, strip_dir, filename, numdays, Tperiod):
                 satlatitudes = getTPLatitudes(orbit)
                 #gets the matrix corresponding to that orbit
                 matrix = makeStripMatrix(orbit,channel,strip_dir)
-                if len(orbit) == 0 or len(matrix.shape) == 1:
+                if len(orbit) == 0 :
                     continue
                 if orbnum == 1:
                     #plotting latitude vs time for the first orbit
