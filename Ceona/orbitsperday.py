@@ -10,11 +10,11 @@ import numpy as np
 import time
 
 # Determine the main time span and settings for multiple plots
-start_time = DT.datetime(2023,2,1,00,00,0)
-stop_time = DT.datetime(2023,2,3,00,00,0)
-channel = 'IR1'
+start_time = DT.datetime(2023,2,22,00,00,0)
+stop_time = DT.datetime(2023,3,1,00,00,0)
+channel = 'IR2'
 strip_dir = 'v'
-filename = "12february.pdf"
+filename = "4weekfebIR2.pdf"
 numdays = stop_time-start_time #number of days
 Tperiod = timedelta(minutes=100)
 
@@ -32,12 +32,12 @@ def getSatDates(objects):
     return listofdates
 
 # %% puts data in file temp_data
-df = read_MATS_data(start_time,stop_time,version=0.5,level='1a',filter={"TPlat":[50,90],'CCDSEL': [1, 1], 'NROW': [0,400]})
-df.to_pickle('12febdata')
+df = read_MATS_data(start_time,stop_time,version=0.5,level='1a',filter={"TPlat":[50,90],'NROW': [0,400]})
+df.to_pickle('22to28febdata')
 "change latitude filter depending on if you want to look at north or south pole."
 
 #%% Reads in data from file
-items = pd.read_pickle('12febdata')
+items = pd.read_pickle('22to28febdata')
 items = items[items['channel'] == channel]
 
 # %% Saves keograms for every orbit per day on a pdf page.
@@ -70,12 +70,14 @@ def orbit_pdf(items, channel, strip_dir, filename, numdays, Tperiod):
                 continue
             if deltat > Tperiod/2:  #if this is True, next image will belong to next orbit.                         
                 #creates orbit from index n to i
+                print((n,i))
                 orbit = items.iloc[n:i]
                 dates = getSatDates(orbit)
                 times_strings = [dt.strftime("%H:%M") for dt in dates]  #as strings
                 satlatitudes = getTPLatitudes(orbit)
                 #gets the matrix corresponding to that orbit
                 matrix = makeStripMatrix(orbit,channel,strip_dir)
+                print(len(orbit))
                 if len(orbit) == 0 :
                     continue
                 if orbnum == 1:
@@ -85,7 +87,7 @@ def orbit_pdf(items, channel, strip_dir, filename, numdays, Tperiod):
                     axs[0].set_ylabel('Latitude')
                     axs[0].set_xlim(dates[0],dates[-1])
                     axs[0].grid(linestyle='-')
-                    axs[0].set_title((daystart + timedelta(days=day-1)).date(), fontsize=16)
+                    axs[0].set_title(dates[0].date(), fontsize=16)
                     axs[0].set_xticks(dates[::20])
                     axs[0].set_xticklabels(times_strings[::20], rotation = 30) 
                 
@@ -105,8 +107,9 @@ def orbit_pdf(items, channel, strip_dir, filename, numdays, Tperiod):
                     #then we want to quit this for loop and start a new day
                     print("new day")
                     print(orbit_startdate)
-                    
+
                     break
+
         time0 = time.time()   #seems to take around 225 s which is way to slow
         #fig.savefig('plot.png')
         pdf.savefig(fig)
@@ -116,4 +119,4 @@ def orbit_pdf(items, channel, strip_dir, filename, numdays, Tperiod):
     pdf.close()
   
     return
-# %%
+ # %%
