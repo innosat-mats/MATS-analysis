@@ -39,54 +39,6 @@ stop_sza = 95 # sza for which nadir measurement ends
 start_TPlat = 48.5 # TPlat for which UV measurement starts
 stop_TPlat = 42.5 # TPlat for which UV measurement starts
 
-# folders to store monitoring data
-monitoring_folder = "/home/louis/MATS/MATS-Data/Monitoring"
-
-
-#%%
-
-start_time = datetime(2023, 5, 1, 0, 0, 0)
-stop_time = datetime(2023, 5, 1, 0, 10, 0)
-
-
-# folders to store figures
-data_folder = f"{monitoring_folder}{start_time.strftime('%Y:%m:%d')}_{stop_time.strftime('%Y:%m:%d')}"
-if not os.path.exists(data_folder):
-        os.mkdir(data_folder)
-
-
-sampling = 'custom'
-
-custom_period = timedelta(minutes=2)
-
-if sampling == 'day':
-    start=start_time.replace(hour=0, minute=0, second=0, microsecond=0)
-    end=stop_time.replace(hour=0, minute=0, second=0, microsecond=0)
-    time_sampling = pd.date_range(start=start,
-                  end=end,
-                  periods=(end-start).days + 1)
-
-elif sampling == 'orbit':
-    orbit_filter = {'CCDSEL': [1,7],'satlat':[-1.0,+1.0]}
-    df = read_MATS_data(start_time, stop_time,filter=orbit_filter,level='1a',version='0.5')
-    df = df[~np.isnan(df['satlat'])].sort_values('EXPDate')
-    time_sampling = [start_time.replace(tzinfo=timezone.utc)]
-    for i in range(len(df)-1):
-        if df.iloc[i]['satlat']<0.0 and df.iloc[i+1]['satlat']>0.0:
-            time_sampling.append(df.iloc[i]['EXPDate'])  
-    time_sampling.append(stop_time.replace(tzinfo=timezone.utc))    
-
-if sampling == 'custom':
-    start=start_time
-    end=stop_time
-    time_sampling = pd.date_range(start=start,
-                  end=end,
-                  periods=(end-start).total_seconds()/custom_period.total_seconds() + 1,tz=timezone.utc)
-
-
-
-#%%   
-
 
 
 # %%
@@ -188,11 +140,6 @@ def timeline_stat(df,time_sampling,df_loc):
     return(nb_expected_images_default,nb_expected_images,nb_generated_images)
         
 
-    
-    
-
-# nb_expected_images,nb_generated_images = timeline_stat(df0,time_sampling,df0)
-
 
 #%%
     
@@ -206,7 +153,7 @@ def timeline_plot(data,time_sampling,title,line_labels,file=None):
     width = 0.9
 
     
-    fig, ax = plt.subplots(figsize=(20,10))
+    fig, ax = plt.subplots(figsize=(20,10),dpi=250)
     # iteration over channels
     for line_ind in range(len(line_labels)):
         
@@ -259,13 +206,8 @@ def timeline_plot(data,time_sampling,title,line_labels,file=None):
 
 
 
-# line_labels = {0:'IR1',1:'IR4',2:'IR3',3:'IR2',4:'UV1',5:'UV2',6:'NADIR'}
-
-# timeline_plot(nb_expected_images,nb_generated_images,time_sampling,'test',line_labels=line_labels)
-    
-
 #%%
-def multi_timeline(dataframes,dataframe_labels,time_sampling):
+def multi_timeline(dataframes,dataframe_labels,time_sampling,data_folder=None):
 
     df_loc = dataframes[0]
 
@@ -297,7 +239,9 @@ def multi_timeline(dataframes,dataframe_labels,time_sampling):
         data = np.where((nb_expected_images==0)&(nb_generated_images>0),nb_generated_images/nb_expected_images_default,data)
         start = min(df['EXPDate'])
         end = max(df['EXPDate'])
-        file_path = f"{data_folder}/{start.strftime('%Y:%m:%d')}_{end.strftime('%Y:%m:%d')}_nb_images.png"
+        file_path = None
+        if type(data_folder) != type(None):
+            file_path = f"{data_folder}/{start.strftime('%Y:%m:%d')}_{end.strftime('%Y:%m:%d')}_nb_images.png"
         timeline_plot(data,time_sampling,title,line_labels=line_labels,file=file_path)
 
 
@@ -309,8 +253,9 @@ def multi_timeline(dataframes,dataframe_labels,time_sampling):
     nb_total_generated_images = np.sum(total_generated_images,axis=1)
     total_data = np.zeros_like(nb_total_expected_images)
     total_data = np.where(nb_total_expected_images!=0,nb_total_generated_images/nb_total_expected_images,None)
-    
-    file_path = f"{data_folder}/{start.strftime('%Y:%m:%d')}_{end.strftime('%Y:%m:%d')}_nb_image_sum.png"
+    file_path = None
+    if type(data_folder) != type(None):
+        file_path = f"{data_folder}/{start.strftime('%Y:%m:%d')}_{end.strftime('%Y:%m:%d')}_nb_image_sum.png"
     timeline_plot(total_data,time_sampling,"nb of images/expected nb of images (all channels)",line_labels=dataframe_labels,file=file_path)
 
 
@@ -333,8 +278,10 @@ def multi_timeline(dataframes,dataframe_labels,time_sampling):
     processing_data = np.zeros_like(nb_im_origin)
     processing_data = np.where(nb_im_origin!=0,nb_im_processed/nb_im_origin,None)
     #total_data = np.where((nb_im_origin==0)&(nb_im_processed>0),nb_im_processed/nb_expected_images_default,data)
-
-    file_path = f"{data_folder}/{start.strftime('%Y:%m:%d')}_{end.strftime('%Y:%m:%d')}_processing.png"
+    
+    file_path = None
+    if type(data_folder) != type(None):
+        file_path = f"{data_folder}/{start.strftime('%Y:%m:%d')}_{end.strftime('%Y:%m:%d')}_processing.png"
     timeline_plot(processing_data,time_sampling,"processing success rate (nb processed images/nb of images)",line_labels=processing_labels,file = file_path)
 
     
@@ -342,7 +289,7 @@ def multi_timeline(dataframes,dataframe_labels,time_sampling):
 
 def temperatureCRBD_plot(dataframe,title='',file=None):
 
-    fig, ax = plt.subplots(figsize=(20,10))
+    fig, ax = plt.subplots(figsize=(20,10),dpi=250)
     for channel_ind in range(1,8):  
         channel = channels[channel_ind]
         df = dataframe[dataframe['CCDSEL']==channel_ind]
@@ -370,7 +317,7 @@ def temperatureCRBD_plot(dataframe,title='',file=None):
             ax.plot(df['EXPDate'],temp_ADC,label=channel,marker='o',linestyle='')
     
     ax.legend()
-    ax.set_title(f'Temperature in each CRB-D ({title})')
+    ax.set_title(f'Temperature in each CRB-D {title}')
     ax.set_ylabel('Temperature in C')
     ax.set_xlabel('EXPDate')
     if type(file) != type(None):
@@ -379,7 +326,7 @@ def temperatureCRBD_plot(dataframe,title='',file=None):
 
 def temperatureHTR_plot(dataframe,title='',file=None):
 
-    fig, ax = plt.subplots(figsize=(20,10))
+    fig, ax = plt.subplots(figsize=(20,10),dpi=250)
     T_period = timedelta(seconds=60)
     start = min(dataframe['TMHeaderTime'])
     end = max(dataframe['TMHeaderTime'])
@@ -398,176 +345,146 @@ def temperatureHTR_plot(dataframe,title='',file=None):
         ax.plot(temp_sampling[:-1],HTR_temp,label=HTR_name,marker='o',linestyle='')
     
     ax.legend()
-    ax.set_title(f'Temperature in each heater sensor (averaged over {T_period.total_seconds():.0f} s) ({title})')
+    ax.set_title(f'Temperature in each heater sensor (averaged over {T_period.total_seconds():.0f} s) {title}')
     ax.set_ylabel('Temperature in C')
-    ax.set_xlabel('EXPDate')
+    ax.set_xlabel('TMHeaderTime')
     if type(file) != type(None):
         fig.savefig(file)
     plt.show(block=False)
 
 
-def temp_plot(dataframe,dataframe_label):
-    try:
-        print(f"Plotting CRB-D temperatures for {dataframe_label}")
-        start = min(dataframe['EXPDate'])
-        end = max(dataframe['EXPDate'])
-        file_path = f"{data_folder}/{start.strftime('%Y:%m:%d')}_{end.strftime('%Y:%m:%d')}_CRBD_temp.png"
-        temperatureCRBD_plot(dataframe,title=dataframe_label,file=file_path)
-    except:
-        print(f"Unable to plot CRB-D temperatures for {dataframe_label}")
+  
 
-    try:
-        print(f"Plotting HTR temperatures for {dataframe_label}")
-        start = min(dataframe['EXPDate'])
-        end = max(dataframe['EXPDate'])
-        file_path = f"{data_folder}/{start.strftime('%Y:%m:%d')}_{end.strftime('%Y:%m:%d')}_HTR_temp.png"
-        temperatureHTR_plot(dataframe,title=dataframe_label,file=file_path)
-    except:
-        print(f"Unable to plot HTR temperatures for {dataframe_label}")
+def PWRV_plot(dataframe,title='',file=None):
 
+    fig, ax = plt.subplots(figsize=(20,10),dpi=250)
+    time_period = timedelta(seconds=60)
+    start = min(dataframe['TMHeaderTime'])
+    end = max(dataframe['TMHeaderTime'])
+    time_sampling = pd.date_range(start=start,
+                  end=end,
+                  periods=(end-start).total_seconds()/time_period.total_seconds() + 1,tz=timezone.utc)
 
-    
-    
-
-    
-
-# multi_timeline([df0,df1a,df1b],['level 0 v0.3','level 1a v0.5','level 1b v0.4'],time_sampling)
-
-#%%
-
-
-
-
-def multi_level_data(start_time,stop_time,sampling='custom',custom_period = timedelta(minutes=2)):
-
-    # defining the timesampling
-    if sampling == 'day':
-        start=start_time.replace(hour=0, minute=0, second=0, microsecond=0)
-        end=stop_time.replace(hour=0, minute=0, second=0, microsecond=0)
-        time_sampling = pd.date_range(start=start,
-                    end=end,
-                    periods=(end-start).days + 1)
-
-    elif sampling == 'orbit':
-        orbit_filter = {'CCDSEL': [1,7],'satlat':[-1.0,+1.0]}
-        df = read_MATS_data(start_time, stop_time,pltfilter=orbit_filter,level='1a',version='0.5')
-        df = df[~np.isnan(df['satlat'])].sort_values('EXPDate')
-        time_sampling = [start_time.replace(tzinfo=timezone.utc)]
-        for i in range(len(df)-1):
-            if df.iloc[i]['satlat']<0.0 and df.iloc[i+1]['satlat']>0.0:
-                time_sampling.append(df.iloc[i]['EXPDate'])  
-        time_sampling.append(stop_time.replace(tzinfo=timezone.utc))    
-
-    if sampling == 'custom':
-        start=start_time
-        end=stop_time
-        time_sampling = pd.date_range(start=start,
-                    end=end,
-                    periods=(end-start).total_seconds()/custom_period.total_seconds() + 1,tz=timezone.utc)
+    for voltage in ['PWRP32V','PWRP16V','PWRM16V']:  
+        volt_data = dataframe[voltage] 
+        VOLT = np.zeros(len(time_sampling)-1)    
+        for i in range(len(time_sampling)-1):
+            start = time_sampling[i]
+            end = time_sampling[i+1]
+            VOLT[i] = np.nanmean(volt_data[(start<=dataframe['TMHeaderTime']) & (dataframe['TMHeaderTime']<=end)])
         
-
+        ax.plot(time_sampling[:-1],VOLT,label=voltage,marker='o',linestyle='')
     
-    dataframes = []
-    dataframe_labels = []
-    try :
-        print("Importing level 0 data")
-        df0 = read_MATS_data(start_time, stop_time,level='0',version='0.3')
-        dataframes.append(df0)
-        dataframe_labels.append('l0 v0.3')
-    except :
-        print('No level 0 data')
-
-    try :
-        print("Importing level 1a data")
-        df1a = read_MATS_data(start_time, stop_time,level='1a',version='0.5')
-        dataframes.append(df1a)
-        dataframe_labels.append('l1a v0.5')
-    except :
-        print('No level 1a data')
-
-    try :
-        print("Importing level 1b data")
-        df1b = read_MATS_data(start_time, stop_time,level='1b',version='0.4')
-        dataframes.append(df1b)
-        dataframe_labels.append('l1b v0.4')
-    except :
-        print('No level 1b data')
-    
-    
-    if len(dataframes)>0:
-        multi_timeline(dataframes,dataframe_labels,time_sampling)  
+    ax.legend()
+    ax.set_title(f'Voltage in each bus (averaged over {time_period.total_seconds():.0f} s) {title}')
+    ax.set_ylabel('Voltage in V')
+    ax.set_xlabel('TMHeaderTime')
+    if type(file) != type(None):
+        fig.savefig(file)
+    plt.show(block=False)
 
 
+def PWRC_plot(dataframe,title='',file=None):
 
-    return dataframes,dataframe_labels,time_sampling
-
-
-
-
-
-#%%
-
-
-
-dataframes,dataframe_labels,time_sampling = multi_level_data(start_time,stop_time)
-
-
-#%%
-
-
-print('Importing L1b data')
-df1b = read_MATS_data(start_time, stop_time,level='1b',version='0.4')
-print('Plotting temperature data')
-temp_plot(df1b,'l1b v0.4')
-
-
+    fig, ax = plt.subplots(figsize=(20,10),dpi=250)
+    time_period = timedelta(seconds=60)
+    start = min(dataframe['TMHeaderTime'])
+    end = max(dataframe['TMHeaderTime'])
+    time_sampling = pd.date_range(start=start,
+                  end=end,
+                  periods=(end-start).total_seconds()/time_period.total_seconds() + 1,tz=timezone.utc)
+    for current in ['PWRP32C','PWRP16C','PWRM16C','PWRP3C3']:  
+        curr_data = dataframe[current] 
+        CURR = np.zeros(len(time_sampling)-1)    
+        for i in range(len(time_sampling)-1):
+            start = time_sampling[i]
+            end = time_sampling[i+1]
+            CURR[i] = np.nanmean(curr_data[(start<=dataframe['TMHeaderTime']) & (dataframe['TMHeaderTime']<=end)])
         
-# multi_timeline(dataframes,dataframe_labels,time_sampling)
+        ax.plot(time_sampling[:-1],CURR,label=current,marker='o',linestyle='')
+    
+    ax.legend()
+    ax.set_title(f'Current in each bus (averaged over {time_period.total_seconds():.0f} s) {title}')
+    ax.set_ylabel('Current in A')
+    ax.set_xlabel('TMHeaderTime')
+    if type(file) != type(None):
+        fig.savefig(file)
+    plt.show(block=False)
 
 
 
+def PWRT_plot(dataframe,title='',file=None):
+
+    fig, ax = plt.subplots(figsize=(20,10),dpi=250)
+    time_period = timedelta(seconds=60)
+    start = min(dataframe['TMHeaderTime'])
+    end = max(dataframe['TMHeaderTime'])
+    time_sampling = pd.date_range(start=start,
+                  end=end,
+                  periods=(end-start).total_seconds()/time_period.total_seconds() + 1,tz=timezone.utc)
+    temp_data = dataframe['PWRT'] 
+    TEMP = np.zeros(len(time_sampling)-1)    
+    for i in range(len(time_sampling)-1):
+        start = time_sampling[i]
+        end = time_sampling[i+1]
+        TEMP[i] = np.nanmean(temp_data[(start<=dataframe['TMHeaderTime']) & (dataframe['TMHeaderTime']<=end)])
+        
+    ax.plot(time_sampling[:-1],TEMP,label='PWRT',marker='o',linestyle='')
+    
+    ax.legend()
+    ax.set_title(f'Power module temperature (averaged over {time_period.total_seconds():.0f} s) {title}')
+    ax.set_ylabel('Temperature  in C')
+    ax.set_xlabel('TMHeaderTime')
+    if type(file) != type(None):
+        fig.savefig(file)
+    plt.show(block=False)
 
 
 # %%
 
-# check no geolocation ?
-# check temp
 
-
-
-plt.show(block=True)
-
-
-
-
-# %%
-
-def HTR_temp(start_time,stop_time,file=None):
+def read_MATS_payload_data(start_date,end_date,data_type='HTR',filter=None,version='0.3'):
     session = boto3.session.Session(profile_name="mats")
     credentials = session.get_credentials()
+    filesystem = f'ops-payload-level0-v{version}'
+    file = f"{filesystem}/{data_type}"
 
     s3 = fs.S3FileSystem(
         secret_key=credentials.secret_key,
         access_key=credentials.access_key,
         region=session.region_name,
         session_token=credentials.token)
-
+    
+    if start_date.tzinfo == None:
+        start_date = start_date.replace(tzinfo=timezone.utc)
+    if end_date.tzinfo == None:
+        end_date = end_date.replace(tzinfo=timezone.utc)
 
     dataset = ds.dataset(
-        "ops-payload-level0-v0.3/HTR",
+        file,
         filesystem=s3,
         )
+    filterlist = (
+        (ds.field("TMHeaderTime") >= pd.Timestamp(start_date))
+        & (ds.field("TMHeaderTime") <= pd.Timestamp(end_date))
+    )
+    if filter != None:
+        for variable in filter.keys():
+            filterlist &= (
+                (ds.field(variable) >= filter[variable][0])
+                & (ds.field(variable) <= filter[variable][1])
+            )
 
-    df = dataset.to_table().to_pandas()
-    df = df[(df['TMHeaderTime']>start_time.replace(tzinfo=timezone.utc))&(df['TMHeaderTime']<stop_time.replace(tzinfo=timezone.utc))]
-    temperatureHTR_plot(df,file=file)
+    table = dataset.to_table(filter=filterlist)
+    dataframe = table.to_pandas()
+    dataframe.reset_index(inplace=True)
+    dataframe.set_index('TMHeaderTime',inplace=True)
+    dataframe.sort_index(inplace=True)
+    dataframe.reset_index(inplace=True)
+
+    return dataframe
 
 
-temp_start = datetime(2023, 2, 19, 0, 0, 0)
-temp_stop = datetime(2023, 2, 26, 0, 0, 0)
-data_folder = f"{monitoring_folder}{temp_start.strftime('%Y:%m:%d')}_{temp_stop.strftime('%Y:%m:%d')}"
-if not os.path.exists(data_folder):
-        os.mkdir(data_folder)
-HTR_temp(temp_start,temp_stop,file=f"{data_folder}/test.png")
+
 
 # %%

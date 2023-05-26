@@ -17,6 +17,8 @@ from matplotlib.patches import Patch
 
 
 #%%
+plt.ioff()
+
 
 # defining study window 
 
@@ -158,7 +160,7 @@ AWS_files = ['ops-payload-level0-source',
 
 s3_client = boto3.client('s3')
 
-plt.figure()
+fig, ax = plt.subplots()
 for i in range(len(AWS_files)):
     print(AWS_files[i])
     #print(keys[6])
@@ -166,11 +168,15 @@ for i in range(len(AWS_files)):
     dates = parse_object_date(keys)   
     print(f"{len(keys)} parquet files ({len(dates)} with dates)")
     if type(dates) != type(None): 
-        plt.plot(dates,i*np.ones(len(dates)),'o',label=AWS_files[i])
-plt.xlabel("Parquet date")
-plt.title("ops payload")
-plt.legend()
-plt.show()
+        if len(dates)>0:
+            ax.hlines(y=AWS_files[i],xmin=dates[0],xmax=dates[0],color='white')
+        else :
+            ax.hlines(y=AWS_files[i],xmin=start_time,xmax=start_time,color='white')
+        ax.plot(dates,i*np.ones(len(dates)),'o',label=AWS_files[i])
+ax.set_xlabel("Parquet date")
+ax.set_title("ops payload")
+
+plt.show(block=False)
 
 
 
@@ -182,18 +188,22 @@ AWS_files = ['ops-platform-level1a-source',
 
 s3_client = boto3.client('s3')
 
-plt.figure()
+fig, ax = plt.subplots()
 for i in range(len(AWS_files)):
     print(AWS_files[i])
     keys = get_object_keys(s3_client,bucket=AWS_files[i]) 
     dates = parse_object_date(keys)     
     print(f"{len(keys)} parquet files ({len(dates)} with dates)") 
     if type(dates) != type(None): 
-        plt.plot(dates,i*np.ones(len(dates)),'o',label=AWS_files[i])
-plt.xlabel("Parquet date")
-plt.title("ops platform")
-plt.legend()
-plt.show()
+        if len(dates)>0:
+            ax.hlines(y=AWS_files[i],xmin=dates[0],xmax=dates[0],color='white')
+        else :
+            ax.hlines(y=AWS_files[i],xmin=start_time,xmax=start_time,color='white')
+        ax.plot(dates,i*np.ones(len(dates)),'o',label=AWS_files[i])
+ax.set_xlabel("Parquet date")
+ax.set_title("ops platform")
+
+plt.show(block=False)
 
 
 #%%
@@ -246,7 +256,8 @@ legend_elements = [Patch(facecolor='red',label=f"{lim_red:.0f} < files/day <= {l
 ax.set_xlabel("Parquet date")
 ax.set_title("Number of .parquet files generated per day")
 ax.legend(handles=legend_elements,loc='upper left')
-plt.show()
+
+plt.show(block=False)
 
 
 #%%
@@ -300,8 +311,9 @@ for i in range(n):
             color = 'white'
             if day_parquet_origin[ind_day] != 0:
                 processing_rate = day_parquet_processed[ind_day]/day_parquet_origin[ind_day]
-            
-                if (lim_red<=processing_rate) and (processing_rate<=lim_orange):
+                if processing_rate == 0.0:
+                    color ='black'
+                elif (lim_red<processing_rate) and (processing_rate<=lim_orange):
                     color = 'red'
                 elif (lim_orange<processing_rate) and (processing_rate<=lim_blue):
                     color = 'orange'
@@ -313,14 +325,16 @@ for i in range(n):
             ax.add_patch(Rectangle((day,i-width*0.5),timedelta(days=1),width,color=color))
 
 # legend
-legend_elements = [Patch(facecolor='red',label=f"{lim_red*100:.0f}% <= success rate <= {lim_orange*100:.0f}%"),
+legend_elements = [Patch(facecolor='black',label="success rate == 0%" ),
+                   Patch(facecolor='red',label=f"{lim_red*100:.0f}% < success rate <= {lim_orange*100:.0f}%"),
                    Patch(facecolor='orange',label=f"{lim_orange*100:.0f}% < success rate <= {lim_blue*100:.0f}%"),
                    Patch(facecolor='tab:blue',label=f"{lim_blue*100:.0f}% < success rate < 100%"),
                    Patch(facecolor='green',label=f"success rate = 100%")]
 ax.set_xlabel("Parquet date")
 ax.set_title("Daily processing success rate")
 ax.legend(handles=legend_elements,loc='upper left')
-plt.show()
+
+plt.show(block=True)
 
 
 
@@ -398,5 +412,4 @@ AWS_files = ['ops-payload-level0-source',
              'ops-platform-level1a-v0.1',
              'ops-platform-level1a-v0.2',
              'ops-platform-level1a-v0.3']
-
 # %%
