@@ -36,11 +36,14 @@ custom_period = timedelta(minutes=2)
 
 #%%
 
-dt = datetime.now() - timedelta(days=7*6)
+dt = datetime.now() - timedelta(days=7*7)
 day = datetime(dt.year, dt.month, dt.day, 0, 0, 0)
 week_start = day - timedelta(days=day.weekday()+7)
 week_end = week_start + timedelta(days=7)
 
+
+print('===========================================')
+print(f"Monitoring from {week_start} to {week_end}")
 
 data_folder = f"{monitoring_folder}/weekly_monitoring{week_start.strftime('%Y_%m_%d')}_{week_end.strftime('%Y_%m_%d')}"
 if not os.path.exists(data_folder):
@@ -70,5 +73,5 @@ try:
     print(f"Plotting PWR currents")
     PWRC_plot(PWR_df,file=f"{data_folder}/PWR_current.png")
 except:
-    print(f"Unable to plot HTR temperatures")
+    print(f"Unable to plot PWR temperatures")
 # %%

@@ -38,6 +38,7 @@ custom_period = timedelta(minutes=2)
 
 
 dt = datetime.now()
+dt = datetime(2023,4,25)
 stop_time = datetime(dt.year, dt.month, dt.day, 0, 0, 0)
 start_time = stop_time - timedelta(days=1)
 
@@ -48,7 +49,7 @@ if not os.path.exists(data_folder):
         os.mkdir(data_folder)
 
 
-
+#%%
 
 if sampling == 'custom':
     start=start_time
@@ -77,6 +78,8 @@ try :
 except :
     print('No level 0 data')
 
+df0 = df0.drop('ImageData', axis=1)
+
 try :
     print("Importing level 1a data")
     df1a = read_MATS_data(start_time, stop_time,level='1a',version='0.5')
@@ -85,6 +88,8 @@ try :
 except :
     print('No level 1a data')
 
+df1a = df1a.drop('IMAGE', axis=1)
+
 try :
     print("Importing level 1b data")
     df1b = read_MATS_data(start_time, stop_time,level='1b',version='0.4')
@@ -92,6 +97,8 @@ try :
     dataframe_labels.append('l1b v0.4')
 except :
     print('No level 1b data')
+
+df1b = df1b.drop('ImageCalibrated', axis=1)
     
     
 if len(dataframes)>0:
@@ -128,7 +135,7 @@ try:
     print(f"Plotting PWR currents")
     PWRC_plot(PWR_df,file=f"{data_folder}/PWR_current.png")
 except:
-    print(f"Unable to plot HTR temperatures")
+    print(f"Unable to plot PWR temperatures")
 
 
 # %%
