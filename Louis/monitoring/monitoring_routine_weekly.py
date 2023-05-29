@@ -36,10 +36,15 @@ custom_period = timedelta(minutes=2)
 
 #%%
 
-dt = datetime.now() - timedelta(days=7*7)
-day = datetime(dt.year, dt.month, dt.day, 0, 0, 0)
-week_start = day - timedelta(days=day.weekday()+7)
-week_end = week_start + timedelta(days=7)
+args = sys.argv
+week_start = datetime.strptime(args[1],'%Y:%m:%d:%H:%M:%S')
+week_end = datetime.strptime(args[2],'%Y:%m:%d:%H:%M:%S')
+
+if type(week_start) == type(None) or type(week_end) == type(None):
+    dt = datetime.now() - timedelta(days=7*7)
+    day = datetime(dt.year, dt.month, dt.day, 0, 0, 0)
+    week_start = day - timedelta(days=day.weekday()+7)
+    week_end = week_start + timedelta(days=7)
 
 
 print('===========================================')

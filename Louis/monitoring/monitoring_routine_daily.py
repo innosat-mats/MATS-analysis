@@ -10,7 +10,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta, timezone
 import warnings
-
+import sys
 import boto3
 import re
 import pyarrow.parquet as pq  # type: ignore
@@ -36,12 +36,19 @@ custom_period = timedelta(minutes=2)
 
 #%%
 
+args = sys.argv
+start_time = datetime.strptime(args[1],'%Y:%m:%d:%H:%M:%S')
+stop_time = datetime.strptime(args[2],'%Y:%m:%d:%H:%M:%S')
 
-dt = datetime.now()
-dt = datetime(2023,4,25)
-stop_time = datetime(dt.year, dt.month, dt.day, 0, 0, 0)
-start_time = stop_time - timedelta(days=1)
+if type(start_time) == type(None) or type(stop_time) == type(None):
+    dt = datetime.now()
+    dt = datetime(2023,4,25)
+    stop_time = datetime(dt.year, dt.month, dt.day, 0, 0, 0)
+    start_time = stop_time - timedelta(days=1)
 
+
+print('===========================================')
+print(f"Monitoring from {start_time} to {stop_time}")
 
 # folders to store figures
 data_folder = f"{monitoring_folder}/daily_monitoring_{start_time.strftime('%Y_%m_%d')}"
@@ -70,25 +77,6 @@ elif sampling == 'orbit':
     
 dataframes = []
 dataframe_labels = []
-try :
-    print("Importing level 0 data")
-    df0 = read_MATS_data(start_time, stop_time,level='0',version='0.3')
-    dataframes.append(df0)
-    dataframe_labels.append('l0 v0.3')
-except :
-    print('No level 0 data')
-
-df0 = df0.drop('ImageData', axis=1)
-
-try :
-    print("Importing level 1a data")
-    df1a = read_MATS_data(start_time, stop_time,level='1a',version='0.5')
-    dataframes.append(df1a)
-    dataframe_labels.append('l1a v0.5')
-except :
-    print('No level 1a data')
-
-df1a = df1a.drop('IMAGE', axis=1)
 
 try :
     print("Importing level 1b data")
@@ -99,6 +87,28 @@ except :
     print('No level 1b data')
 
 df1b = df1b.drop('ImageCalibrated', axis=1)
+
+
+try :
+    print("Importing level 1a data")
+    df1a = read_MATS_data(start_time, stop_time,level='1a',version='0.5')
+    dataframes.append(df1a)
+    dataframe_labels.append('l1a v0.5')
+except :
+    print('No level 1a data')
+
+df1a = df1a.drop(columns=['IMAGE','ImageData','id'], axis=1)
+
+
+try :
+    print("Importing level 0 data")
+    df0 = read_MATS_data(start_time, stop_time,level='0',version='0.3')
+    dataframes.append(df0)
+    dataframe_labels.append('l0 v0.3')
+except :
+    print('No level 0 data')
+
+df0 = df0.drop('ImageData', axis=1)
     
     
 if len(dataframes)>0:
