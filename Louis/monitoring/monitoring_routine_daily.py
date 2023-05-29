@@ -1,24 +1,12 @@
 #%% Import modules
 #%matplotlib qt5
 from mats_utils.rawdata.read_data import read_MATS_data
-import datetime as DT
-from mats_utils.plotting.plotCCD import *
-from mats_utils.statistiscs.images_functions import create_imagecube
-from tqdm import tqdm
-import matplotlib.pyplot as plt
+import os
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta, timezone
-import warnings
-import sys
-import boto3
-import re
-import pyarrow.parquet as pq  # type: ignore
-import pyarrow.dataset as ds
-from pyarrow import fs
-from matplotlib.patches import Rectangle
-from matplotlib.patches import Patch
-from monitoring_functions import timeline_stat,timeline_plot,multi_timeline,temperatureCRBD_plot,temperatureHTR_plot,read_MATS_payload_data,PWRT_plot,PWRC_plot,PWRV_plot
+import argparse
+from monitoring_functions import multi_timeline,temperatureCRBD_plot,temperatureHTR_plot,read_MATS_payload_data,PWRT_plot,PWRC_plot,PWRV_plot
 
 pd.set_option('display.max_rows', 500)
 
@@ -27,7 +15,7 @@ pd.set_option('display.max_rows', 500)
 # defining some parameters
 
 # folders to store monitoring data
-monitoring_folder = "/home/louis/MATS/MATS-Data/Monitoring"
+def_monitoring_folder = "/home/louis/MATS/MATS-Data/Monitoring"
 
 sampling = 'custom'
 
@@ -35,12 +23,30 @@ custom_period = timedelta(minutes=2)
 
 
 #%%
+# parsing arguments 
 
-args = sys.argv
-start_time = datetime.strptime(args[1],'%Y:%m:%d:%H:%M:%S')
-stop_time = datetime.strptime(args[2],'%Y:%m:%d:%H:%M:%S')
+parser = argparse.ArgumentParser(description='arguments for weekly and daily routine monitoring scripts')
 
-if type(start_time) == type(None) or type(stop_time) == type(None):
+parser.add_argument('--outdir', type=str, default=def_monitoring_folder,
+                    help='output directory')
+parser.add_argument('--start_time', type=str, default='',
+                    help='start of the studied time intervall')
+parser.add_argument('--stop_time', type=str, default='',
+                    help='end of the studied time intervall')
+parser.add_argument('--show_plots', type=bool, default=False,
+                    help='if matplotlib plots are shown')
+
+args = parser.parse_args()
+
+start_time = args.start_time
+stop_time = args.stop_time
+monitoring_folder = args.outdir
+show_plot = args.show_plots
+
+if start_time != '' and stop_time != '':
+        start_time = datetime.strptime(start_time,'%Y:%m:%d_%H:%M:%S')
+        stop_time = datetime.strptime(stop_time,'%Y:%m:%d_%H:%M:%S')
+else: # no time range given : take last week
     dt = datetime.now()
     dt = datetime(2023,4,25)
     stop_time = datetime(dt.year, dt.month, dt.day, 0, 0, 0)
@@ -55,6 +61,7 @@ data_folder = f"{monitoring_folder}/daily_monitoring_{start_time.strftime('%Y_%m
 if not os.path.exists(data_folder):
         os.mkdir(data_folder)
 
+print(f"Output directory : {data_folder}")
 
 #%%
 
@@ -112,14 +119,14 @@ df0 = df0.drop('ImageData', axis=1)
     
     
 if len(dataframes)>0:
-    multi_timeline(dataframes,dataframe_labels,time_sampling,data_folder=data_folder)
+    multi_timeline(dataframes,dataframe_labels,time_sampling,data_folder=data_folder,show_plot=show_plot)
 
 try:
     print(f"Plotting CRB-D temperatures")
     start = min(df0['EXPDate'])
     end = max(df0['EXPDate'])
-    file_path = f"{data_folder}/{start.strftime('%Y:%m:%d')}_{end.strftime('%Y:%m:%d')}_CRBD_temp.png"
-    temperatureCRBD_plot(df0,title='',file=file_path)
+    file_path = f"{data_folder}/CRBD_temp.png"
+    temperatureCRBD_plot(df0,title='',file=file_path,show_plot=show_plot)
 except:
     print(f"Unable to plot CRB-D temperatures from l0 v0.3")
 
@@ -130,7 +137,7 @@ try:
     HTR_df = read_MATS_payload_data(start_time,stop_time,data_type='HTR')
     file_path = f"{data_folder}/HTR_temp.png"
     print(f"Plotting HTR temperatures")
-    temperatureHTR_plot(HTR_df,file=file_path)
+    temperatureHTR_plot(HTR_df,file=file_path,show_plot=show_plot)
 except:
     print(f"Unable to plot HTR temperatures")
 
@@ -139,11 +146,11 @@ try:
     print(f"Importing PWR data")
     PWR_df = read_MATS_payload_data(start_time,stop_time,data_type='PWR')
     print(f"Plotting PWR voltages")
-    PWRV_plot(PWR_df,file=f"{data_folder}/PWR_voltage.png")
+    PWRV_plot(PWR_df,file=f"{data_folder}/PWR_voltage.png",show_plot=show_plot)
     print(f"Plotting PWR temperature")
-    PWRT_plot(PWR_df,file=f"{data_folder}/PWR_temp.png")
+    PWRT_plot(PWR_df,file=f"{data_folder}/PWR_temp.png",show_plot=show_plot)
     print(f"Plotting PWR currents")
-    PWRC_plot(PWR_df,file=f"{data_folder}/PWR_current.png")
+    PWRC_plot(PWR_df,file=f"{data_folder}/PWR_current.png",show_plot=show_plot)
 except:
     print(f"Unable to plot PWR temperatures")
 

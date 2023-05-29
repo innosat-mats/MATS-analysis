@@ -1,19 +1,12 @@
 #%% Import modules
 #%matplotlib qt5
-from mats_utils.rawdata.read_data import read_MATS_data
-import datetime as DT
-from mats_utils.plotting.plotCCD import *
-from mats_utils.statistiscs.images_functions import create_imagecube
-from tqdm import tqdm
+import os
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta, timezone
 import warnings
-
 import boto3
-import re
-import pyarrow.parquet as pq  # type: ignore
 import pyarrow.dataset as ds
 from pyarrow import fs
 from matplotlib.patches import Rectangle
@@ -143,7 +136,7 @@ def timeline_stat(df,time_sampling,df_loc):
 
 #%%
     
-def timeline_plot(data,time_sampling,title,line_labels,file=None):
+def timeline_plot(data,time_sampling,title,line_labels,file=None,show_plot=False):
 
     lim_red = 0
     lim_orange = 0.5
@@ -201,13 +194,14 @@ def timeline_plot(data,time_sampling,title,line_labels,file=None):
     ax.legend(handles=legend_elements,loc='upper left')
     if type(file) != type(None):
         fig.savefig(file)
-    plt.show(block=False)
+    if show_plot:
+        plt.show(block=False)
 
 
 
 
 #%%
-def multi_timeline(dataframes,dataframe_labels,time_sampling,data_folder=None):
+def multi_timeline(dataframes,dataframe_labels,time_sampling,data_folder=None,show_plot=False):
 
     df_loc = dataframes[0]
 
@@ -241,8 +235,8 @@ def multi_timeline(dataframes,dataframe_labels,time_sampling,data_folder=None):
         end = max(df['EXPDate'])
         file_path = None
         if type(data_folder) != type(None):
-            file_path = f"{data_folder}/{start.strftime('%Y:%m:%d')}_{end.strftime('%Y:%m:%d')}_nb_images.png"
-        timeline_plot(data,time_sampling,title,line_labels=line_labels,file=file_path)
+            file_path = f"{data_folder}/image_generation_channels.png"
+        timeline_plot(data,time_sampling,title,line_labels=line_labels,file=file_path,show_plot=show_plot)
 
 
     
@@ -255,8 +249,8 @@ def multi_timeline(dataframes,dataframe_labels,time_sampling,data_folder=None):
     total_data = np.where(nb_total_expected_images!=0,nb_total_generated_images/nb_total_expected_images,None)
     file_path = None
     if type(data_folder) != type(None):
-        file_path = f"{data_folder}/{start.strftime('%Y:%m:%d')}_{end.strftime('%Y:%m:%d')}_nb_image_sum.png"
-    timeline_plot(total_data,time_sampling,"nb of images/expected nb of images (all channels)",line_labels=dataframe_labels,file=file_path)
+        file_path = f"{data_folder}/image_generation_sum.png"
+    timeline_plot(total_data,time_sampling,"nb of images/expected nb of images (all channels)",line_labels=dataframe_labels,file=file_path,show_plot=show_plot)
 
 
     # processing success
@@ -281,13 +275,13 @@ def multi_timeline(dataframes,dataframe_labels,time_sampling,data_folder=None):
     
     file_path = None
     if type(data_folder) != type(None):
-        file_path = f"{data_folder}/{start.strftime('%Y:%m:%d')}_{end.strftime('%Y:%m:%d')}_processing.png"
-    timeline_plot(processing_data,time_sampling,"processing success rate (nb processed images/nb of images)",line_labels=processing_labels,file = file_path)
+        file_path = f"{data_folder}/image_processing.png"
+    timeline_plot(processing_data,time_sampling,"processing success rate (nb processed images/nb of images)",line_labels=processing_labels,file = file_path,show_plot=show_plot)
 
     
 #%%
 
-def temperatureCRBD_plot(dataframe,title='',file=None):
+def temperatureCRBD_plot(dataframe,title='',file=None,show_plot=False):
 
     fig, ax = plt.subplots(figsize=(20,10),dpi=250)
     for channel_ind in range(1,8):  
@@ -322,9 +316,11 @@ def temperatureCRBD_plot(dataframe,title='',file=None):
     ax.set_xlabel('EXPDate')
     if type(file) != type(None):
         fig.savefig(file)
-    plt.show(block=False)
+    if show_plot:
+        plt.show(block=False)
+    
 
-def temperatureHTR_plot(dataframe,title='',file=None):
+def temperatureHTR_plot(dataframe,title='',file=None,show_plot=False):
 
     fig, ax = plt.subplots(figsize=(20,10),dpi=250)
     T_period = timedelta(seconds=60)
@@ -350,12 +346,13 @@ def temperatureHTR_plot(dataframe,title='',file=None):
     ax.set_xlabel('TMHeaderTime')
     if type(file) != type(None):
         fig.savefig(file)
-    plt.show(block=False)
+    if show_plot:
+        plt.show(block=False)
 
 
   
 
-def PWRV_plot(dataframe,title='',file=None):
+def PWRV_plot(dataframe,title='',file=None,show_plot=False):
 
     fig, ax = plt.subplots(figsize=(20,10),dpi=250)
     time_period = timedelta(seconds=60)
@@ -381,10 +378,11 @@ def PWRV_plot(dataframe,title='',file=None):
     ax.set_xlabel('TMHeaderTime')
     if type(file) != type(None):
         fig.savefig(file)
-    plt.show(block=False)
+    if show_plot:
+        plt.show(block=False)
 
 
-def PWRC_plot(dataframe,title='',file=None):
+def PWRC_plot(dataframe,title='',file=None,show_plot=False):
 
     fig, ax = plt.subplots(figsize=(20,10),dpi=250)
     time_period = timedelta(seconds=60)
@@ -409,11 +407,12 @@ def PWRC_plot(dataframe,title='',file=None):
     ax.set_xlabel('TMHeaderTime')
     if type(file) != type(None):
         fig.savefig(file)
-    plt.show(block=False)
+    if show_plot:
+        plt.show(block=False)
 
 
 
-def PWRT_plot(dataframe,title='',file=None):
+def PWRT_plot(dataframe,title='',file=None,show_plot=False):
 
     fig, ax = plt.subplots(figsize=(20,10),dpi=250)
     time_period = timedelta(seconds=60)
@@ -437,7 +436,8 @@ def PWRT_plot(dataframe,title='',file=None):
     ax.set_xlabel('TMHeaderTime')
     if type(file) != type(None):
         fig.savefig(file)
-    plt.show(block=False)
+    if show_plot:
+        plt.show(block=False)
 
 
 # %%
