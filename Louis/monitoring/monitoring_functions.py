@@ -201,7 +201,7 @@ def timeline_plot(data,time_sampling,title,line_labels,file=None,show_plot=False
 
 
 #%%
-def multi_timeline(dataframes,dataframe_labels,time_sampling,data_folder=None):
+def multi_timeline(dataframes,dataframe_labels,time_sampling,data_folder=None,show_plot=False):
 
     df_loc = dataframes[0]
 
@@ -235,8 +235,8 @@ def multi_timeline(dataframes,dataframe_labels,time_sampling,data_folder=None):
         end = max(df['EXPDate'])
         file_path = None
         if type(data_folder) != type(None):
-            file_path = f"{data_folder}/{start.strftime('%Y:%m:%d')}_{end.strftime('%Y:%m:%d')}_nb_images.png"
-        timeline_plot(data,time_sampling,title,line_labels=line_labels,file=file_path)
+            file_path = f"{data_folder}/image_generation_channels.png"
+        timeline_plot(data,time_sampling,title,line_labels=line_labels,file=file_path,show_plot=show_plot)
 
 
     
@@ -249,8 +249,8 @@ def multi_timeline(dataframes,dataframe_labels,time_sampling,data_folder=None):
     total_data = np.where(nb_total_expected_images!=0,nb_total_generated_images/nb_total_expected_images,None)
     file_path = None
     if type(data_folder) != type(None):
-        file_path = f"{data_folder}/{start.strftime('%Y:%m:%d')}_{end.strftime('%Y:%m:%d')}_nb_image_sum.png"
-    timeline_plot(total_data,time_sampling,"nb of images/expected nb of images (all channels)",line_labels=dataframe_labels,file=file_path)
+        file_path = f"{data_folder}/image_generation_sum.png"
+    timeline_plot(total_data,time_sampling,"nb of images/expected nb of images (all channels)",line_labels=dataframe_labels,file=file_path,show_plot=show_plot)
 
 
     # processing success
@@ -275,8 +275,8 @@ def multi_timeline(dataframes,dataframe_labels,time_sampling,data_folder=None):
     
     file_path = None
     if type(data_folder) != type(None):
-        file_path = f"{data_folder}/{start.strftime('%Y:%m:%d')}_{end.strftime('%Y:%m:%d')}_processing.png"
-    timeline_plot(processing_data,time_sampling,"processing success rate (nb processed images/nb of images)",line_labels=processing_labels,file = file_path)
+        file_path = f"{data_folder}/image_processing.png"
+    timeline_plot(processing_data,time_sampling,"processing success rate (nb processed images/nb of images)",line_labels=processing_labels,file = file_path,show_plot=show_plot)
 
     
 #%%

@@ -33,12 +33,15 @@ parser.add_argument('--start_time', type=str, default='',
                     help='start of the studied time intervall')
 parser.add_argument('--stop_time', type=str, default='',
                     help='end of the studied time intervall')
+parser.add_argument('--show_plots', type=bool, default=False,
+                    help='if matplotlib plots are shown')
 
 args = parser.parse_args()
 
 start_time = args.start_time
 stop_time = args.stop_time
 monitoring_folder = args.outdir
+show_plot = args.show_plots
 
 if start_time != '' and stop_time != '':
         week_start = datetime.strptime(start_time,'%Y:%m:%d_%H:%M:%S')
@@ -73,7 +76,7 @@ try:
     HTR_df = read_MATS_payload_data(week_start,week_end,data_type='HTR')
     file_path = f"{data_folder}/HTR_temp.png"
     print(f"Plotting HTR temperatures")
-    temperatureHTR_plot(HTR_df,file=file_path)
+    temperatureHTR_plot(HTR_df,file=file_path,show_plot=show_plot)
 except:
     print(f"Unable to plot HTR temperatures")
 
@@ -82,11 +85,11 @@ try:
     print(f"Importing PWR data")
     PWR_df = read_MATS_payload_data(week_start,week_end,data_type='PWR')
     print(f"Plotting PWR voltages")
-    PWRV_plot(PWR_df,file=f"{data_folder}/PWR_voltage.png")
+    PWRV_plot(PWR_df,file=f"{data_folder}/PWR_voltage.png",show_plot=show_plot)
     print(f"Plotting PWR temperature")
-    PWRT_plot(PWR_df,file=f"{data_folder}/PWR_temp.png")
+    PWRT_plot(PWR_df,file=f"{data_folder}/PWR_temp.png",show_plot=show_plot)
     print(f"Plotting PWR currents")
-    PWRC_plot(PWR_df,file=f"{data_folder}/PWR_current.png")
+    PWRC_plot(PWR_df,file=f"{data_folder}/PWR_current.png",show_plot=show_plot)
 except:
     print(f"Unable to plot PWR temperatures")
 # %%
