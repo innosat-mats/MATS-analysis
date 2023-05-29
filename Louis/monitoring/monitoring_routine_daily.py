@@ -48,7 +48,6 @@ if start_time != '' and stop_time != '':
         stop_time = datetime.strptime(stop_time,'%Y:%m:%d_%H:%M:%S')
 else: # no time range given : take last week
     dt = datetime.now()
-    dt = datetime(2023,4,25)
     stop_time = datetime(dt.year, dt.month, dt.day, 0, 0, 0)
     start_time = stop_time - timedelta(days=1)
 
