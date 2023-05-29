@@ -1,24 +1,12 @@
 #%% Import modules
 #%matplotlib qt5
 from mats_utils.rawdata.read_data import read_MATS_data
-import datetime as DT
-from mats_utils.plotting.plotCCD import *
-from mats_utils.statistiscs.images_functions import create_imagecube
-from tqdm import tqdm
-import matplotlib.pyplot as plt
+import os
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta, timezone
-import warnings
-import sys
-import boto3
-import re
-import pyarrow.parquet as pq  # type: ignore
-import pyarrow.dataset as ds
-from pyarrow import fs
-from matplotlib.patches import Rectangle
-from matplotlib.patches import Patch
-from monitoring_functions import timeline_stat,timeline_plot,multi_timeline,temperatureCRBD_plot,temperatureHTR_plot,read_MATS_payload_data,PWRT_plot,PWRC_plot,PWRV_plot
+import argparse
+from monitoring_functions import multi_timeline,temperatureCRBD_plot,temperatureHTR_plot,read_MATS_payload_data,PWRT_plot,PWRC_plot,PWRV_plot
 
 pd.set_option('display.max_rows', 500)
 
@@ -27,7 +15,7 @@ pd.set_option('display.max_rows', 500)
 # defining some parameters
 
 # folders to store monitoring data
-monitoring_folder = "/home/louis/MATS/MATS-Data/Monitoring"
+def_monitoring_folder = "/home/louis/MATS/MATS-Data/Monitoring"
 
 sampling = 'custom'
 
@@ -35,12 +23,27 @@ custom_period = timedelta(minutes=2)
 
 
 #%%
+# parsing arguments 
 
-args = sys.argv
-start_time = datetime.strptime(args[1],'%Y:%m:%d:%H:%M:%S')
-stop_time = datetime.strptime(args[2],'%Y:%m:%d:%H:%M:%S')
+parser = argparse.ArgumentParser(description='arguments for weekly and daily routine monitoring scripts')
 
-if type(start_time) == type(None) or type(stop_time) == type(None):
+parser.add_argument('--outdir', type=str, default=def_monitoring_folder,
+                    help='output directory')
+parser.add_argument('--start_time', type=str, default='',
+                    help='start of the studied time intervall')
+parser.add_argument('--stop_time', type=str, default='',
+                    help='end of the studied time intervall')
+
+args = parser.parse_args()
+
+start_time = args.start_time
+stop_time = args.stop_time
+monitoring_folder = args.outdir
+
+if start_time != '' and stop_time != '':
+        start_time = datetime.strptime(start_time,'%Y:%m:%d_%H:%M:%S')
+        stop_time = datetime.strptime(stop_time,'%Y:%m:%d_%H:%M:%S')
+else: # no time range given : take last week
     dt = datetime.now()
     dt = datetime(2023,4,25)
     stop_time = datetime(dt.year, dt.month, dt.day, 0, 0, 0)
@@ -55,6 +58,7 @@ data_folder = f"{monitoring_folder}/daily_monitoring_{start_time.strftime('%Y_%m
 if not os.path.exists(data_folder):
         os.mkdir(data_folder)
 
+print(f"Output directory : {data_folder}")
 
 #%%
 

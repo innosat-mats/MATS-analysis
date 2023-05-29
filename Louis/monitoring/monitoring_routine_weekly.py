@@ -1,23 +1,11 @@
 #%% Import modules
 #%matplotlib qt5
 from mats_utils.rawdata.read_data import read_MATS_data
-import datetime as DT
-from mats_utils.plotting.plotCCD import *
-from mats_utils.statistiscs.images_functions import create_imagecube
-from tqdm import tqdm
-import matplotlib.pyplot as plt
 import pandas as pd
+import os
 import numpy as np
-from datetime import datetime, timedelta, timezone
-import warnings
+from datetime import datetime, timedelta
 import argparse
-import boto3
-import re
-import pyarrow.parquet as pq  # type: ignore
-import pyarrow.dataset as ds
-from pyarrow import fs
-from matplotlib.patches import Rectangle
-from matplotlib.patches import Patch
 from monitoring_functions import timeline_stat,timeline_plot,multi_timeline,temperatureCRBD_plot,temperatureHTR_plot,read_MATS_payload_data,PWRT_plot,PWRC_plot,PWRV_plot
 
 pd.set_option('display.max_rows', 500)
@@ -35,7 +23,7 @@ custom_period = timedelta(minutes=2)
 
 
 #%%
-
+# parsing arguments
 
 parser = argparse.ArgumentParser(description='arguments for weekly and daily routine monitoring scripts')
 
@@ -44,7 +32,7 @@ parser.add_argument('--outdir', type=str, default=def_monitoring_folder,
 parser.add_argument('--start_time', type=str, default='',
                     help='start of the studied time intervall')
 parser.add_argument('--stop_time', type=str, default='',
-                    help='end of the studied time intervall', default=False)
+                    help='end of the studied time intervall')
 
 args = parser.parse_args()
 
@@ -63,17 +51,20 @@ else: # no time range given : take last week
 
 
 
-    
+
+
+#%%
 
 
 print('===========================================')
 print(f"Monitoring from {week_start} to {week_end}")
 
-data_folder = f"{monitoring_folder}/weekly_monitoring{week_start.strftime('%Y_%m_%d')}_{week_end.strftime('%Y_%m_%d')}"
+
+data_folder = f"{monitoring_folder}/weekly_monitoring_{week_start.strftime('%Y_%m_%d')}_{week_end.strftime('%Y_%m_%d')}"
 if not os.path.exists(data_folder):
         os.mkdir(data_folder)
 
-
+print(f"Output directory : {data_folder}")
 
 #%%
 
