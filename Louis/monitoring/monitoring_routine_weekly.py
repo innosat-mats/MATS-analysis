@@ -10,7 +10,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta, timezone
 import warnings
-
+import argparse
 import boto3
 import re
 import pyarrow.parquet as pq  # type: ignore
@@ -27,7 +27,7 @@ pd.set_option('display.max_rows', 500)
 # defining some parameters
 
 # folders to store monitoring data
-monitoring_folder = "/home/louis/MATS/MATS-Data/Monitoring"
+def_monitoring_folder = "/home/louis/MATS/MATS-Data/Monitoring"
 
 sampling = 'custom'
 
@@ -36,15 +36,34 @@ custom_period = timedelta(minutes=2)
 
 #%%
 
-args = sys.argv
-week_start = datetime.strptime(args[1],'%Y:%m:%d:%H:%M:%S')
-week_end = datetime.strptime(args[2],'%Y:%m:%d:%H:%M:%S')
 
-if type(week_start) == type(None) or type(week_end) == type(None):
-    dt = datetime.now() - timedelta(days=7*7)
+parser = argparse.ArgumentParser(description='arguments for weekly and daily routine monitoring scripts')
+
+parser.add_argument('--outdir', type=str, default=def_monitoring_folder,
+                    help='output directory')
+parser.add_argument('--start_time', type=str, default='',
+                    help='start of the studied time intervall')
+parser.add_argument('--stop_time', type=str, default='',
+                    help='end of the studied time intervall', default=False)
+
+args = parser.parse_args()
+
+start_time = args.start_time
+stop_time = args.stop_time
+monitoring_folder = args.outdir
+
+if start_time != '' and stop_time != '':
+        week_start = datetime.strptime(start_time,'%Y:%m:%d_%H:%M:%S')
+        week_end = datetime.strptime(stop_time,'%Y:%m:%d_%H:%M:%S')
+else: # no time range given : take last week
+    dt = datetime.now() 
     day = datetime(dt.year, dt.month, dt.day, 0, 0, 0)
     week_start = day - timedelta(days=day.weekday()+7)
     week_end = week_start + timedelta(days=7)
+
+
+
+    
 
 
 print('===========================================')
