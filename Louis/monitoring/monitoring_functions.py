@@ -25,6 +25,14 @@ sampling_rates={'IR1':timedelta(seconds=6),
                     'UV1':timedelta(seconds=6),
                     'UV2':timedelta(seconds=6),
                     'NADIR':timedelta(seconds=2)}
+
+Port_dic = {'IR1' : ['CPRUA',0],
+                'IR4' : ['CPRUA',1],
+                'IR3' : ['CPRUA',2],
+                'IR2' : ['CPRUA',3],
+                'UV1' : ['CPRUB',0],
+                'UV2' : ['CPRUB',1],
+                'NADIR' : ['CPRUB',2]}
     
 start_sza = 97 # sza for which nadir measurement starts
 stop_sza = 95 # sza for which nadir measurement ends
@@ -439,6 +447,64 @@ def PWRT_plot(dataframe,title='',file=None,show_plot=False):
     if show_plot:
         plt.show(block=False)
 
+
+#%%
+
+def CPRU_plot(dataframe,sampling_period=timedelta(seconds=10),file=None,show_plot=False):
+    
+
+    # define time sampling
+    start = min(dataframe['TMHeaderTime'])
+    end = max(dataframe['TMHeaderTime'])
+    time_sampling = pd.date_range(start=start,
+                  end=end,
+                  periods=(end-start).total_seconds()/sampling_period.total_seconds() + 1,tz=timezone.utc)
+    
+    # width of the line
+    width = 0.9
+        
+
+
+    # plotting overvoltage   
+    fig, ax = plt.subplots(figsize=(20,10),dpi=250)
+    # iteration over channels
+    for line_ind in range(7):
+        ccdsel = line_ind + 1
+        channel = channels[ccdsel]        
+        portnum = Port_dic[channel][1]
+        cprunum = Port_dic[channel][0]
+        df = dataframe[dataframe['SID']==cprunum]
+        
+        # compute the ratio nb of images/expected number of images
+
+        ax.hlines(y=channel,xmin=time_sampling[0],xmax=time_sampling[0],color='white') # some invisible line to have a working plot
+        for i in range(len(time_sampling)-1):
+            start = time_sampling[i]
+            end = time_sampling[i+1]
+            overvoltages = df[(start<=df['TMHeaderTime']) & (df['TMHeaderTime']<end)][f"Overvoltage{portnum}"]
+            color = 'white'
+            #print(value)
+            if len(overvoltages)>0:
+                if any(overvoltages):
+                    color = 'red'
+                else: color='green'
+            ax.add_patch(Rectangle((start,line_ind-width*0.5),end-start,width,color=color))
+
+    # legend
+    legend_elements = [Patch(facecolor='white',label="no data"),    
+                    Patch(facecolor='red',label="Overvoltage"),
+                    Patch(facecolor='green',label="No overvoltage")]
+    ax.set_xlabel("Date")
+    ax.set_title("Overvoltage")
+    ax.legend(handles=legend_elements,loc='upper left')
+    if type(file) != type(None):
+        fig.savefig(file)
+    if show_plot:
+        plt.show(block=False)
+
+
+
+  
 
 # %%
 

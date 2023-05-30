@@ -87,34 +87,38 @@ dataframe_labels = []
 try :
     print("Importing level 1b data")
     df1b = read_MATS_data(start_time, stop_time,level='1b',version='0.4')
+    df1b = df1b.drop('ImageCalibrated', axis=1)
     dataframes.append(df1b)
     dataframe_labels.append('l1b v0.4')
 except :
     print('No level 1b data')
 
-df1b = df1b.drop('ImageCalibrated', axis=1)
+
 
 
 try :
     print("Importing level 1a data")
     df1a = read_MATS_data(start_time, stop_time,level='1a',version='0.5')
+    df1a = df1a.drop(columns=['IMAGE','ImageData','id'], axis=1)
     dataframes.append(df1a)
     dataframe_labels.append('l1a v0.5')
+
 except :
     print('No level 1a data')
 
-df1a = df1a.drop(columns=['IMAGE','ImageData','id'], axis=1)
+
 
 
 try :
     print("Importing level 0 data")
     df0 = read_MATS_data(start_time, stop_time,level='0',version='0.3')
+    df0 = df0.drop('ImageData', axis=1)
     dataframes.append(df0)
     dataframe_labels.append('l0 v0.3')
 except :
     print('No level 0 data')
 
-df0 = df0.drop('ImageData', axis=1)
+
     
     
 if len(dataframes)>0:

@@ -22,8 +22,8 @@ plt.ioff()
 
 # defining study window 
 
-start_time = DT.datetime(2022, 12, 1, 0, 0, 0)
-stop_time = DT.datetime(2023, 5, 25, 0, 0, 0)
+start_time = datetime(2022, 12, 1, 0, 0, 0)
+stop_time = datetime.now()
 
 start=start_time.replace(hour=0, minute=0, second=0, microsecond=0)
 end=stop_time.replace(hour=0, minute=0, second=0, microsecond=0)
