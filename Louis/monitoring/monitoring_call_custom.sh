@@ -17,54 +17,19 @@ echo -e "Daily data and health monitoring: Initiating ..."
 
 
 
-daily_start='2023:05:07_0:0:0'
-daily_stop='2023:05:08_0:0:0'
+daily_start='2023:04:21_0:0:0'
+daily_stop='2023:04:23_0:0:0'
 { python ${MATS_dir}MATS-analysis/Louis/monitoring/monitoring_routine_daily.py --outdir ${outdir} --start_time ${daily_start} --stop_time ${daily_stop}; } &
 pid=$!
 wait $pid
 
 
-daily_start='2023:05:09_0:0:0'
-daily_stop='2023:05:10_0:0:0'
+daily_start='2023:04:05_0:0:0'
+daily_stop='2023:04:07_0:0:0'
 { python ${MATS_dir}MATS-analysis/Louis/monitoring/monitoring_routine_daily.py --outdir ${outdir} --start_time ${daily_start} --stop_time ${daily_stop}; } &
 pid=$!
 wait $pid
 
-daily_start='2023:05:10_0:0:0'
-daily_stop='2023:05:11_0:0:0'
-{ python ${MATS_dir}MATS-analysis/Louis/monitoring/monitoring_routine_daily.py --outdir ${outdir} --start_time ${daily_start} --stop_time ${daily_stop}; } &
-pid=$!
-wait $pid
-
-daily_start='2023:05:12_0:0:0'
-daily_stop='2023:05:13_0:0:0'
-{ python ${MATS_dir}MATS-analysis/Louis/monitoring/monitoring_routine_daily.py --outdir ${outdir} --start_time ${daily_start} --stop_time ${daily_stop}; } &
-pid=$!
-wait $pid
-
-daily_start='2023:05:13_0:0:0'
-daily_stop='2023:05:14_0:0:0'
-{ python ${MATS_dir}MATS-analysis/Louis/monitoring/monitoring_routine_daily.py --outdir ${outdir} --start_time ${daily_start} --stop_time ${daily_stop}; } &
-pid=$!
-wait $pid
-
-daily_start='2023:05:14_0:0:0'
-daily_stop='2023:05:15_0:0:0'
-{ python ${MATS_dir}MATS-analysis/Louis/monitoring/monitoring_routine_daily.py --outdir ${outdir} --start_time ${daily_start} --stop_time ${daily_stop}; } &
-pid=$!
-wait $pid
-
-daily_start='2023:05:15_0:0:0'
-daily_stop='2023:05:16_0:0:0'
-{ python ${MATS_dir}MATS-analysis/Louis/monitoring/monitoring_routine_daily.py --outdir ${outdir} --start_time ${daily_start} --stop_time ${daily_stop}; } &
-pid=$!
-wait $pid
-
-daily_start='2023:05:16_0:0:0'
-daily_stop='2023:05:17_0:0:0'
-{ python ${MATS_dir}MATS-analysis/Louis/monitoring/monitoring_routine_daily.py --outdir ${outdir} --start_time ${daily_start} --stop_time ${daily_stop}; } &
-pid=$!
-wait $pid
 # #### Weekly summary generation
 
 # # weekly summary 

@@ -6,7 +6,7 @@ import os
 import numpy as np
 from datetime import datetime, timedelta
 import argparse
-from monitoring_functions import timeline_stat,timeline_plot,multi_timeline,temperatureCRBD_plot,temperatureHTR_plot,read_MATS_payload_data,PWRT_plot,PWRC_plot,PWRV_plot
+from monitoring_functions import timeline_stat,timeline_plot,multi_timeline,temperatureCRBD_plot,temperatureHTR_plot,read_MATS_payload_data,PWRT_plot,PWRC_plot,PWRV_plot,CPRU_overvoltage_plot
 
 pd.set_option('display.max_rows', 500)
 
@@ -92,4 +92,16 @@ try:
     PWRC_plot(PWR_df,file=f"{data_folder}/PWR_current.png",show_plot=show_plot)
 except:
     print(f"Unable to plot PWR temperatures")
+
+
+try:
+    print(f"Importing CPRU data")
+    CPRU_df = read_MATS_payload_data(week_start,week_end,data_type='CPRU')
+    print(f"Plotting CPRU overvoltages")
+    CPRU_overvoltage_plot(CPRU_df,file=f"{data_folder}/CPRU_overvoltage.png",show_plot=show_plot)
+    
+except:
+    print(f"Unable to plot CPRU overvolatge")
+
+
 # %%

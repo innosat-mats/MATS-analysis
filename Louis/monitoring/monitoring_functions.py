@@ -450,9 +450,8 @@ def PWRT_plot(dataframe,title='',file=None,show_plot=False):
 
 #%%
 
-def CPRU_plot(dataframe,sampling_period=timedelta(seconds=10),file=None,show_plot=False):
+def CPRU_overvoltage_plot(dataframe,sampling_period=timedelta(seconds=600),file=None,show_plot=False):
     
-
     # define time sampling
     start = min(dataframe['TMHeaderTime'])
     end = max(dataframe['TMHeaderTime'])
@@ -503,6 +502,35 @@ def CPRU_plot(dataframe,sampling_period=timedelta(seconds=10),file=None,show_plo
         plt.show(block=False)
 
 
+def CPRUV_plot(dataframe,plotting_folder=None,show_plot=False):
+    
+    time_period = timedelta(seconds=60)
+
+    voltage = 'VGATE'
+    if type(plotting_folder) != type(None):
+        file = f"{plotting_folder}/{voltage}.png"
+    # plotting overvoltage   
+    fig, ax = plt.subplots(figsize=(20,10),dpi=250)
+    # iteration over channels
+    for line_ind in range(7):
+        ccdsel = line_ind + 1
+        channel = channels[ccdsel]        
+        portnum = Port_dic[channel][1]
+        cprunum = Port_dic[channel][0]
+        df = dataframe[dataframe['SID']==cprunum]
+        ax.plot(df['TMHeaderTime'],df[f"{voltage}{portnum}"],label=channel,linestyle='',marker='o')        
+
+    # legend
+    ax.set_xlabel("TMHeaderTime")
+    ax.set_title(f"{voltage} (V)")
+    ax.legend()
+    if type(file) != type(None):
+        fig.savefig(file)
+    if show_plot:
+        plt.show(block=False)
+
+
+
 
   
 
@@ -510,6 +538,21 @@ def CPRU_plot(dataframe,sampling_period=timedelta(seconds=10),file=None,show_plo
 
 
 def read_MATS_payload_data(start_date,end_date,data_type='HTR',filter=None,version='0.3'):
+    """Reads the payload data between the specified times. 
+
+    Args:
+        start (datetime):           Read payload data from this time (inclusive).
+        stop (datetime):            Read payload data up to this time (inclusive).
+        data_type (str):            key describing the different types of data :
+                                    CCD, CPRU, HTR, PWR, STAT, TCV, PM
+        filter (Optional[dict]):    Extra filters of the form:
+                                    `{fieldname1: [min, max], ...}`
+                                    (Default: None)
+
+    Returns:
+        DataFrame:      The payload data.
+    """
+
     session = boto3.session.Session(profile_name="mats")
     credentials = session.get_credentials()
     filesystem = f'ops-payload-level0-v{version}'
