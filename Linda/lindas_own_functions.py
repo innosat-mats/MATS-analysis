@@ -11,26 +11,26 @@ File for differet plotting functions to be used for MATS commisioning data analy
 import matplotlib.pyplot as plt
 import numpy as np
 
-def collapsandplot(imagecube,collapsdim, ax, signallabel='', title=''):
+def collapsandplot(imagecube,collapsdim, ax, signallabel='', title='', altvec=None):
     """    
+    
     Parameters
     ----------
     imagecub : 3d numpy array made by several CCDimages, created by  create_imagecube(CCDitems, calibrated=False)
     calibrated : BOOLEAN 
 
-    Returns
-    -------
-    3d ndarray with all images and time as the last dimension
-
     """
 
     img_hmean=imagecube.mean(collapsdim)
     img_mean=img_hmean.mean(0)
-    myindex1=np.arange(0, img_mean.shape[0])
+    if altvec is not None:
+        myindex1=altvec
+    else:
+        myindex1=np.arange(0, img_mean.shape[0])
     
 
     if collapsdim==2:
-        myindex=myindex1*CCDitem['NRBIN']#/7.6+54
+        myindex=myindex1#*CCDitem['NRBIN']#/7.6+54
         ax.plot(img_mean,myindex, label='mean')
 
         img_std=img_hmean.std(0)
@@ -47,7 +47,7 @@ def collapsandplot(imagecube,collapsdim, ax, signallabel='', title=''):
         ax.legend()
         plt.tight_layout()
     elif collapsdim==1:
-        myindex=myindex1*CCDitem['NCBINCCDColumns']#/7.6-125
+        myindex=myindex1#*CCDitem['NCBINCCDColumns']#/7.6-125
         ax.plot(myindex, img_mean, label='mean')
 
         img_std=img_hmean.std(0)
@@ -124,4 +124,12 @@ def select_CCDitems_using_list(CCDitems, key, valuelist):
         CCDitems=select_CCDitems(CCDitems, key, value)
     
     return CCDitems
+
+def rename_CCDitem_entries(df):
+    df['NCBIN CCDColumns'] = df['NCBINCCDColumns']
+    df['GAIN Truncation'] = df['GAINTruncation']
+    df['NCBIN FPGAColumns'] = df['NCBINFPGAColumns']
+    mylist=[]
+    df['BC'] = [mylist for i in df.index]
+    df['GAIN Mode'] = df['GAINMode'] 
 

@@ -1,3 +1,4 @@
+
 #%% Import modules
 from mats_utils.rawdata.read_data import read_MATS_data
 import pandas as pd
@@ -8,15 +9,18 @@ import matplotlib.pyplot as plt
 #%%
 # Select Time
 
-start_time=DT.datetime(2023,1,11,18,0,0)
-stop_time=DT.datetime(2023,1,12,6,0,0)
+starttime=DT.datetime(2023,3,20,12,0,0)
+endtime=DT.datetime(2023,3,29,12,0,0)
 
-df=read_MATS_data(start_time, stop_time)
+
+df = read_MATS_data(starttime, endtime,filter=None,level='1a',version='0.5')
+
 print(df.columns.tolist())
 
+#%%
 
 fig, ax=plt.subplots(1)
-sensors=['HTR8B']#, 'HTR1B','HTR2A','HTR2A','HTR8A','HTR8B']
+sensors=['HTR1A','HTR1B','HTR2A','HTR2B','HTR8A','HTR8B']
 for sensor in sensors:
     line, =ax.plot(df.EXPDate, df[sensor])
     line.set_label(sensor)
