@@ -1,6 +1,6 @@
 #%% Import modules
 #%matplotlib qt5
-from mats_utils.rawdata.read_data import read_MATS_data
+from mats_utils.rawdata.read_data import read_MATS_data,read_MATS_payload_data
 import os
 import pandas as pd
 import numpy as np
@@ -19,7 +19,7 @@ def_monitoring_folder = "/home/louis/MATS/MATS-Data/Monitoring"
 
 sampling = 'custom'
 
-custom_period = timedelta(minutes=2)
+
 
 
 #%%
@@ -35,6 +35,8 @@ parser.add_argument('--stop_time', type=str, default='',
                     help='end of the studied time intervall')
 parser.add_argument('--show_plots', type=bool, default=False,
                     help='if matplotlib plots are shown')
+parser.add_argument('--sampling_period', type=int, default=120,
+                    help='time sampling period in seconds')
 
 args = parser.parse_args()
 
@@ -42,6 +44,7 @@ start_time = args.start_time
 stop_time = args.stop_time
 monitoring_folder = args.outdir
 show_plot = args.show_plots
+sampling_period = timedelta(seconds=args.sampling_period)
 
 if start_time != '' and stop_time != '':
         start_time = datetime.strptime(start_time,'%Y:%m:%d_%H:%M:%S')
@@ -56,6 +59,9 @@ print('===========================================')
 print(f"Monitoring from {start_time} to {stop_time}")
 
 # folders to store figures
+if not os.path.exists(monitoring_folder):
+        os.mkdir(monitoring_folder)
+
 data_folder = f"{monitoring_folder}/daily_monitoring_{start_time.strftime('%Y_%m_%d')}"
 if not os.path.exists(data_folder):
         os.mkdir(data_folder)
@@ -64,30 +70,25 @@ print(f"Output directory : {data_folder}")
 
 #%%
 
-if sampling == 'custom':
-    start=start_time
-    end=stop_time
-    time_sampling = pd.date_range(start=start,
-                    end=end,
-                    periods=(end-start).total_seconds()/custom_period.total_seconds() + 1,tz=timezone.utc)
-        
-elif sampling == 'orbit':
-    orbit_filter = {'CCDSEL': [1,7],'satlat':[-1.0,+1.0]}
-    df = read_MATS_data(start_time, stop_time,pltfilter=orbit_filter,level='1a',version='0.5')
-    df = df[~np.isnan(df['satlat'])].sort_values('EXPDate')
-    time_sampling = [start_time.replace(tzinfo=timezone.utc)]
-    for i in range(len(df)-1):
-        if df.iloc[i]['satlat']<0.0 and df.iloc[i+1]['satlat']>0.0:
-            time_sampling.append(df.iloc[i]['EXPDate'])  
-    time_sampling.append(stop_time.replace(tzinfo=timezone.utc)) 
-    
+
 dataframes = []
 dataframe_labels = []
 
+columns_l1a = ['TMHeaderTime', 'EXPDate', 'RID', 'CCDSEL', 'TEXPMS', 
+            'afsAttitudeState', 'afsGnssStateJ2000', 'afsTPLongLatGeod',
+            'afsTangentH_wgs84', 'afsTangentPointECI', 'satlat', 'satlon',
+            'satheight', 'TPlat', 'TPlon', 'TPheight', 'nadir_sza', 'TPsza',
+            'TPssa', 'TPlocaltime']
+
+columns_l1b = columns_l1a
+
+columns_l0 = ['TMHeaderTime', 'RID', 'CCDSEL',
+            'EXPDate', 'TEXPMS', 'TEMP']
+
 try :
     print("Importing level 1b data")
-    df1b = read_MATS_data(start_time, stop_time,level='1b',version='0.4')
-    df1b = df1b.drop('ImageCalibrated', axis=1)
+    df1b = read_MATS_data(start_time, stop_time,level='1b',version='0.4',columns=columns_l1b)
+    # df1b = df1b.drop('ImageCalibrated', axis=1)
     dataframes.append(df1b)
     dataframe_labels.append('l1b v0.4')
 except :
@@ -98,8 +99,8 @@ except :
 
 try :
     print("Importing level 1a data")
-    df1a = read_MATS_data(start_time, stop_time,level='1a',version='0.5')
-    df1a = df1a.drop(columns=['IMAGE','ImageData','id'], axis=1)
+    df1a = read_MATS_data(start_time, stop_time,level='1a',version='0.5',columns=columns_l1a)
+    # df1a = df1a.drop(columns=['IMAGE','ImageData','id'], axis=1)
     dataframes.append(df1a)
     dataframe_labels.append('l1a v0.5')
 
@@ -111,8 +112,8 @@ except :
 
 try :
     print("Importing level 0 data")
-    df0 = read_MATS_data(start_time, stop_time,level='0',version='0.3')
-    df0 = df0.drop('ImageData', axis=1)
+    df0 = read_MATS_data(start_time, stop_time,level='0',version='0.3',columns=columns_l0)
+    # df0 = df0.drop('ImageData', axis=1)
     dataframes.append(df0)
     dataframe_labels.append('l0 v0.3')
 except :
@@ -122,7 +123,7 @@ except :
     
     
 if len(dataframes)>0:
-    multi_timeline(dataframes,dataframe_labels,time_sampling,data_folder=data_folder,show_plot=show_plot)
+    multi_timeline(dataframes,dataframe_labels,data_folder=data_folder,show_plot=show_plot,sampling_period=sampling_period)
 
 try:
     print(f"Plotting CRB-D temperatures")
@@ -140,7 +141,7 @@ try:
     HTR_df = read_MATS_payload_data(start_time,stop_time,data_type='HTR')
     file_path = f"{data_folder}/HTR_temp.png"
     print(f"Plotting HTR temperatures")
-    temperatureHTR_plot(HTR_df,file=file_path,show_plot=show_plot)
+    temperatureHTR_plot(HTR_df,file=file_path,show_plot=show_plot,sampling_period=sampling_period)
 except:
     print(f"Unable to plot HTR temperatures")
 
@@ -149,11 +150,11 @@ try:
     print(f"Importing PWR data")
     PWR_df = read_MATS_payload_data(start_time,stop_time,data_type='PWR')
     print(f"Plotting PWR voltages")
-    PWRV_plot(PWR_df,file=f"{data_folder}/PWR_voltage.png",show_plot=show_plot)
+    PWRV_plot(PWR_df,file=f"{data_folder}/PWR_voltage.png",show_plot=show_plot,sampling_period=sampling_period)
     print(f"Plotting PWR temperature")
-    PWRT_plot(PWR_df,file=f"{data_folder}/PWR_temp.png",show_plot=show_plot)
+    PWRT_plot(PWR_df,file=f"{data_folder}/PWR_temp.png",show_plot=show_plot,sampling_period=sampling_period)
     print(f"Plotting PWR currents")
-    PWRC_plot(PWR_df,file=f"{data_folder}/PWR_current.png",show_plot=show_plot)
+    PWRC_plot(PWR_df,file=f"{data_folder}/PWR_current.png",show_plot=show_plot,sampling_period=sampling_period)
 except:
     print(f"Unable to plot PWR temperatures")
 

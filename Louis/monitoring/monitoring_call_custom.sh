@@ -1,51 +1,40 @@
 #!/bin/bash
 
-# activate conda environment ?
-conda activate MATS_analysis
 
+#### DATA AND HEALTH MONITORING ####
+
+# activate conda environment ?
+# conda activate mats_analysis
+
+
+#### PARAMETERS ####
+ 
 # main path
 MATS_dir='/home/louis/MATS/'
 
+# output folder
+outdir=${MATS_dir}'MATS-Data/Monitoring/test'
 
-# output
-outdir=${MATS_dir}'MATS-Data/Monitoring'
+# monitoring parameters
+sampling_period=3600 # sampling period in seconds
+data_processing=true
+CRBD=true
+HTR=true
+PWR=true
+CPRU=true
 
-#### Daily data and health monitoring
-
-# initiate daily monitoring
-echo -e "Daily data and health monitoring: Initiating ..."
-
+# start and stop of the monitoring
+start_time='2023:05:1_0:0:0'
+stop_time='2023:06:1_0:0:0'
 
 
-daily_start='2023:04:21_0:0:0'
-daily_stop='2023:04:23_0:0:0'
-{ python ${MATS_dir}MATS-analysis/Louis/monitoring/monitoring_routine_daily.py --outdir ${outdir} --start_time ${daily_start} --stop_time ${daily_stop}; } &
+#### RUNNING SCRIPT ####
+
+# initiate monitoring
+echo -e "Data and health monitoring: Initiating ..."
+
+{ python ${MATS_dir}MATS-analysis/Louis/monitoring/monitoring_routine.py --outdir ${outdir} --start_time ${start_time} --stop_time ${stop_time} --sampling_period ${sampling_period} --data_processing=${data_processing} --CRBD=${CRBD} --HTR=${HTR} --PWR=${PWR} --CPRU=${CPRU} ; } &
 pid=$!
 wait $pid
-
-
-daily_start='2023:04:05_0:0:0'
-daily_stop='2023:04:07_0:0:0'
-{ python ${MATS_dir}MATS-analysis/Louis/monitoring/monitoring_routine_daily.py --outdir ${outdir} --start_time ${daily_start} --stop_time ${daily_stop}; } &
-pid=$!
-wait $pid
-
-# #### Weekly summary generation
-
-# # weekly summary 
-# weekly_start='2023:05:01_0:0:0'
-# weekly_stop='2023:06:01_0:0:0'
-
-# # initiate weekly monitoring
-# echo -e "Weekly data and health monitoring summary: Initiating ..."
-
-# # generate figures (fixed time range)
-# # { python ${MATS_dir}MATS-analysis/Louis/monitoring/monitoring_routine_weekly.py --outdir ${outdir} --start_time ${weekly_start} --stop_time ${weekly_stop}; } &
-
-# # generate figures (current week)
-# #{ python ${MATS_dir}MATS-analysis/Louis/monitoring/monitoring_routine_weekly.py --outdir ${outdir}; } &
-
-# # pid=$!
-# # wait $pid
 
 echo 'End of program .....'

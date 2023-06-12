@@ -1,6 +1,6 @@
 #%% Import modules
 #%matplotlib qt5
-from mats_utils.rawdata.read_data import read_MATS_data
+from mats_utils.rawdata.read_data import read_MATS_data, read_MATS_payload_data
 import pandas as pd
 import os
 import numpy as np
