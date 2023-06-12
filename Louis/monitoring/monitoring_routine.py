@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta, timezone
 import argparse
+import matplotlib.pyplot as plt
 from monitoring_functions import multi_timeline,temperatureCRBD_plot,temperatureHTR_plot,read_MATS_payload_data,PWRT_plot,PWRC_plot,PWRV_plot,CPRU_overvoltage_plot,CPRUV_plot,read_MATS_data_custom
 
 pd.set_option('display.max_rows', 500)
@@ -124,6 +125,8 @@ if data_processing:
         
     if len(dataframes)>0:
         multi_timeline(dataframes,dataframe_labels,output_folder=output_folder,show_plot=show_plot,sampling_period=sampling_period)
+        if not show_plot:
+            plt.close('all')
 
 if CRBD:
     try:
@@ -134,6 +137,8 @@ if CRBD:
         end = max(df0['EXPDate'])
         file_path = f"{output_folder}/CRBD_temp.png"
         temperatureCRBD_plot(df0,title='',file=file_path,show_plot=show_plot)
+        if not show_plot:
+            plt.close('all')
     except:
         print(f"Unable to plot CRB-D temperatures from l0 v0.3")
 
@@ -145,6 +150,8 @@ if HTR:
         file_path = f"{output_folder}/HTR_temp.png"
         print(f"Plotting HTR temperatures")
         temperatureHTR_plot(HTR_df,file=file_path,show_plot=show_plot,sampling_period=sampling_period)
+        if not show_plot:
+            plt.close('all')
     except:
         print(f"Unable to plot HTR temperatures")
 
@@ -158,6 +165,8 @@ if PWR:
         PWRT_plot(PWR_df,file=f"{output_folder}/PWR_temp.png",show_plot=show_plot,sampling_period=sampling_period)
         print(f"Plotting PWR currents")
         PWRC_plot(PWR_df,file=f"{output_folder}/PWR_current.png",show_plot=show_plot,sampling_period=sampling_period)
+        if not show_plot:
+            plt.close('all')
     except:
         print(f"Unable to plot PWR temperatures")
 
@@ -169,8 +178,15 @@ if CPRU:
         CPRUV_plot(CPRU_df,output_folder=output_folder,show_plot=show_plot,sampling_period=sampling_period)
         print(f"Plotting Overvoltage summary")
         CPRU_overvoltage_plot(CPRU_df,file=f"{output_folder}/CPRU_overvoltage.png",show_plot=show_plot,sampling_period=sampling_period)
+        if not show_plot:
+            plt.close('all')
     except:
         print(f"Unable to plot CPRU data")
+        
+        
+# closing all plots
+if not show_plot:
+    plt.close('all')
      
 
 
