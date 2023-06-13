@@ -34,19 +34,19 @@ parser.add_argument('--start_time', type=str, default='',
                     help='start of the studied time intervall')
 parser.add_argument('--stop_time', type=str, default='',
                     help='end of the studied time intervall')
-parser.add_argument('--show_plots', type=bool, default=False,
+parser.add_argument('--show_plots', type=str, default='False',
                     help='if matplotlib plots are shown')
 parser.add_argument('--sampling_period', type=int, default=120,
                     help='time sampling period in seconds')
-parser.add_argument('--data_processing', type=bool, default=True,
+parser.add_argument('--data_processing', type=str, default='False',
                     help='if data generation and processing success rate are plotted')
-parser.add_argument('--CRBD', type=bool, default=True,
+parser.add_argument('--CRBD', type=str, default='False',
                     help='if CRB-D temperatures are plotted')
-parser.add_argument('--HTR', type=bool, default=True,
+parser.add_argument('--HTR', type=str, default='False',
                     help='if HTR temperatures are plotted')
-parser.add_argument('--PWR', type=bool, default=True,
+parser.add_argument('--PWR', type=str, default='False',
                     help='PWR data is plotted')
-parser.add_argument('--CPRU', type=bool, default=True,
+parser.add_argument('--CPRU', type=str, default='False',
                     help='if CPRU data is plotted plotted')
 
 args = parser.parse_args()
@@ -54,13 +54,14 @@ args = parser.parse_args()
 start_time = args.start_time
 stop_time = args.stop_time
 output_folder = args.outdir
-show_plot = args.show_plots
+show_plot = args.show_plots=='True'
 sampling_period = timedelta(seconds=args.sampling_period)
-data_processing = args.data_processing
-CRBD = args.CRBD
-HTR = args.HTR
-PWR = args.PWR
-CPRU = args.CPRU
+data_processing = args.data_processing=='True'
+CRBD = args.CRBD=='True'
+HTR = args.HTR=='True'
+PWR = args.PWR=='True'
+CPRU = args.CPRU=='True'
+
 
 if start_time != '' and stop_time != '':
         start_time = datetime.strptime(start_time,'%Y:%m:%d_%H:%M:%S')
@@ -99,8 +100,11 @@ if data_processing:
         print("Importing level 1b data")
         df1b = read_MATS_data_custom(start_time, stop_time,level='1b',version='0.4',columns=columns_l1b)
         # df1b = df1b.drop('ImageCalibrated', axis=1)
-        dataframes.append(df1b)
-        dataframe_labels.append('l1b v0.4')
+        if len(df1b)>0:
+            dataframes.append(df1b)
+            dataframe_labels.append('l1b v0.4')
+        else :
+            print('No level 1b data')
     except :
         print('No level 1b data')
 
@@ -108,9 +112,11 @@ if data_processing:
         print("Importing level 1a data")
         df1a = read_MATS_data_custom(start_time, stop_time,level='1a',version='0.5',columns=columns_l1a)
         # df1a = df1a.drop(columns=['IMAGE','ImageData','id'], axis=1)
-        dataframes.append(df1a)
-        dataframe_labels.append('l1a v0.5')
-
+        if len(df1a)>0:
+            dataframes.append(df1a)
+            dataframe_labels.append('l1a v0.5')
+        else :
+            print('No level 1a data')
     except :
         print('No level 1a data')
 
@@ -118,8 +124,11 @@ if data_processing:
         print("Importing level 0 data")
         df0 = read_MATS_data_custom(start_time, stop_time,level='0',version='0.3',columns=columns_l0)
         # df0 = df0.drop('ImageData', axis=1)
-        dataframes.append(df0)
-        dataframe_labels.append('l0 v0.3')
+        if len(df0)>0:
+            dataframes.append(df0)
+            dataframe_labels.append('l0 v0.3')
+        else :
+            print('No level 0 data')
     except :
         print('No level 0 data')    
         
