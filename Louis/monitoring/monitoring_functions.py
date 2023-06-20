@@ -21,6 +21,8 @@ import pyarrow.parquet as pq  # type: ignore
 from pandas import DataFrame, Timestamp  # type: ignore
 from PIL import Image
 import time as time
+from mats_l1_processing.read_parquet_functions import convert_image_data
+from mats_utils.statistiscs.images_functions import create_imagecube
 
 pd.set_option('display.max_rows', 500)
 
@@ -269,14 +271,14 @@ def multi_timeline(dataframes,dataframe_labels,sampling_period=timedelta(seconds
         # for k in range(len(nb_expected_images)):
         #     print(nb_generated_images[k])
 
-    nb_total_expected_images = np.sum(total_expected_images,axis=1)
-    nb_total_generated_images = np.sum(total_generated_images,axis=1)
-    total_data = np.zeros_like(nb_total_expected_images)
-    total_data = np.where(nb_total_expected_images!=0,nb_total_generated_images/nb_total_expected_images,None)
-    file_path = None
-    if type(output_folder) != type(None):
-        file_path = f"{output_folder}/image_generation_sum.png"
-    timeline_plot(total_data,time_sampling,"nb of images/expected nb of images (all channels)",line_labels=dataframe_labels,file=file_path,show_plot=show_plot)
+    # nb_total_expected_images = np.sum(total_expected_images,axis=1)
+    # nb_total_generated_images = np.sum(total_generated_images,axis=1)
+    # total_data = np.zeros_like(nb_total_expected_images)
+    # total_data = np.where(nb_total_expected_images!=0,nb_total_generated_images/nb_total_expected_images,None)
+    # file_path = None
+    # if type(output_folder) != type(None):
+    #     file_path = f"{output_folder}/image_generation_sum.png"
+    # timeline_plot(total_data,time_sampling,"nb of images/expected nb of images (all channels)",line_labels=dataframe_labels,file=file_path,show_plot=show_plot)
 
 
     # processing success
@@ -598,7 +600,7 @@ def CPRUV_plot(dataframe,output_folder=None,show_plot=False,sampling_period=time
                     else: color='red'
                 #print(f"--> {color}")
                 #ax_bool.add_patch(Rectangle((start,line_ind-width*0.5),end-start,width,color=color))
-                ax_bool.hlines(y=key,xmin=start,xmax=end,color=color)
+                ax_bool.hlines(y=key,xmin=start,xmax=end,color=color,linewidth=3)
 
         # legend
         legend_elements = [Patch(facecolor='white',label="no data"),    
@@ -613,6 +615,90 @@ def CPRUV_plot(dataframe,output_folder=None,show_plot=False,sampling_period=time
             fig.savefig(file)
         if show_plot:
             plt.show(block=False)
+
+
+def schedule_plot(dataframe,column='name',file=None,show_plot=False):
+    """Plots info from timeline schedule
+
+    Arguments:
+        df (obj:`dataframe`): Pandas dataframe holding the schedule
+        column: Value to plot (default: name)
+    Returns:
+        None
+
+    """
+    df = dataframe.drop_duplicates(subset=['schedule_id'])
+
+    fig, ax = plt.subplots(figsize=(20,10),dpi=250)
+    for x1, x2, y in zip(df["schedule_start_date"], df["schedule_end_date"], df[column]):
+        ax.plot([x1, x2], [y, y],linewidth=3)
+    ax.set_title('Payload schedule')
+
+    if type(file) != type(None):
+        fig.savefig(file)
+    if show_plot:
+        plt.show(block=False)
+
+
+def mean_image(dataframe,file=None,show_plot=False,histo=False):
+    """Plots mean image for each channel
+
+    Arguments:
+        df (obj:`dataframe`): Pandas dataframe holding the schedule
+    Returns:
+        None
+
+    """
+    
+    channel_names = ['IR1','IR3','UV1','IR2','IR4','UV2','NADIR']
+
+    plt.ioff()
+
+    fig, axes = plt.subplots(3, 3, figsize=(16, 9))
+    fig.suptitle(f"Mean image between {min(dataframe['TMHeaderTime'])} and  {max(dataframe['TMHeaderTime'])}")
+    #fig.patch.set_facecolor('lightgrey')
+    axes=axes.ravel()
+
+
+    df = dataframe
+    convert_image_data(df)
+
+    # generate cbars
+    cbaxes, cbars = [], []
+    for i in range(7):
+        channel = channel_names[i]
+        ccdsel=CCDSEL[channel]        
+        df_tmp = df[df.CCDSEL==ccdsel]
+        if len(df_tmp)>0:
+            im_cube = create_imagecube(df_tmp)
+            mean_im = np.mean(im_cube,axis=0)
+            ax = axes[i]
+            im = ax.pcolormesh(mean_im)
+            fig.colorbar(im,ax=ax)   
+            ax.set_title(f"{channel} ({len(df_tmp)} images)")
+            if histo:
+                fig_histo, axes_histo = plt.subplots(2)
+                im_histo = axes_histo[0].pcolormesh(mean_im)
+                axes_histo[0].set_title(f"Mean image")
+                fig_histo.colorbar(im,ax=axes_histo[0]) 
+                axes_histo[1].hist(np.ravel(im_cube),nbin=30) 
+                axes_histo[1].set_title(f"Histogram")
+                axes_histo[1].set_xlabel(f"Pixel value")
+                axes_histo[1].set_ylabel(f"Number of pixels")
+                fig_histo.suptitle(f"{channel} ({len(df_tmp)} images)")
+                file_tmp = file
+                if type(file) != type(None):
+                    file_histo = f"{'/'.join(file_tmp.split('/')[:-1])}/{channel}_histo.png"
+                    fig_histo.savefig(file_histo)
+                if show_plot:
+                    fig_histo.show()
+
+
+
+    if type(file) != type(None):
+        fig.savefig(file)
+    if show_plot:
+        plt.show(block=False)
 
 
 
@@ -813,6 +899,9 @@ def read_ccd_data_in_interval_custom(
     if metadata:
         return dataframe, table.schema.metadata
     return dataframe
+
+
+
 
 # %%
 
