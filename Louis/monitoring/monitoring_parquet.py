@@ -144,8 +144,7 @@ def parse_object_date(
 
 #%%
 # plotting all the parquet files dates
-AWS_files = ['ops-payload-level0-source',
-             'ops-payload-level0-v0.1',
+AWS_files = ['ops-payload-level0-v0.1',
              'ops-payload-level0-v0.2',
              'ops-payload-level0-v0.3',
              'ops-payload-level1a-v0.1',
@@ -153,8 +152,10 @@ AWS_files = ['ops-payload-level0-source',
              'ops-payload-level1a-v0.3',
              'ops-payload-level1a-v0.4',
              'ops-payload-level1a-v0.5',
+             'ops-payload-level1a-v0.6',
              'ops-payload-level1b-v0.3',
              'ops-payload-level1b-v0.4',
+             'ops-payload-level1b-v0.5',
              'ops-payload-level1a-pm-v0.1',
              'ops-payload-level1a-pm-v0.2']
 
@@ -210,8 +211,8 @@ plt.show(block=False)
 
 # number of parquet files per day
 AWS_files = ['ops-payload-level0-v0.3',
-             'ops-payload-level1a-v0.5',
-             'ops-payload-level1b-v0.4']
+             'ops-payload-level1a-v0.6',
+             'ops-payload-level1b-v0.5']
 
 
 lim_red = 0

@@ -9,8 +9,6 @@ import argparse
 import matplotlib.pyplot as plt
 from monitoring_functions import multi_timeline,temperatureCRBD_plot,temperatureHTR_plot,read_MATS_payload_data,PWRT_plot,PWRC_plot,PWRV_plot,CPRU_overvoltage_plot,CPRUV_plot,read_MATS_data_custom,schedule_plot,mean_image
 
-
-
 pd.set_option('display.max_rows', 500)
 
 #%%
@@ -40,9 +38,18 @@ parser.add_argument('--show_plots', type=str, default='False',
                     help='if matplotlib plots are shown')
 parser.add_argument('--sampling_period', type=int, default=120,
                     help='time sampling period in seconds')
-parser.add_argument('--mode', type=str, default='daily',
-                    help='Monitoring mode : daily, weekly, temp, all, power')
-
+parser.add_argument('--data_processing', type=str, default='False',
+                    help='if data generation and processing success rate are plotted')
+parser.add_argument('--CRBD', type=str, default='False',
+                    help='if CRB-D temperatures are plotted')
+parser.add_argument('--HTR', type=str, default='False',
+                    help='if HTR temperatures are plotted')
+parser.add_argument('--PWR', type=str, default='False',
+                    help='PWR data is plotted')
+parser.add_argument('--CPRU', type=str, default='False',
+                    help='if CPRU data is plotted')
+parser.add_argument('--schedule', type=str, default='False',
+                    help='if schedule data is plotted')
 
 args = parser.parse_args()
 
@@ -51,64 +58,12 @@ stop_time = args.stop_time
 output_folder = args.outdir
 show_plot = args.show_plots=='True'
 sampling_period = timedelta(seconds=args.sampling_period)
-mode = args.mode
-
-
-if mode == 'daily':
-    data_processing = True # plots data generation for each channel (compares it to the expected nb of images) and the processing succes rate between levels
-    mean_im = True # plots the mean image for each channel
-    histo = False # plots the mean image for each channel aswell as the histogram of pixel values
-    CRBD_temp = False # plots the temperature in each CRB-D
-    HTR = True # plots the temperature for each Heater and raises some warnings if the temperature isn't nominal
-    PWRT = False # plots the temperature in the power module
-    PWRC = False # plots the cureents from the power module
-    PWRV = False # plots the voltage values in the power module
-    overvoltage = True # plots a summary of overvoltage events for each channel
-    CPRU = False # plots several voltage data coming from the CPRU
-    mode_schedule = True # plots the scheduled instrument mode 
-
-elif mode == 'temp':
-    data_processing = False
-    mean_im = False
-    histo = False
-    CRBD_temp = True
-    HTR = True
-    PWRT = True
-    PWRC = False
-    PWRV = False
-    overvoltage = False
-    CPRU = False
-    mode_schedule = False
-
-elif mode == 'all':
-    data_processing = True
-    mean_im = True
-    histo = True
-    CRBD_temp = True
-    HTR = True
-    PWRT = True
-    PWRC = True
-    PWRV = True
-    overvoltage = True
-    CPRU = True
-    mode_schedule = True
-
-elif mode == 'power':
-    data_processing = False
-    mean_im = False
-    histo = False
-    CRBD_temp = False
-    HTR = False
-    PWRT = False
-    PWRC = True
-    PWRV = True
-    overvoltage = True
-    CPRU = True
-    mode_schedule = False    
-
-
-
-
+data_processing = args.data_processing=='True'
+CRBD = args.CRBD=='True'
+HTR = args.HTR=='True'
+PWR = args.PWR=='True'
+CPRU = args.CPRU=='True'
+schedule = args.schedule=='True'
 
 
 if start_time != '' and stop_time != '':
@@ -142,15 +97,6 @@ columns_l1b = columns_l1a
 
 columns_l0 = ['TMHeaderTime', 'CCDSEL',
             'EXPDate', 'TEXPMS', 'TEMP']
-
-temp_range = {'HTR1A':[10,25],
-              'HTR1B':[10,25],
-              'HTR2A':[5,20],
-              'HTR2B':[5,20],
-              'HTR8A':[-25,-5],
-              'HTR8B':[-25,-5]}
-
-max_variability = 5 # in K
 
 if data_processing:
     try :
@@ -194,27 +140,17 @@ if data_processing:
         if not show_plot:
             plt.close('all')
 
-
-if mean_im:
-    try:
-        print("Importing level 0 data")
-        df0 = read_MATS_data(start_time, stop_time,level='0',version='0.3')
-        print(f"Plotting the mean image for each channel")
-        file_path = f"{output_folder}/mean_im.png"
-        mean_image(df0,file=file_path,show_plot=show_plot)
-        if not show_plot:
-            plt.close('all')
-    except:
-        print(f"Unable to plot mean images from from l0 v0.3")
-
-
-if CRBD_temp:
+if CRBD:
     try:
         print("Importing level 0 data")
         df0 = read_MATS_data_custom(start_time, stop_time,level='0',version='0.3')
         print(f"Plotting CRB-D temperatures")
+        start = min(df0['EXPDate'])
+        end = max(df0['EXPDate'])
         file_path = f"{output_folder}/CRBD_temp.png"
         temperatureCRBD_plot(df0,title='',file=file_path,show_plot=show_plot)
+        file_path = f"{output_folder}/mean_im.png"
+        mean_image(df0,file=file_path,show_plot=show_plot)
         if not show_plot:
             plt.close('all')
     except:
@@ -228,57 +164,44 @@ if HTR:
         file_path = f"{output_folder}/HTR_temp.png"
         print(f"Plotting HTR temperatures")
         temperatureHTR_plot(HTR_df,file=file_path,show_plot=show_plot,sampling_period=sampling_period)
-        for heater in ['HTR1A','HTR1B','HTR2A','HTR2B','HTR8A','HTR8B']:
-            nominal_range = temp_range[heater]
-            if max(HTR_df[heater]) > nominal_range[1] :
-                print(f"{heater} temperature anormally high")
-            if min(HTR_df[heater]) < nominal_range[0] :
-                print(f"{heater} temperature anormally low")
-            if max(HTR_df[heater]) - min(HTR_df[heater]) > max_variability:
-                print(f"High variability on {heater} temperature between {start_time} and {stop_time}")
         if not show_plot:
             plt.close('all')
     except:
         print(f"Unable to plot HTR temperatures")
 
-if PWRV or PWRC or PWRT:
+if PWR:
     try:
         print(f"Importing PWR data")
         PWR_df = read_MATS_payload_data(start_time,stop_time,data_type='PWR')
-        if PWRV:
-            print(f"Plotting PWR voltages")
-            PWRV_plot(PWR_df,file=f"{output_folder}/PWR_voltage.png",show_plot=show_plot,sampling_period=sampling_period)
-        if PWRT:
-            print(f"Plotting PWR temperature")
-            PWRT_plot(PWR_df,file=f"{output_folder}/PWR_temp.png",show_plot=show_plot,sampling_period=sampling_period)
-        if PWRC:
-            print(f"Plotting PWR currents")
-            PWRC_plot(PWR_df,file=f"{output_folder}/PWR_current.png",show_plot=show_plot,sampling_period=sampling_period)
+        print(f"Plotting PWR voltages")
+        PWRV_plot(PWR_df,file=f"{output_folder}/PWR_voltage.png",show_plot=show_plot,sampling_period=sampling_period)
+        print(f"Plotting PWR temperature")
+        PWRT_plot(PWR_df,file=f"{output_folder}/PWR_temp.png",show_plot=show_plot,sampling_period=sampling_period)
+        print(f"Plotting PWR currents")
+        PWRC_plot(PWR_df,file=f"{output_folder}/PWR_current.png",show_plot=show_plot,sampling_period=sampling_period)
         if not show_plot:
             plt.close('all')
     except:
         print(f"Unable to plot PWR temperatures")
 
-if CPRU or overvoltage:
+if CPRU:
     try:
         print(f"Importing CPRU data")
         CPRU_df = read_MATS_payload_data(start_time,stop_time,data_type='CPRU')    
-        if CPRU:
-            print(f"Plotting CPRU data")
-            CPRUV_plot(CPRU_df,output_folder=output_folder,show_plot=show_plot,sampling_period=sampling_period)
-        if overvoltage:
-            print(f"Plotting Overvoltage summary")
-            CPRU_overvoltage_plot(CPRU_df,file=f"{output_folder}/CPRU_overvoltage.png",show_plot=show_plot,sampling_period=sampling_period)
+        print(f"Plotting CPRU data")
+        CPRUV_plot(CPRU_df,output_folder=output_folder,show_plot=show_plot,sampling_period=sampling_period)
+        print(f"Plotting Overvoltage summary")
+        CPRU_overvoltage_plot(CPRU_df,file=f"{output_folder}/CPRU_overvoltage.png",show_plot=show_plot,sampling_period=sampling_period)
         if not show_plot:
             plt.close('all')
     except:
         print(f"Unable to plot CPRU data")
 
 
-if mode_schedule: 
+if schedule: # only works with the dev repostiroies
     try:
         print(f"Importing df1a v0.6 data")
-        df1a = read_MATS_data(start_time,stop_time,version='0.6',level='1a')
+        df1a = read_MATS_data(start_time,stop_time,version='0.6',level='1a',dev=True)
         df1a = df1a.drop(columns=['IMAGE','ImageData','id'], axis=1)
         print(f"Plotting schedule data")
         schedule_plot(df1a,file=f"{output_folder}/schedule.png",show_plot=show_plot,column='schedule_name')
