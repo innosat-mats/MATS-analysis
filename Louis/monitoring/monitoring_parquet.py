@@ -265,8 +265,8 @@ plt.show(block=False)
 
 # checking the daily processing rate 
 
-AWS_processing = np.array([['ops-payload-level0-v0.3','ops-payload-level1a-v0.5'],['ops-payload-level1a-v0.5','ops-payload-level1b-v0.4'],['ops-payload-level0-v0.3','ops-payload-level1b-v0.4']])
-AWS_labels = ["L0-v0.3 --> L1a-v0.5","L1a-v0.5 --> L1b-v0.4","L0-v0.3 --> L1b-v0.4"]
+AWS_processing = np.array([['ops-payload-level0-v0.3','ops-payload-level1a-v0.6'],['ops-payload-level1a-v0.6','ops-payload-level1b-v0.5'],['ops-payload-level0-v0.3','ops-payload-level1b-v0.5']])
+AWS_labels = ["L0-v0.3 --> L1a-v0.6","L1a-v0.6 --> L1b-v0.5","L0-v0.3 --> L1b-v0.5"]
 
 lim_red = 0
 lim_orange = 0.5
