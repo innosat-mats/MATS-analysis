@@ -61,7 +61,7 @@ if mode == 'daily':
     CRBD_temp = False # plots the temperature in each CRB-D
     HTR = True # plots the temperature for each Heater and raises some warnings if the temperature isn't nominal
     PWRT = False # plots the temperature in the power module
-    PWRC = False # plots the cureents from the power module
+    PWRC = False # plots the currents from the power module
     PWRV = False # plots the voltage values in the power module
     overvoltage = True # plots a summary of overvoltage events for each channel
     CPRU = False # plots several voltage data coming from the CPRU
@@ -107,8 +107,9 @@ elif mode == 'power':
     mode_schedule = False    
 
 
-
-
+l0_version = '0.3'
+l1a_version = '0.6'
+l1b_version = '0.5'
 
 
 if start_time != '' and stop_time != '':
@@ -136,7 +137,7 @@ dataframes = []
 dataframe_labels = []
 
 columns_l1a = ['TMHeaderTime', 'EXPDate', 'CCDSEL', 'TEXPMS', 
-            'satlat', 'satlon', 'TPlat', 'TPlon', 'nadir_sza']
+            'satlat', 'satlon', 'TPlat', 'TPlon', 'nadir_sza','schedule_start_date','schedule_end_date','schedule_id','schedule_name']
 
 columns_l1b = columns_l1a
 
@@ -152,10 +153,12 @@ temp_range = {'HTR1A':[10,25],
 
 max_variability = 5 # in K
 
+
+#%%
 if data_processing:
     try :
         print("Importing level 1b data")
-        df1b = read_MATS_data_custom(start_time, stop_time,level='1b',version='0.4',columns=columns_l1b)
+        df1b = read_MATS_data_custom(start_time, stop_time,level='1b',version=l1b_version,columns=columns_l1b)
         # df1b = df1b.drop('ImageCalibrated', axis=1)
         if len(df1b)>0:
             dataframes.append(df1b)
@@ -167,7 +170,7 @@ if data_processing:
 
     try :
         print("Importing level 1a data")
-        df1a = read_MATS_data_custom(start_time, stop_time,level='1a',version='0.5',columns=columns_l1a)
+        df1a = read_MATS_data_custom(start_time, stop_time,level='1a',version=l1a_version,columns=columns_l1a)
         # df1a = df1a.drop(columns=['IMAGE','ImageData','id'], axis=1)
         if len(df1a)>0:
             dataframes.append(df1a)
@@ -179,7 +182,7 @@ if data_processing:
 
     try :
         print("Importing level 0 data")
-        df0 = read_MATS_data_custom(start_time, stop_time,level='0',version='0.3',columns=columns_l0)
+        df0 = read_MATS_data_custom(start_time, stop_time,level='0',version=l0_version,columns=columns_l0)
         # df0 = df0.drop('ImageData', axis=1)
         if len(df0)>0:
             dataframes.append(df0)
@@ -198,20 +201,20 @@ if data_processing:
 if mean_im:
     try:
         print("Importing level 0 data")
-        df0 = read_MATS_data(start_time, stop_time,level='0',version='0.3')
+        df0 = read_MATS_data(start_time, stop_time,level='0/CCD',version='0.3')
         print(f"Plotting the mean image for each channel")
         file_path = f"{output_folder}/mean_im.png"
         mean_image(df0,file=file_path,show_plot=show_plot)
         if not show_plot:
             plt.close('all')
     except:
-        print(f"Unable to plot mean images from from l0 v0.3")
+        print(f"Unable to plot mean images from l0 v0.3")
 
 
 if CRBD_temp:
     try:
         print("Importing level 0 data")
-        df0 = read_MATS_data_custom(start_time, stop_time,level='0',version='0.3')
+        df0 = read_MATS_data_custom(start_time, stop_time,level='0',version=l0_version,columns=columns_l0)
         print(f"Plotting CRB-D temperatures")
         file_path = f"{output_folder}/CRBD_temp.png"
         temperatureCRBD_plot(df0,title='',file=file_path,show_plot=show_plot)
@@ -278,7 +281,7 @@ if CPRU or overvoltage:
 if mode_schedule: 
     try:
         print(f"Importing df1a v0.6 data")
-        df1a = read_MATS_data(start_time,stop_time,version='0.6',level='1a')
+        df1a = read_MATS_data(start_time,stop_time,version=l1a_version,level='1a')
         df1a = df1a.drop(columns=['IMAGE','ImageData','id'], axis=1)
         print(f"Plotting schedule data")
         schedule_plot(df1a,file=f"{output_folder}/schedule.png",show_plot=show_plot,column='schedule_name')
