@@ -58,7 +58,9 @@ stop_TPlat = 42.5 # TPlat for which UV measurement starts
 # %%
 
 def timeline_stat(df,time_sampling,df_loc):    
-
+    """
+    Function that computes the number of expected and generated images for each channel in each time intervall
+    """
     nb_expected_images = np.zeros((7,len(time_sampling)-1))
     nb_generated_images = np.zeros((7,len(time_sampling)-1))
     nb_expected_images_default = np.zeros((7,len(time_sampling)-1)) 
@@ -158,7 +160,20 @@ def timeline_stat(df,time_sampling,df_loc):
 #%%
     
 def timeline_plot(data,time_sampling,title,line_labels,file=None,show_plot=False):
+    """
+    Plot the timeline of the number of images generated for each channel
 
+    Parameters: 
+        data (array): array containing the number of images generated for each channel and each time intervall
+        time_sampling (array): array containing the start and end times of each time intervall
+        title (str): title of the plot
+        line_labels (list): list of the labels of each line
+        file (str): name of the file where to save the plot. Default is None, ie no saving
+        show_plot (bool): if True, the plot is shown. Default is False
+    
+    Returns:
+        None    
+    """
     lim_red = 0
     lim_orange = 0.5
     lim_blue = 0.8
@@ -223,6 +238,19 @@ def timeline_plot(data,time_sampling,title,line_labels,file=None,show_plot=False
 
 #%%
 def multi_timeline(dataframes,dataframe_labels,sampling_period=timedelta(seconds=120),output_folder=None,show_plot=False):
+    """ 
+    Plot the timeline of the number of images generated for each channel, as well as the processing success rate between level 0, level 1a and level 1b.
+
+    Parameters:
+        dataframes (list of pandas.DataFrame): list of dataframes containing the data
+        dataframe_labels (list of str): list of labels for each dataframe
+        sampling_period (timedelta): sampling period for the timeline
+        output_folder (str): path to the output folder. Default is None, ie no plot is saved
+        show_plot (bool): if True, the plot is shown. Default is False
+
+    Returns:
+        None
+    """  
 
     df_loc = dataframes[0]
 
@@ -309,8 +337,16 @@ def multi_timeline(dataframes,dataframe_labels,sampling_period=timedelta(seconds
     
 #%%
 
-def temperatureCRBD_plot(dataframe,title='',file=None,show_plot=False):
-
+def temperatureCRBD_plot(dataframe,file=None,show_plot=False):
+    '''
+    Plot the temperature of the CRBD
+    Args:
+        dataframe (pandas.DataFrame): dataframe containing the data
+        file (str): path to save the plot. Default is None, which means the plot is not saved
+        show_plot (bool): whether to show the plot or not. Default is False
+    Returns:
+        None
+    '''
     fig, ax = plt.subplots(figsize=(20,10),dpi=250)
     for channel_ind in range(1,8):  
         channel = channels[channel_ind]
@@ -339,7 +375,7 @@ def temperatureCRBD_plot(dataframe,title='',file=None,show_plot=False):
             ax.plot(df['EXPDate'],temp_ADC,label=channel,marker='o',linestyle='')
     
     ax.legend()
-    ax.set_title(f'Temperature in each CRB-D {title}')
+    ax.set_title(f'Temperature in each CRB-D')
     ax.set_ylabel('Temperature in C')
     ax.set_xlabel('EXPDate')
     if type(file) != type(None):
@@ -348,16 +384,26 @@ def temperatureCRBD_plot(dataframe,title='',file=None,show_plot=False):
         plt.show(block=False)
     
 
-def temperatureHTR_plot(dataframe,title='',file=None,show_plot=False,sampling_period=timedelta(seconds=60)):
-
+def temperatureHTR_plot(dataframe,file=None,show_plot=False,sampling_period=timedelta(seconds=60)):
+    '''
+    Plots the temperature of the HTR sensors
+    Args:
+        dataframe (DataFrame):  The dataframe containing the payload data.
+        file (str, optional):   The file path where to save the plot. Defaults to None, ie the plot is not saved.
+        show_plot (bool, optional): Whether to show the plot or not. Defaults to False.
+        sampling_period (timedelta, optional): The sampling period. Defaults to timedelta(seconds=60).    
+    Returns:
+        None
+    '''
     fig, ax = plt.subplots(figsize=(20,10),dpi=250)
     start = min(dataframe['TMHeaderTime'])
     end = max(dataframe['TMHeaderTime'])
     temp_sampling = pd.date_range(start=start,
                   end=end,
                   periods=(end-start).total_seconds()/sampling_period.total_seconds() + 1,tz=timezone.utc)
-
+    
     for HTR_name in ['HTR1A','HTR1B','HTR2A','HTR2B','HTR8A','HTR8B']:  
+        ax.plot(dataframe['TMHeaderTime'],dataframe[HTR_name],marker='.',linestyle='',label=HTR_name) 
         temp_data = dataframe[HTR_name] 
         HTR_temp = np.zeros(len(temp_sampling)-1)    
         for i in range(len(temp_sampling)-1):
@@ -365,10 +411,10 @@ def temperatureHTR_plot(dataframe,title='',file=None,show_plot=False,sampling_pe
             end = temp_sampling[i+1]
             HTR_temp[i] = np.nanmean(temp_data[(start<=dataframe['TMHeaderTime']) & (dataframe['TMHeaderTime']<=end)])
         
-        ax.plot(temp_sampling[:-1],HTR_temp,label=HTR_name,marker='o',linestyle='')
-    
+        ax.plot(temp_sampling[:-1],HTR_temp,label=f"{HTR_name} {sampling_period.total_seconds():.0f}s average",linestyle='-')
+            
     ax.legend()
-    ax.set_title(f'Temperature in each heater sensor (averaged over {sampling_period.total_seconds():.0f} s) {title}')
+    ax.set_title(f'Temperature in each heater sensor')
     ax.set_ylabel('Temperature in C')
     ax.set_xlabel('TMHeaderTime')
     if type(file) != type(None):
@@ -379,8 +425,17 @@ def temperatureHTR_plot(dataframe,title='',file=None,show_plot=False,sampling_pe
 
   
 
-def PWRV_plot(dataframe,title='',file=None,show_plot=False,sampling_period=timedelta(seconds=60)):
-
+def PWRV_plot(dataframe,file=None,show_plot=False,sampling_period=timedelta(seconds=60)):
+    '''
+    Plots the voltage of the PWR module
+    Args:
+        dataframe (DataFrame):  The dataframe containing the payload data.
+        file (str, optional):   The file path where to save the plot. Defaults to None, ie the plot is not saved.
+        show_plot (bool, optional): Whether to show the plot or not. Defaults to False.
+        sampling_period (timedelta, optional): The sampling period. Defaults to timedelta(seconds=60).
+    Returns:
+        None
+    '''
     fig, ax = plt.subplots(figsize=(20,10),dpi=250)
     start = min(dataframe['TMHeaderTime'])
     end = max(dataframe['TMHeaderTime'])
@@ -388,7 +443,8 @@ def PWRV_plot(dataframe,title='',file=None,show_plot=False,sampling_period=timed
                   end=end,
                   periods=(end-start).total_seconds()/sampling_period.total_seconds() + 1,tz=timezone.utc)
 
-    for voltage in ['PWRP32V','PWRP16V','PWRM16V']:  
+    for voltage in ['PWRP32V','PWRP16V','PWRM16V']: 
+        ax.plot(dataframe['TMHeaderTime'],dataframe[voltage],marker='.',linestyle='',label=voltage) 
         volt_data = dataframe[voltage] 
         VOLT = np.zeros(len(time_sampling)-1)    
         for i in range(len(time_sampling)-1):
@@ -396,10 +452,12 @@ def PWRV_plot(dataframe,title='',file=None,show_plot=False,sampling_period=timed
             end = time_sampling[i+1]
             VOLT[i] = np.nanmean(volt_data[(start<=dataframe['TMHeaderTime']) & (dataframe['TMHeaderTime']<=end)])
         
-        ax.plot(time_sampling[:-1],VOLT,label=voltage,marker='o',linestyle='')
-    
+        ax.plot(time_sampling[:-1],VOLT,label=f"{voltage} {sampling_period.total_seconds():.0f}s average")
+
+        
+
     ax.legend()
-    ax.set_title(f'Voltage in each bus (averaged over {sampling_period.total_seconds():.0f} s) {title}')
+    ax.set_title(f'Voltage in each bus')
     ax.set_ylabel('Voltage in V')
     ax.set_xlabel('TMHeaderTime')
     if type(file) != type(None):
@@ -408,15 +466,25 @@ def PWRV_plot(dataframe,title='',file=None,show_plot=False,sampling_period=timed
         plt.show(block=False)
 
 
-def PWRC_plot(dataframe,title='',file=None,show_plot=False,sampling_period=timedelta(seconds=60)):
-
+def PWRC_plot(dataframe,file=None,show_plot=False,sampling_period=timedelta(seconds=60)):
+    '''
+    Plots the current of the power module
+    Args:
+        dataframe (DataFrame):  The dataframe containing the payload data.
+        file (str, optional):   The file path where to save the plot. Defaults to None, ie the plot is not saved.
+        show_plot (bool, optional): Whether to show the plot or not. Defaults to False.
+        sampling_period (timedelta, optional): The sampling period. Defaults to timedelta(seconds=60).
+    Returns:
+        None
+    '''
     fig, ax = plt.subplots(figsize=(20,10),dpi=250)
     start = min(dataframe['TMHeaderTime'])
     end = max(dataframe['TMHeaderTime'])
     time_sampling = pd.date_range(start=start,
                   end=end,
                   periods=(end-start).total_seconds()/sampling_period.total_seconds() + 1,tz=timezone.utc)
-    for current in ['PWRP32C','PWRP16C','PWRM16C','PWRP3C3']:  
+    for current in ['PWRP32C','PWRP16C','PWRM16C','PWRP3C3']:
+        ax.plot(dataframe['TMHeaderTime'],dataframe[current],marker='.',linestyle='',label=current)  
         curr_data = dataframe[current] 
         CURR = np.zeros(len(time_sampling)-1)    
         for i in range(len(time_sampling)-1):
@@ -424,10 +492,11 @@ def PWRC_plot(dataframe,title='',file=None,show_plot=False,sampling_period=timed
             end = time_sampling[i+1]
             CURR[i] = np.nanmean(curr_data[(start<=dataframe['TMHeaderTime']) & (dataframe['TMHeaderTime']<=end)])
         
-        ax.plot(time_sampling[:-1],CURR,label=current,marker='o',linestyle='')
-    
+        ax.plot(time_sampling[:-1],CURR,label=f"{current} {sampling_period.total_seconds():.0f}s average")
+        
+
     ax.legend()
-    ax.set_title(f'Current in each bus (averaged over {sampling_period.total_seconds():.0f} s) {title}')
+    ax.set_title(f'Current in each bus')
     ax.set_ylabel('Current in A')
     ax.set_xlabel('TMHeaderTime')
     if type(file) != type(None):
@@ -437,10 +506,21 @@ def PWRC_plot(dataframe,title='',file=None,show_plot=False,sampling_period=timed
 
 
 
-def PWRT_plot(dataframe,title='',file=None,show_plot=False,sampling_period=timedelta(seconds=60)):
-
+def PWRT_plot(dataframe,file=None,show_plot=False,sampling_period=timedelta(seconds=60)):
+    '''
+    Plots the temperature of the PWR module
+    Args:   
+        dataframe (DataFrame):  The dataframe containing the payload data.
+        file (str, optional):   The file path where to save the plot. Defaults to None, ie the plot is not saved.
+        show_plot (bool, optional): Whether to show the plot or not. Defaults to False.
+        sampling_period (timedelta, optional): The sampling period. Defaults to timedelta(seconds=60).
+    Returns:
+        None
+    '''
     fig, ax = plt.subplots(figsize=(20,10),dpi=250)
     
+    ax.plot(dataframe['TMHeaderTime'],dataframe['PWRT'],marker='.',linestyle='')
+
     start = min(dataframe['TMHeaderTime'])
     end = max(dataframe['TMHeaderTime'])
     time_sampling = pd.date_range(start=start,
@@ -453,10 +533,10 @@ def PWRT_plot(dataframe,title='',file=None,show_plot=False,sampling_period=timed
         end = time_sampling[i+1]
         TEMP[i] = np.nanmean(temp_data[(start<=dataframe['TMHeaderTime']) & (dataframe['TMHeaderTime']<=end)])
         
-    ax.plot(time_sampling[:-1],TEMP,label='PWRT',marker='o',linestyle='')
+    ax.plot(time_sampling[:-1],TEMP,label=f"{sampling_period.total_seconds():.0f}s average",linestyle='-',linewidth=2)   
     
     ax.legend()
-    ax.set_title(f'Power module temperature (averaged over {sampling_period.total_seconds():.0f} s) {title}')
+    ax.set_title(f'Power module temperature')
     ax.set_ylabel('Temperature  in C')
     ax.set_xlabel('TMHeaderTime')
     if type(file) != type(None):
@@ -468,7 +548,16 @@ def PWRT_plot(dataframe,title='',file=None,show_plot=False,sampling_period=timed
 #%%
 
 def CPRU_overvoltage_plot(dataframe,sampling_period=timedelta(seconds=600),file=None,show_plot=False):
-    
+    '''
+    Plots the overvoltage for each channel of the CPRU
+    Args:
+        dataframe (DataFrame):  The dataframe containing the payload data.
+        sampling_period (timedelta, optional): The sampling period. Defaults to timedelta(seconds=600).
+        file (str, optional):   The file path where to save the plot. Defaults to None, ie the plot is not saved.
+        show_plot (bool, optional): Whether to show the plot or not. Defaults to False.
+    Returns:
+        None
+    '''
     # define time sampling
     start = min(dataframe['TMHeaderTime'])
     end = max(dataframe['TMHeaderTime'])
@@ -520,7 +609,16 @@ def CPRU_overvoltage_plot(dataframe,sampling_period=timedelta(seconds=600),file=
 
 
 def CPRUV_plot(dataframe,output_folder=None,show_plot=False,sampling_period=timedelta(seconds=600)):    
-
+    '''
+    Plots the voltage of the CPRU
+    Args:       
+        dataframe (DataFrame):  The dataframe containing the payload data.
+        output_folder (str, optional): The folder where to save the plots. Defaults to None, ie the plots are not saved.
+        show_plot (bool, optional): Whether to show the plot or not. Defaults to False.
+        sampling_period (timedelta, optional): The sampling period. Defaults to timedelta(seconds=600).
+    Returns:
+        None
+    '''
     for voltage in ['VGATE','VSUBS','VRD','VOD']:
         print(f"Plotting {voltage} values (accross all channels)")
         if type(output_folder) != type(None):
@@ -602,7 +700,7 @@ def CPRUV_plot(dataframe,output_folder=None,show_plot=False,sampling_period=time
                 #ax_bool.add_patch(Rectangle((start,line_ind-width*0.5),end-start,width,color=color))
                 ax_bool.hlines(y=key,xmin=start,xmax=end,color=color,linewidth=3)
 
-        # legend
+        # legend 
         legend_elements = [Patch(facecolor='white',label="no data"),    
                         Patch(facecolor='red',label="False"),
                         Patch(facecolor='green',label="True")]
@@ -617,22 +715,25 @@ def CPRUV_plot(dataframe,output_folder=None,show_plot=False,sampling_period=time
             plt.show(block=False)
 
 
-def schedule_plot(dataframe,column='name',file=None,show_plot=False):
-    """Plots info from timeline schedule
+def schedule_plot(dataframe,column='schedule_name',file=None,show_plot=False):
+    """
+    Plots info from timeline schedule
 
     Arguments:
         df (obj:`dataframe`): Pandas dataframe holding the schedule
-        column: Value to plot (default: name)
+        column: Value to plot (default: schedule_name)
+        file (str): File to save. Default: None, ie no save
+        show_plot (bool): Show plot. Default: False
     Returns:
         None
-
     """
-    df = dataframe.drop_duplicates(subset=['schedule_id'])
+    df = dataframe.drop_duplicates(subset=['schedule_start_date'])
 
     fig, ax = plt.subplots(figsize=(20,10),dpi=250)
     for x1, x2, y in zip(df["schedule_start_date"], df["schedule_end_date"], df[column]):
         ax.plot([x1, x2], [y, y],linewidth=3)
     ax.set_title('Payload schedule')
+    ax.set_xlabel('Date')
 
     if type(file) != type(None):
         fig.savefig(file)
@@ -641,13 +742,16 @@ def schedule_plot(dataframe,column='name',file=None,show_plot=False):
 
 
 def mean_image(dataframe,file=None,show_plot=False,histo=False):
-    """Plots mean image for each channel
+    """
+    Plots mean image for each channel of the dataframe asweel as the evolution of the mean image value over time.
 
     Arguments:
-        df (obj:`dataframe`): Pandas dataframe holding the schedule
+        dataframe (obj:`dataframe`): Pandas dataframe holding the data
+        file (str): File to save the plot. Default: None, ie the plots are not saved
+        show_plot (bool): Show the plot. Default: False
+        histo (bool): Plot histogram of pixel values for each channel. Default: False
     Returns:
         None
-
     """
     
     channel_names = ['IR1','IR3','UV1','IR2','IR4','UV2','NADIR']
@@ -656,9 +760,11 @@ def mean_image(dataframe,file=None,show_plot=False,histo=False):
 
     fig, axes = plt.subplots(3, 3, figsize=(16, 9))
     fig.suptitle(f"Mean image between {min(dataframe['TMHeaderTime'])} and  {max(dataframe['TMHeaderTime'])}")
-    #fig.patch.set_facecolor('lightgrey')
     axes=axes.ravel()
 
+    fig_tm, axes_tm = plt.subplots(3, 3, figsize=(16, 9))
+    fig_tm.suptitle(f"Mean image value evolution")
+    axes_tm=axes_tm.ravel()
 
     df = dataframe
     convert_image_data(df)
@@ -676,12 +782,18 @@ def mean_image(dataframe,file=None,show_plot=False,histo=False):
             im = ax.pcolormesh(mean_im)
             fig.colorbar(im,ax=ax)   
             ax.set_title(f"{channel} ({len(df_tmp)} images)")
+
+            ax_tm = axes_tm[i]
+            ax_tm.plot(df_tmp['EXPDate'],np.mean(im_cube,axis=(1,2)))  
+            ax_tm.set_title(f"{channel} ({len(df_tmp)} images)")
+            ax_tm.set_ylabel(f"Mean pixel value")
+
             if histo:
                 fig_histo, axes_histo = plt.subplots(2)
                 im_histo = axes_histo[0].pcolormesh(mean_im)
                 axes_histo[0].set_title(f"Mean image")
                 fig_histo.colorbar(im,ax=axes_histo[0]) 
-                axes_histo[1].hist(np.ravel(im_cube),nbin=30) 
+                axes_histo[1].hist(np.ravel(im_cube),bins=30) 
                 axes_histo[1].set_title(f"Histogram")
                 axes_histo[1].set_xlabel(f"Pixel value")
                 axes_histo[1].set_ylabel(f"Number of pixels")
@@ -693,7 +805,12 @@ def mean_image(dataframe,file=None,show_plot=False,histo=False):
                 if show_plot:
                     fig_histo.show()
 
-
+    file_tmp = file
+    if type(file) != type(None):
+        file_tm = f"{'/'.join(file_tmp.split('/')[:-1])}/mean_timeline.png"
+        fig_tm.savefig(file_tm)
+    if show_plot:
+        fig_tm.show()
 
     if type(file) != type(None):
         fig.savefig(file)
