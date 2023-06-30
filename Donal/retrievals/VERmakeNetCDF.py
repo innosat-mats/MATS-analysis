@@ -50,7 +50,7 @@ steps=100 #m steps
 s_steps = np.arange(s_140,s_140 + 2e6,steps)
 ts = sfapi.load.timescale()
 if df.channel[0] == 'IR1': hotpiximage=np.load ('ir1mean.npy')
-elif df.channel[0] == 'IR2': hotpiximage=np.load ('ir2mean.npy')
+elif df.channel[0] == 'IR2': hotpiximage=np.load ('/Users/donal/projekt/SIW/ir2mean.npy')
 elif df.channel[0] == 'IR3': hotpiximage=np.load ('ir3mean.npy')
 elif df.channel[0] == 'IR4': hotpiximage=np.load ('ir4mean.npy')
 for i in range(len(df)):
