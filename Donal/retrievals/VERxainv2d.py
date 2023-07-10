@@ -19,8 +19,8 @@ import pickle
 import scipy.sparse as sp
 
 
-ir2=xr.load_dataset('/home/olemar/Projects/Universitetet/MATS/MATS-analysis/Donal/retrievals/IR2mars31vertest.nc')
-filename = "/home/olemar/Projects/Universitetet/MATS/MATS-analysis/Donal/retrievals/jacobian.pkl"
+ir2=xr.load_dataset('/home/olemar/Projects/Universitetet/MATS/MATS-analysis/Donal/retrievals/IR2mars31vertest_2.nc')
+filename = "/home/olemar/Projects/Universitetet/MATS/MATS-analysis/Donal/retrievals/jacobian_2.pkl"
 with open(filename, "rb") as file:
     [edges, k] = pickle.load(file)
 
@@ -60,4 +60,5 @@ fig.show()
 # %%
 plt.plot(k*x_hat)
 plt.plot(y)
+plt.show()
 # %%
