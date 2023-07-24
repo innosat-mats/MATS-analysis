@@ -25,11 +25,11 @@ def linear_oem_sp(K, Se, Sa, y, xa):
         G = inv(K.T.dot(Se_inv).dot(K) + Sa_inv).dot(K.T).dot(Se_inv)
 #        G = spsolve(K.T.dot(Se_inv).dot(K) + Sa_inv, (K.T).dot(Se_inv))
     x_hat = xa + G.dot(y - K.dot(xa))
-#    A = G.dot(K)
-#    I = sp.identity(len(xa))
-#    Ss = (A - I).dot(Sa).dot((A - I).T) # smoothing error
-#    Sm = G.dot(Se).dot(G.T) #retrieval noise 
-    return x_hat, G#, A, Ss, Sm
+    A = G.dot(K)
+    I = sp.identity(len(xa))
+    Ss = (A - I).dot(Sa).dot((A - I).T) # smoothing error
+    Sm = G.dot(Se).dot(G.T) #retrieval noise 
+    return x_hat, G, A, Ss, Sm
 
 #%% oem for dense matrix
 def linear_oem(K, Se, Sa, y, xa):

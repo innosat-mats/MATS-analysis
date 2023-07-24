@@ -1,5 +1,5 @@
 #%%
-from mats_utils.rawdata.read_data import read_MATS_data
+from mats_utils.rawdata.read_data import read_MATS_data, read_MATS_PM_data
 import pandas as pd
 import datetime as DT
 from mats_l1_processing.L1_calibrate import L1_calibrate
@@ -11,13 +11,17 @@ calibration_file ="/home/olemar/Projects/Universitetet/MATS/MATS-L1-processing/s
 instrument = Instrument(calibration_file)
 
 #%% Select on explicit time
-start_time = DT.datetime(2023, 3, 10, 0, 0)
-stop_time = DT.datetime(2023, 3, 10, 1, 0)
-
-df = read_MATS_data(start_time,stop_time,version='0.6',level='1a',dev=True)
+start_time = DT.datetime(2023, 2, 17, 1, 0)
+stop_time = DT.datetime(2023, 2, 17, 12, 0)
 
 #%%
-CCDitems = dataframe_to_ccd_items(df)
+#df = read_MATS_data(start_time,stop_time,version='0.6',level='1a',dev=False)
+
+#%%
+df_ph = read_MATS_PM_data(start_time,stop_time,version='0.1',level='1b')
+
+#%%
+#CCDitems = dataframe_to_ccd_items(df)
 
 #%%
 
