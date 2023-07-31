@@ -1,3 +1,5 @@
 OleM/data/
 Louis/tutorial-satpy-half-day/
 Louis/archive/
+Louis/geolocation/nadir_geo.py
+Louis/geolocation/nadir_geo.sh
