@@ -64,9 +64,54 @@ s_140=1700e3
 steps=100 #m steps
 s_steps = np.arange(s_140,s_140 + 2e6,steps)
 ts = sfapi.load.timescale()
-num_profiles = 10 #use 50 profiles for inversion
+num_profiles = 20 #use 50 profiles for inversion
 df = df.iloc[0:num_profiles]
 k_row = 0
+
+#Generate grid for mid measurement
+i = int(num_profiles/2)    # for i in range(100):
+print(i)
+zs, p = prepare_profile(df.iloc[i])
+profiles.append(p)
+heights.append(zs)
+ecipos.append(df['afsGnssStateJ2000'][i][0:3])
+d = df['EXPDate'][i]
+t = ts.from_datetime(d)
+localR = np.linalg.norm(sfapi.wgs84.latlon(df.TPlat[i], df.TPlon[i], elevation_m=0).at(t).position.m)
+q = df['afsAttitudeState'][i]
+quat = R.from_quat(np.roll(q, -1))
+ypixels = np.linspace(0, df['NROW'][i], 5)
+x, yv = pix_deg(df.iloc[i], int(df['NCOL'][i]/2), ypixels)
+qp = R.from_quat(df['qprime'][i])
+ecivec = np.zeros((3, len(yv)))
+
+k=np.zeros((df['NROW'][i],len(retrival_heights)))
+for irow, y in enumerate(yv):
+    los = R.from_euler('xyz', [0, y, x], degrees=True).apply([1, 0, 0])
+    ecivec[:, irow] = np.array(quat.apply(qp.apply(los)))
+cs_eci=CubicSpline(ypixels,ecivec.T)
+
+to_ecef=R.from_matrix(itrs.rotation_at(ts.from_datetime(df['EXPDate'][0])))
+
+irow = 0
+ecivec=cs_eci(irow)
+pos=np.expand_dims(ecipos[-1], axis=0).T+s_steps*np.expand_dims(ecivec, axis=0).T
+posecef_i=(to_ecef.apply(pos.T).astype('float32'))
+posecef_i_sph = cart2sph(posecef_i)
+#posecef_sph.append(posecef_i_sph) 
+#posecef_sph.append(posecef)        
+hist, edges = np.histogramdd(posecef_i_sph[::1,:],bins=[5,10,30])
+k = hist.reshape(-1)
+ks = sp.lil_matrix((df['NROW'].sum(),len(k)))
+
+#calculate jacobian for all measurements
+
+profiles = []
+heights = []
+ecipos = []
+ecivecs = []
+posecef_sph=[]
+
 for i in range(len(df)):
     # for i in range(100):
     print(i)
@@ -100,17 +145,17 @@ for i in range(len(df)):
         #posecef_sph.append(posecef_i_sph) 
         #posecef_sph.append(posecef)        
         ecivecs.append(ecivec.astype('float32'))
-        if (irow == 0 and i == 0):
-            hist, edges = np.histogramdd(posecef_i_sph[::1,:],bins=[5,5,20])
-            k = hist.reshape(-1)
-            ks = sp.lil_matrix((df['NROW'].sum(),len(k)))
-            ks[k_row,:] = k
-            k_row = k_row+1
-        else:
-            hist, edges = np.histogramdd(posecef_i_sph[::1,:],edges)
-            k = hist.reshape(-1)
-            ks[k_row,:] = k
-            k_row = k_row+1
+        # if (irow == 0 and i == 0):
+        #     hist, edges = np.histogramdd(posecef_i_sph[::1,:],bins=[5,5,20])
+        #     k = hist.reshape(-1)
+        #     ks = sp.lil_matrix((df['NROW'].sum(),len(k)))
+        #     ks[k_row,:] = k
+        #     k_row = k_row+1
+        # else:
+        hist, edges = np.histogramdd(posecef_i_sph[::1,:],edges)
+        k = hist.reshape(-1)
+        ks[k_row,:] = k
+        k_row = k_row+1
     
         
     
@@ -140,8 +185,8 @@ inputdata = xr.Dataset({
 })
 
 # %%
-inputdata.to_netcdf('IR2mars31vertest.nc')
+inputdata.to_netcdf('IR2mars31vertest_2.nc')
 # %%
-filename = "jacobian.pkl"
+filename = "jacobian_2.pkl"
 with open(filename, "wb") as file:
     pickle.dump((edges, ks), file)

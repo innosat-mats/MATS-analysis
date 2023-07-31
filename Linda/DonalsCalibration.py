@@ -5,7 +5,7 @@ from mats_l1_processing.read_parquet_functions import dataframe_to_ccd_items
 import matplotlib.pyplot as plt
 from mats_l1_processing.instrument import Instrument
 from mats_l1_processing.L1_calibrate import L1_calibrate
-from mats_l1_processing.experimental_utils import plot_CCDimage
+from database_generation.experimental_utils import plot_CCDimage
 
 calibration_file='/Users/lindamegner/MATS/MATS-retrieval/MATS-L1-processing/scripts/calibration_data_linda.toml'
 

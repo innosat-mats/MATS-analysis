@@ -10,7 +10,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 
 class CenterStrip:
     def __init__(self, CCDobject):
-        self.image = CCDobject['IMAGE']
+        self.image = CCDobject['ImageCalibrated']   #for L1b otherwise 'IMAGE'
         self.strip = []
         self.latitude = TPpos(CCDobject)[0]  #the first position of TPpos gives the latitude
         self.time =  pd.to_datetime(CCDobject['EXPDate'])
@@ -100,10 +100,11 @@ def plotKeogram(df, channels, strip_dir):
     plt.show()
 
 # %%  Settings to run for normal plot with various channels
-start_time = DT.datetime(2023,2,19,18,30,0)
-stop_time = DT.datetime(2023,2,20,18,30,0)
-channels = ['IR1']  #list of what channels we want to plot
+start_time = DT.datetime(2023,2,22,00,00,0)
+stop_time = DT.datetime(2023,2,23,00,00,0)
+channels = ['IR2']  #list of what channels we want to plot
 strip_dir = 'v'  #vertical 'v' or horiozontal 'h' direction of the strip
+# %%
 df = read_MATS_data(start_time,stop_time,version=0.5,level='1a')
 
-# %%
+
