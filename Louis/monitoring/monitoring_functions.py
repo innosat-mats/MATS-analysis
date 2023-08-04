@@ -51,7 +51,7 @@ start_sza = 97 # sza for which nadir measurement starts
 stop_sza = 95 # sza for which nadir measurement ends
 
 start_TPlat = 48.5 # TPlat for which UV measurement starts
-stop_TPlat = 42.5 # TPlat for which UV measurement starts
+stop_TPlat = 42.5 # TPlat for which UV measurement  stops
 
 
 
@@ -59,7 +59,21 @@ stop_TPlat = 42.5 # TPlat for which UV measurement starts
 
 def timeline_stat(df,time_sampling,df_loc):    
     """
-    Function that computes the number of expected and generated images for each channel in each time intervall
+    Function that computes the number of expected and generated images for each channel in each time intervall. 
+    The sampling rate is taken from the sampling_rates dictionary. The NADIR sensor is supposed to be on when the 
+    SZA is between 97 and 95 degrees and the UV sensor is supposed to be on when the TPlat is between 48.5 and 42.5 degrees.
+    
+
+    Parameters:
+        df: dataframe containing the image data
+        time_sampling: list of datetime objects containing the start and end times of each time intervall
+        df_loc: dataframe containing the location data
+    Returns:
+        nb_expected_images: array containing the number of expected images for each channel in each time intervall
+        nb_generated_images: array containing the number of generated images for each channel in each time intervall
+        nb_expected_images_default: array containing the number of expected images for each channel in each time intervall by assuming that all the CCDs are always on
+        
+
     """
     nb_expected_images = np.zeros((7,len(time_sampling)-1))
     nb_generated_images = np.zeros((7,len(time_sampling)-1))
@@ -203,8 +217,8 @@ def timeline_plot(data,time_sampling,title,line_labels,file=None,show_plot=False
             #     color = 'purple'
             # if nb_expected_images[line_ind,i] > 0:
             #     ratio = nb_generated_images[line_ind,i]/nb_expected_images[line_ind,i]                
-            elif value == 0.0:
-                color ='black'
+            # elif value == 0.0:
+            #     color ='black'
             elif (lim_red<value) and (value<=lim_orange):
                 color = 'red'
             elif (lim_orange<value) and (value<=lim_blue):
@@ -219,7 +233,7 @@ def timeline_plot(data,time_sampling,title,line_labels,file=None,show_plot=False
             ax.add_patch(Rectangle((start,line_ind-width*0.5),end-start,width,color=color))
 
     # legend
-    legend_elements = [Patch(facecolor='black',label=f"0 == ratio"),    
+    legend_elements = [#Patch(facecolor='black',label=f"0 == ratio"),    
                     Patch(facecolor='red',label=f"{lim_red*100:.0f}% < ratio <= {lim_orange*100:.0f}%"),
                     Patch(facecolor='orange',label=f"{lim_orange*100:.0f}% < ratio <= {lim_blue*100:.0f}%"),
                     Patch(facecolor='tab:blue',label=f"{lim_blue*100:.0f}% < ratio <= {lim_green*100:.1f}%"),
@@ -291,7 +305,7 @@ def multi_timeline(dataframes,dataframe_labels,sampling_period=timedelta(seconds
         end = max(df['EXPDate'])
         file_path = None
         if type(output_folder) != type(None):
-            file_path = f"{output_folder}/image_generation_channels.png"
+            file_path = f"{output_folder}/image_generation_channels_{dataframe_labels[i]}.png"
         timeline_plot(data,time_sampling,title,line_labels=line_labels,file=file_path,show_plot=show_plot)
 
 
@@ -411,8 +425,9 @@ def temperatureHTR_plot(dataframe,file=None,show_plot=False,sampling_period=time
             end = temp_sampling[i+1]
             HTR_temp[i] = np.nanmean(temp_data[(start<=dataframe['TMHeaderTime']) & (dataframe['TMHeaderTime']<=end)])
         
-        ax.plot(temp_sampling[:-1],HTR_temp,label=f"{HTR_name} {sampling_period.total_seconds():.0f}s average",linestyle='-')
-            
+        ax.plot(temp_sampling[:-1],HTR_temp,linestyle='-',color='black')
+
+    ax.plot(temp_sampling[:-1],HTR_temp,label=f"{sampling_period.total_seconds():.0f}s average",linestyle='-',color='black')  
     ax.legend()
     ax.set_title(f'Temperature in each heater sensor')
     ax.set_ylabel('Temperature in C')
@@ -741,12 +756,12 @@ def schedule_plot(dataframe,column='schedule_name',file=None,show_plot=False):
         plt.show(block=False)
 
 
-def mean_image(dataframe,file=None,show_plot=False,histo=False):
+def mean_image(df,file=None,show_plot=False,histo=False):
     """
     Plots mean image for each channel of the dataframe asweel as the evolution of the mean image value over time.
 
     Arguments:
-        dataframe (obj:`dataframe`): Pandas dataframe holding the data
+        df (obj:`dataframe`): Pandas dataframe holding the data
         file (str): File to save the plot. Default: None, ie the plots are not saved
         show_plot (bool): Show the plot. Default: False
         histo (bool): Plot histogram of pixel values for each channel. Default: False
@@ -759,14 +774,13 @@ def mean_image(dataframe,file=None,show_plot=False,histo=False):
     plt.ioff()
 
     fig, axes = plt.subplots(3, 3, figsize=(16, 9))
-    fig.suptitle(f"Mean image between {min(dataframe['TMHeaderTime'])} and  {max(dataframe['TMHeaderTime'])}")
+    fig.suptitle(f"Mean image between {min(df['TMHeaderTime'])} and  {max(df['TMHeaderTime'])}")
     axes=axes.ravel()
 
     fig_tm, axes_tm = plt.subplots(3, 3, figsize=(16, 9))
     fig_tm.suptitle(f"Mean image value evolution")
     axes_tm=axes_tm.ravel()
 
-    df = dataframe
     convert_image_data(df)
 
     # generate cbars

@@ -24,3 +24,10 @@ OleM/de421.bsp
 Linda/output/
 Linda/.DS_Store
 Linda/__pycache__/
+Louis/geolocation/nadir_geo.py
+Louis/geolocation/nadir_geo.sh
+Louis/artifact/Nadir_artifact_correction.py
+Louis/geolocation/geolocation test.py
+Louis/monitoring/monitoring_Nickolay.sh
+Louis/monitoring/monitoring_routine_Nickolay.py
+Louis/artifact/miscelleanous.py
