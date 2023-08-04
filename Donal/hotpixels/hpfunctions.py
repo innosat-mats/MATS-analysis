@@ -42,8 +42,5 @@ def gethpm (date,channelname):
         mapdate= date
         HPM=np.array([])
     return (mapdate,HPM)
-# %%
-testdate=DT.datetime(2023,2,24)
-mapdate,HPM=gethpm(testdate,'IR1')
-print (mapdate, HPM)
-# %%
+
+

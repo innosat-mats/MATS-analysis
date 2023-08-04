@@ -7,7 +7,7 @@ import pickle
 import datetime as DT
 #%%
 homecat = os.environ.get('HOME')
-files= glob(homecat + '/Downloads/hpms-2/*')
+files= glob(homecat + '/Downloads/hpms-3/*')
 #%%
 db = sqlite.connect(homecat + '/Downloads/hpms/hpms.db')
 cur = db.cursor()
