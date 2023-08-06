@@ -2,7 +2,7 @@
 from mats_utils.rawdata.read_data import read_MATS_data
 from mats_l1_processing.instrument import Instrument
 from mats_l1_processing.L1_calibrate import L1_calibrate
-from mats_l1_processing.experimental_utils import plot_CCDimage, calibrate_CCDitems
+from database_generation.experimental_utils import plot_CCDimage, calibrate_CCDitems
 from mats_l1_processing.read_parquet_functions import dataframe_to_ccd_items
 import datetime as DT
 from mats_utils.plotting.plotCCD import orbit_plot, simple_plot, plot_image

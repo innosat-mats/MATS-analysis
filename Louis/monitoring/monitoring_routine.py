@@ -10,23 +10,22 @@ import matplotlib.pyplot as plt
 from monitoring_functions import multi_timeline,temperatureCRBD_plot,temperatureHTR_plot,read_MATS_payload_data,PWRT_plot,PWRC_plot,PWRV_plot,CPRU_overvoltage_plot,CPRUV_plot,read_MATS_data_custom,schedule_plot,mean_image
 
 
-
-pd.set_option('display.max_rows', 500)
-
 #%%
 
-# defining some parameters
+# PARAMETERS TO CHANGE
+# latest version of each level
+l0_version = '0.3'
+l1a_version = '0.6'
+l1b_version = '0.5'
+
 
 # folders to store monitoring data
 def_monitoring_folder = "/home/louis/MATS/MATS-Data/Monitoring"
 
 plt.ioff()
 
-
-
-
 #%%
-# parsing arguments 
+# parsing arguments
 
 parser = argparse.ArgumentParser(description='arguments for weekly and daily routine monitoring scripts')
 
@@ -65,7 +64,7 @@ if mode == 'daily':
     PWRV = False # plots the voltage values in the power module
     overvoltage = True # plots a summary of overvoltage events for each channel
     CPRU = False # plots several voltage data coming from the CPRU
-    mode_schedule = True # plots the scheduled instrument mode 
+    mode_schedule = True # plots the scheduled instrument mode
 
 elif mode == 'temp':
     data_processing = False
@@ -104,12 +103,23 @@ elif mode == 'power':
     PWRV = True
     overvoltage = True
     CPRU = True
-    mode_schedule = False    
+    mode_schedule = False
+
+elif mode == 'custom':
+    data_processing = False
+    mean_im = False
+    histo = False
+    CRBD_temp = False
+    HTR = False
+    PWRT = False
+    PWRC = False
+    PWRV = False
+    overvoltage = False
+    CPRU = False
+    mode_schedule = True
 
 
-l0_version = '0.3'
-l1a_version = '0.6'
-l1b_version = '0.5'
+
 
 
 if start_time != '' and stop_time != '':
@@ -126,7 +136,7 @@ print(f"Monitoring from {start_time} to {stop_time}")
 
 # folders to store figures
 if not os.path.exists(output_folder):
-        os.mkdir(output_folder)
+        os.makedirs(output_folder, exist_ok=True)
 
 print(f"Output directory : {output_folder}")
 
@@ -136,7 +146,7 @@ print(f"Output directory : {output_folder}")
 dataframes = []
 dataframe_labels = []
 
-columns_l1a = ['TMHeaderTime', 'EXPDate', 'CCDSEL', 'TEXPMS', 
+columns_l1a = ['TMHeaderTime', 'EXPDate', 'CCDSEL', 'TEXPMS',
             'satlat', 'satlon', 'TPlat', 'TPlon', 'nadir_sza','schedule_start_date','schedule_end_date','schedule_id','schedule_name']
 
 columns_l1b = columns_l1a
@@ -162,7 +172,7 @@ if data_processing:
         # df1b = df1b.drop('ImageCalibrated', axis=1)
         if len(df1b)>0:
             dataframes.append(df1b)
-            dataframe_labels.append('l1b v0.4')
+            dataframe_labels.append(f'l1b v{l1b_version}')
         else :
             print('No level 1b data')
     except :
@@ -174,7 +184,7 @@ if data_processing:
         # df1a = df1a.drop(columns=['IMAGE','ImageData','id'], axis=1)
         if len(df1a)>0:
             dataframes.append(df1a)
-            dataframe_labels.append('l1a v0.5')
+            dataframe_labels.append(f'l1a v{l1a_version}')
         else :
             print('No level 1a data')
     except :
@@ -186,12 +196,12 @@ if data_processing:
         # df0 = df0.drop('ImageData', axis=1)
         if len(df0)>0:
             dataframes.append(df0)
-            dataframe_labels.append('l0 v0.3')
+            dataframe_labels.append(f'l0 v{l0_version}')
         else :
             print('No level 0 data')
     except :
-        print('No level 0 data')    
-        
+        print('No level 0 data')
+
     if len(dataframes)>0:
         multi_timeline(dataframes,dataframe_labels,output_folder=output_folder,show_plot=show_plot,sampling_period=sampling_period)
         if not show_plot:
@@ -201,14 +211,14 @@ if data_processing:
 if mean_im:
     try:
         print("Importing level 0 data")
-        df0 = read_MATS_data(start_time, stop_time,level='0/CCD',version='0.3')
+        df0 = read_MATS_data(start_time, stop_time,level='0/CCD',version=l0_version)
         print(f"Plotting the mean image for each channel")
         file_path = f"{output_folder}/mean_im.png"
         mean_image(df0,file=file_path,show_plot=show_plot)
         if not show_plot:
             plt.close('all')
     except:
-        print(f"Unable to plot mean images from l0 v0.3")
+        print(f"Unable to plot mean images from l0 v{l0_version}")
 
 
 if CRBD_temp:
@@ -221,7 +231,7 @@ if CRBD_temp:
         if not show_plot:
             plt.close('all')
     except:
-        print(f"Unable to plot CRB-D temperatures from l0 v0.3")
+        print(f"Unable to plot CRB-D temperatures from l0 v{l0_version}")
 
 
 if HTR:
@@ -265,7 +275,7 @@ if PWRV or PWRC or PWRT:
 if CPRU or overvoltage:
     try:
         print(f"Importing CPRU data")
-        CPRU_df = read_MATS_payload_data(start_time,stop_time,data_type='CPRU')    
+        CPRU_df = read_MATS_payload_data(start_time,stop_time,data_type='CPRU')
         if CPRU:
             print(f"Plotting CPRU data")
             CPRUV_plot(CPRU_df,output_folder=output_folder,show_plot=show_plot,sampling_period=sampling_period)
@@ -278,7 +288,7 @@ if CPRU or overvoltage:
         print(f"Unable to plot CPRU data")
 
 
-if mode_schedule: 
+if mode_schedule:
     try:
         print(f"Importing df1a v0.6 data")
         df1a = read_MATS_data(start_time,stop_time,version=l1a_version,level='1a')
@@ -289,15 +299,15 @@ if mode_schedule:
             plt.close('all')
     except:
         print(f"Unable to plot schedule data")
-        
 
-       
+
+
 
 if show_plot:
     plt.show(block=True)
 else:
     plt.close('all')
-     
+
 
 
 # %%

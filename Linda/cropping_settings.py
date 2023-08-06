@@ -20,13 +20,13 @@ This script is based on the old script test_alignment_launch_star.py
 
 
 
-from mats_l1_processing.experimental_utils import plotCCDitem
+from database_generation.experimental_utils import plotCCDitem
 from mats_l1_processing.read_in_functions import read_CCDitems,read_CCDdata
 from matplotlib import pyplot as plt
 import numpy as np
 from mats_l1_processing.instrument import Instrument
 from mats_l1_processing.L1_calibrate import L1_calibrate
-from mats_l1_processing.experimental_utils import calibrate_CCDitems
+from database_generation.experimental_utils import calibrate_CCDitems
 import datetime as DT
 from mats_utils.selection_tools.itemselect import select_on_time as seltime
 from mats_utils.rawdata.time_tools import add_datetime as add_datetime

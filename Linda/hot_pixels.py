@@ -1,6 +1,6 @@
 #%%
 from mats_utils.rawdata.read_data import read_MATS_data
-from mats_l1_processing.experimental_utils import plot_CCDimage
+from database_generation.experimental_utils import plot_CCDimage
 from mats_l1_processing.instrument import Instrument
 from mats_l1_processing.L1_calibration_functions import bin_image_with_BC
 from database_generation.flatfield import read_pic_and_picd
