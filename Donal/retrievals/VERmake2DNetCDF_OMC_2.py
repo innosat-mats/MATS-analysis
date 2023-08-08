@@ -69,7 +69,7 @@ ts = sfapi.load.timescale()
 
 #select part of orbit
 offset = 300
-num_profiles = 400 #use 50 profiles for inversion
+num_profiles = 250 #use 50 profiles for inversion
 df = df.loc[offset:offset+num_profiles]
 df = df.reset_index(drop=True)
 k_row = 0
@@ -113,7 +113,7 @@ pos=np.expand_dims(ecipos[-1], axis=0).T+s_steps*np.expand_dims(ecivec, axis=0).
 posecef_i=(to_ecef.apply(pos.T).astype('float32'))
 posecef_i = ecef_to_local.apply(posecef_i) #convert to local
 posecef_i_sph = cart2sph(posecef_i)   #x: height, y: acrosstrac (angle), z: along track (angle)
-altitude_grid = np.arange(localR+30e3,localR+200e3,2e3)
+altitude_grid = np.arange(localR+10e3,localR+200e3,2e3)
 altitude_grid[0] = altitude_grid[0]-30e3
 altitude_grid[-1] = altitude_grid[-1]+30e3
 acrosstrack_grid = np.array([-0.2,0.2])
