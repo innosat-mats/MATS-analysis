@@ -68,8 +68,8 @@ s_steps = np.arange(s_140,s_140 + 2e6-4e5,steps)
 ts = sfapi.load.timescale()
 
 #select part of orbit
-offset = 200
-num_profiles = 50 #use 50 profiles for inversion
+offset = 300
+num_profiles = 400 #use 50 profiles for inversion
 df = df.loc[offset:offset+num_profiles]
 df = df.reset_index(drop=True)
 k_row = 0
@@ -113,13 +113,16 @@ pos=np.expand_dims(ecipos[-1], axis=0).T+s_steps*np.expand_dims(ecivec, axis=0).
 posecef_i=(to_ecef.apply(pos.T).astype('float32'))
 posecef_i = ecef_to_local.apply(posecef_i) #convert to local
 posecef_i_sph = cart2sph(posecef_i)   #x: height, y: acrosstrac (angle), z: along track (angle)
-hist, edges = np.histogramdd(posecef_i_sph[::1,:],bins=[50,1,10]) 
-edges[1][0] += -0.1
-edges[1][1] +=  0.1
-edges[0][0] += -30e3
-edges[0][-1] += 100e3
-edges[2][0] += -1
-edges[2][-1] += 1
+altitude_grid = np.arange(localR+30e3,localR+200e3,2e3)
+altitude_grid[0] = altitude_grid[0]-30e3
+altitude_grid[-1] = altitude_grid[-1]+30e3
+acrosstrack_grid = np.array([-0.2,0.2])
+#acrosstrack_grid = np.linspace(posecef_i_sph[:,1].min(),posecef_i_sph[:,1].max(),1)
+alongtrack_grid = np.linspace(posecef_i_sph[:,2].min()-1.5,posecef_i_sph[:,2].max()+1.5,100)
+alongtrack_grid[0] = alongtrack_grid[0]-0.5
+alongtrack_grid[-1] = alongtrack_grid[-1]+0.5
+
+hist, edges = np.histogramdd(posecef_i_sph[::1,:],bins=[altitude_grid,acrosstrack_grid,alongtrack_grid]) 
 
 #%%
 fig = go.Figure(data=[go.Scatter3d(x=posecef_i_sph[::1000,0]-localR, y=posecef_i_sph[::1000,1], z=posecef_i_sph[::1000,2],mode='markers')])

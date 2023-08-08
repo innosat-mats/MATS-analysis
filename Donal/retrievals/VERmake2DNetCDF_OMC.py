@@ -65,8 +65,8 @@ steps=10 #m steps
 df = df.reset_index(drop=True)
 s_steps = np.arange(s_140,s_140 + 4e6,steps)
 ts = sfapi.load.timescale()
-offset = 200
-num_profiles = 100 #use 50 profiles for inversion
+offset = 100
+num_profiles = 400 #use 50 profiles for inversion
 df = df.loc[offset:offset+num_profiles]
 df = df.reset_index(drop=True)
 k_row = 0

@@ -10,12 +10,18 @@ import numpy as np
 from scipy import sparse as sp
 from scipy.sparse.linalg import inv, spsolve
 
+
+
+
+
 #%% oem for sparse matrix
 def linear_oem_sp(K, Se, Sa, y, xa):
     K = K.tocsc()
     Sa = Sa.tocsc()
     Se = Se.tocsc()
-    
+    y = y
+    xa = xa
+
     if len(y)<len(xa): # m form
         G = Sa.dot(K.T).dot(inv(K.dot(Sa).dot(K.T) + Se))
 
@@ -29,6 +35,7 @@ def linear_oem_sp(K, Se, Sa, y, xa):
     I = sp.identity(len(xa))
     Ss = (A - I).dot(Sa).dot((A - I).T) # smoothing error
     Sm = G.dot(Se).dot(G.T) #retrieval noise 
+    np.save('xhat.npy',x_hat)
     return x_hat, G, A, Ss, Sm
 
 #%% oem for dense matrix
