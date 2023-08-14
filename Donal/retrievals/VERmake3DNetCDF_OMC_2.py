@@ -63,17 +63,17 @@ ecivecs = []
 posecef_sph=[]
 retrival_heights= np.arange(30,130,1)
 s_140=1800e3
-steps=10 #m steps
+steps=50 #m steps
 df = df.reset_index(drop=True)
 s_steps = np.arange(s_140,s_140 + 2e6-4e5,steps)
 ts = sfapi.load.timescale()
 
 #select part of orbit
-offset = 100
+offset = 300
 num_profiles = 100 #use 50 profiles for inversion
 df = df.loc[offset:offset+num_profiles-1]
 df = df.reset_index(drop=True)
-columns = np.arange(1,df["NCOL"][0]-1,2)
+columns = np.arange(1,df["NCOL"][0],1)
 k_row = 0
 
 #Generate grid for mid measurement
@@ -121,13 +121,16 @@ for column in columns:
     posecef_i_sph_allcol.append(posecef_i_sph)
 
 posecef_i_sph_allcol = np.vstack(posecef_i_sph_allcol)
-hist, edges = np.histogramdd(posecef_i_sph_allcol[::1,:],bins=[50,10,30]) 
-edges[0][0] += -30e3
-edges[0][-1] += 100e3
-edges[1][0] += -0.1
-edges[1][-1] +=  0.1
-edges[2][0] += -1
-edges[2][-1] += 1
+altitude_grid = np.arange(localR+50e3,localR+130e3,2e3)
+altitude_grid[0] = altitude_grid[0]-30e3
+altitude_grid[-1] = altitude_grid[-1]+30e3
+acrosstrack_grid = np.arange(-0.1,0.1,0.01)
+#acrosstrack_grid = np.linspace(posecef_i_sph[:,1].min(),posecef_i_sph[:,1].max(),1)
+alongtrack_grid = np.linspace(posecef_i_sph_allcol[:,2].min()-0.5,posecef_i_sph_allcol[:,2].max()+0.5,50)
+alongtrack_grid[0] = alongtrack_grid[0]-0.5
+alongtrack_grid[-1] = alongtrack_grid[-1]+0.5
+
+hist, edges = np.histogramdd(posecef_i_sph_allcol[::1,:],bins=[altitude_grid,acrosstrack_grid,alongtrack_grid]) 
 
 #%%
 fig = go.Figure(data=[go.Scatter3d(x=posecef_i_sph_allcol[::1000,0]-localR, y=posecef_i_sph_allcol[::1000,1], z=posecef_i_sph_allcol[::1000,2],mode='markers')])
