@@ -57,9 +57,22 @@ def getTimePos(df):
     listoflatitudes= []
     listofexpdates = []
     for index, row in df.iterrows():
-        listoflatitudes.append(TPpos(row)[0])
-        listofexpdates.append(row['EXPDate'])
+        listoflatitudes.append(row.TPlat)
+        listofexpdates.append(row.EXPDate)
     return listoflatitudes, listofexpdates
+
+def getTPLatitudes(objects):
+    TPlat_list= []
+    for n, CCD in objects.iterrows():
+        TPlat_list.append(CCD.TPlat)
+    return TPlat_list
+
+
+def getSatDates(objects):
+    listofdates = []
+    for n, row in objects.iterrows():
+        listofdates.append(row.EXPDate)
+    return listofdates
 
 # Makes a plot of the matrix made with makeStripMatrix()
 def plotKeogram(df, channels, strip_dir):
@@ -68,7 +81,8 @@ def plotKeogram(df, channels, strip_dir):
     if len(channels)==1 :
         IR_list = df[df['channel'] == channels[0]]
         fig,axs = plt.subplots(nrows=2, ncols=1)
-        latitudes, dates = getTimePos(IR_list)
+        latitudes = getTPLatitudes(IR_list)
+        dates = getSatDates(IR_list)
         matrix = makeStripMatrix(df,channels[0],strip_dir)
         axs[0].pcolormesh(dates,range(matrix.shape[0]),matrix)
         axs[0].set_title(f"Channel {channels[0]}")
@@ -81,14 +95,16 @@ def plotKeogram(df, channels, strip_dir):
         fig,axs = plt.subplots(nrows=len(channels)+1, ncols=1)
         IR1_list = df[df['channel'] == channels[0]]
         # gets the latitudes from objects only for the first channel.
-        latitudes, dates = getTimePos(IR1_list)
+        latitudes = getTPLatitudes(IR1_list)
+        dates = getSatDates(IR1_list)
         axs[len(channels)].set_xlabel('Time')
         axs[len(channels)].set_ylabel('Latitude')
         axs[len(channels)].plot(dates,latitudes,'.')
         axs[len(channels)].set_xlim(dates[0],dates[-1])
         for i in range(len(channels)):
             IR_objects =  df[df['channel'] == channels[i]]
-            latitudes, dates = getTimePos(IR_objects)
+            latitudes = getTPLatitudes(IR_objects)
+            dates = getSatDates(IR_objects)
             matrix = makeStripMatrix(df,channels[i],strip_dir)  
             axs[i].pcolormesh(dates,range(matrix.shape[0]),matrix, vmax=1500)
             axs[i].set_title(f"Channel {channels[i]}")
