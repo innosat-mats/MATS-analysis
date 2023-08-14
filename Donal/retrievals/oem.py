@@ -44,7 +44,7 @@ def oem_basic_sparse_2(y, K, xa, Seinv, Sainv, maxiter):
     KSe = (K.T).dot(Seinv)
     KSey = KSe.dot(y-K.dot(xa))
     xhat = sci.sparse.linalg.spsolve(S,KSey)                              
-    xhat = xhat + xa[:,0]
+    xhat = np.expand_dims(xhat,1) + xa[:,0]
     
     return xhat
 
