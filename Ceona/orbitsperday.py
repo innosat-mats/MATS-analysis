@@ -4,7 +4,7 @@ import datetime as DT
 import pandas as pd 
 from datetime import timedelta
 import matplotlib.pyplot as plt 
-from Keogram import makeStripMatrix
+from Keogram import makeStripMatrix, getTPLatitudes, getSatDates
 from matplotlib.backends.backend_pdf import PdfPages
 import numpy as np
 import time
@@ -17,19 +17,6 @@ strip_dir = 'v'
 filename = "1weekfebIR1_l1b.pdf"
 numdays = stop_time-start_time #number of days
 Tperiod = timedelta(minutes=100)
-
-def getTPLatitudes(objects):
-    TPlat_list= []
-    for n, CCD in objects.iterrows():
-        TPlat_list.append(CCD.TPlat)
-    return TPlat_list
-
-
-def getSatDates(objects):
-    listofdates = []
-    for n, row in objects.iterrows():
-        listofdates.append(row.EXPDate)
-    return listofdates
 
 # %% puts data in file temp_data
 df = read_MATS_data(start_time,stop_time,version=0.5,level='1b',filter={"TPlat":[50,90],'NROW': [0,400]})
