@@ -25,10 +25,10 @@ from oem_functions import linear_oem
 # ir2=xr.load_dataset('/Users/donal/projekt/SIW/IR2Decvertest.nc')
 # ir3=xr.load_dataset('/Users/donal/projekt/SIW/IR3Decvertest.nc')
 # ir4=xr.load_dataset('/Users/donal/projekt/SIW/IR4Decvertest.nc')
-ir1=xr.load_dataset('/Users/donal/projekt/SIW/IR1Mar29vertest.nc')
-ir2=xr.load_dataset('/Users/donal/projekt/SIW/IR2Mar29vertest.nc')
-ir3=xr.load_dataset('/Users/donal/projekt/SIW/IR3Mar29vertest.nc')
-ir4=xr.load_dataset('/Users/donal/projekt/SIW/IR4Mar29vertest.nc')
+#ir1=xr.load_dataset('/Users/donal/projekt/SIW/IR1Mar29vertest.nc')
+ir2=xr.load_dataset('/Users/donal/projekt/SIW/MATS-analysis/Donal/retrievals/IR2Mar29vertest_1d.nc')
+#ir3=xr.load_dataset('/Users/donal/projekt/SIW/IR3Mar29vertest.nc')
+#ir4=xr.load_dataset('/Users/donal/projekt/SIW/IR4Mar29vertest.nc')
 # ir1=xr.load_dataset('/Users/donal/projekt/SIW/IR1Feb11vertest.nc')
 # ir2=xr.load_dataset('/Users/donal/projekt/SIW/IR2Feb11vertest.nc')
 # ir3=xr.load_dataset('/Users/donal/projekt/SIW/IR3Feb11vertest.nc')
@@ -55,7 +55,7 @@ def make_k(ch,i,retrival_heights):
 
 
  # %%
-ch=ir4
+ch=ir2
 mr = []
 error2_retrieval = []
 error2_smoothing = []
@@ -89,8 +89,8 @@ result_1d = xr.Dataset().update({
         'longitude': (['time',], ch.TPlon.values),
         'channel': (['time',], ch.channel.values),
         })
-ir4band=result_1d
-# %%
+ir2band=result_1d
+p# %%
 overlap=np.array([0.78584363, 0.7656091 , 0.74607243, 0.72726005, 0.70918753,
        0.69185982, 0.67527261, 0.659414  , 0.64426607, 0.62980651,
        0.61600987, 0.60284864, 0.59029418, 0.57831736, 0.56688911,
