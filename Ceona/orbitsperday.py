@@ -4,40 +4,27 @@ import datetime as DT
 import pandas as pd 
 from datetime import timedelta
 import matplotlib.pyplot as plt 
-from Keogram import makeStripMatrix
+from Keogram import makeStripMatrix, getTPLatitudes, getSatDates
 from matplotlib.backends.backend_pdf import PdfPages
 import numpy as np
 import time
 
 # Determine the main time span and settings for multiple plots
-start_time = DT.datetime(2023,2,22,00,00,0)
-stop_time = DT.datetime(2023,3,1,00,00,0)
-channel = 'IR2'
+start_time = DT.datetime(2023,2,1,00,00,0)
+stop_time = DT.datetime(2023,2,8,00,00,0)
+channel = 'IR1'
 strip_dir = 'v'
-filename = "4weekfebIR2.pdf"
+filename = "1weekfebIR1_l1b.pdf"
 numdays = stop_time-start_time #number of days
 Tperiod = timedelta(minutes=100)
 
-def getTPLatitudes(objects):
-    TPlat_list= []
-    for n, CCD in objects.iterrows():
-        TPlat_list.append(CCD.TPlat)
-    return TPlat_list
-
-
-def getSatDates(objects):
-    listofdates = []
-    for n, row in objects.iterrows():
-        listofdates.append(row.EXPDate)
-    return listofdates
-
 # %% puts data in file temp_data
-df = read_MATS_data(start_time,stop_time,version=0.5,level='1a',filter={"TPlat":[50,90],'NROW': [0,400]})
-df.to_pickle('22to28febdata')
+df = read_MATS_data(start_time,stop_time,version=0.5,level='1b',filter={"TPlat":[50,90],'NROW': [0,400]})
+df.to_pickle('1to7febdata')
 "change latitude filter depending on if you want to look at north or south pole."
 
 #%% Reads in data from file
-items = pd.read_pickle('22to28febdata')
+items = pd.read_pickle('1to7febdata')
 items = items[items['channel'] == channel]
 
 # %% Saves keograms for every orbit per day on a pdf page.
@@ -70,14 +57,12 @@ def orbit_pdf(items, channel, strip_dir, filename, numdays, Tperiod):
                 continue
             if deltat > Tperiod/2:  #if this is True, next image will belong to next orbit.                         
                 #creates orbit from index n to i
-                print((n,i))
                 orbit = items.iloc[n:i]
                 dates = getSatDates(orbit)
                 times_strings = [dt.strftime("%H:%M") for dt in dates]  #as strings
                 satlatitudes = getTPLatitudes(orbit)
                 #gets the matrix corresponding to that orbit
                 matrix = makeStripMatrix(orbit,channel,strip_dir)
-                print(len(orbit))
                 if len(orbit) == 0 :
                     continue
                 if orbnum == 1:
@@ -90,9 +75,11 @@ def orbit_pdf(items, channel, strip_dir, filename, numdays, Tperiod):
                     axs[0].set_title(dates[0].date(), fontsize=16)
                     axs[0].set_xticks(dates[::20])
                     axs[0].set_xticklabels(times_strings[::20], rotation = 30) 
-                
                 #plots the orbit found from n to current i
-                axs[orbnum].pcolormesh(dates,range(matrix.shape[0]),matrix, rasterized = True) # rasterized makes a pixel image instead of vector graphic
+                if channel == 'IR2':
+                    axs[orbnum].pcolormesh(dates,range(matrix.shape[0]),matrix, rasterized = True, vmin=-20, vmax=260) # rasterized makes a pixel image instead of vector graphic
+                else:
+                    axs[orbnum].pcolormesh(dates,range(matrix.shape[0]),matrix, rasterized = True) # rasterized makes a pixel image instead of vector graphic, less saving time
                 axs[orbnum].set_title(f"Orbit {orbnum}")
                 axs[orbnum].set_xticks(dates[::20])
                 axs[orbnum].set_xticklabels(times_strings[::20], rotation = 30) 
@@ -117,6 +104,5 @@ def orbit_pdf(items, channel, strip_dir, filename, numdays, Tperiod):
         plt.close(fig)
         
     pdf.close()
-  
     return
  # %%
