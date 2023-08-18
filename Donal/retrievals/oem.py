@@ -9,7 +9,7 @@ import scipy as sci
 import numpy as np
 from numba import jit
 from numba import prange
-from pytictoc import TicToc
+#from pytictoc import TicToc
 import tables, warnings
 from scipy import sparse
 import h5py
@@ -40,11 +40,11 @@ def oem_basic_sparse(y, K, xa, Seinv, Sainv, maxiter):
 
 def oem_basic_sparse_2(y, K, xa, Seinv, Sainv, maxiter):
     
-    S = (K.T.dot(Seinv)).dot(K) + Sainv
-    KSe = (K.T).dot(Seinv)
-    KSey = KSe.dot(y-K.dot(xa))
+    S = K.T @ Seinv @ K + Sainv
+    KSe = K.T @ Seinv
+    KSey = KSe @ (y-K @ xa)
     xhat = sci.sparse.linalg.spsolve(S,KSey)                              
-    xhat = np.expand_dims(xhat,1) + xa[:,0]
+    xhat = xhat + xa.T
     
     return xhat
 

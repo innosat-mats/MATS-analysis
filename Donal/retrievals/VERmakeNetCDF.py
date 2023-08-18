@@ -18,18 +18,23 @@ from numpy.linalg import inv
 # %%
 dftop = pd.read_pickle('/Users/donal/projekt/SIW/verdec')
 #%%
-starttime=datetime(2023,3,29,21,0)
-stoptime=datetime(2023,3,29,22,35)
-dftop=read_MATS_data(starttime,stoptime,level="1b",version="0.4")
+#starttime=datetime(2023,3,29,21,0)
+#stoptime=datetime(2023,3,29,22,35)
+#dftop=read_MATS_data(starttime,stoptime,level="1b",version="0.4")
 #%%
 # df=df[df['channel']!='NADIR']
 df = dftop[dftop['channel'] == 'IR2'].dropna().reset_index()#[0:10]
 # %%
+#select part of orbit
+offset = 10
+num_profiles = 250 #use 50 profiles for inversion
+df = df.loc[offset:offset+num_profiles]
+df = df.reset_index(drop=True)
 # %%
 
 
 def prepare_profile(ch,hotpiximage):
-    image = image = np.stack(ch.ImageCalibrated)-hotpiximage
+    image = image = np.stack(ch.ImageCalibrated)#-hotpiximage
     col = int(ch['NCOL']/2)
     cs = col_heights(ch, col, 10, spline=True)
     heights = np.array(cs(range(ch['NROW'])))
@@ -103,5 +108,5 @@ inputdata = xr.Dataset({
     'k': (['time','z','z_r'],ks),
 })
 # %%
-inputdata.to_netcdf('IR2Mar29vertest.nc')
+inputdata.to_netcdf('IR2Mar29vertest_1d.nc')
 # %%
