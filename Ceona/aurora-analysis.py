@@ -15,22 +15,17 @@ from datetime import datetime, timedelta, timezone
 import pandas as pd 
 import matplotlib.pyplot as plt 
 import numpy as np
-from Keogram import makeStripMatrix
+from Keogram import makeStripMatrix, getSatDates, CenterStrip
 import time
-
-def getTPtimes(objects):
-    listoftimes = []
-    for n, row in objects.iterrows():
-        listoftimes.append(row.EXPDate.time())
-    return listoftimes
 
 def col_pos(ccditem, x, nheights=None, splineTPgeo=False):
     if nheights == None:
         nheights = ccditem['NROW']
     d = ccditem['EXPDate']
-    ts = load.timescale()  #earth rotation data
+    ts = load.timescale()  #loads earth rotation data
     t = ts.from_datetime(d)
-    ecipos = ccditem['afsGnssStateJ2000'][0:3] #uses the J2000 global navigation satellite system
+    #gets the cameras position and attitude data
+    ecipos = ccditem['afsGnssStateJ2000'][0:3] #uses the J2000 equinox epoch,for the global navigation satellite system
     q = ccditem['afsAttitudeState']
     quat = R.from_quat(np.roll(q, -1))
     qprime = R.from_quat(ccditem['qprime'])
@@ -45,8 +40,8 @@ def col_pos(ccditem, x, nheights=None, splineTPgeo=False):
         TPpos[iy, :] = ecipos+res.x*ecivec
         posGC = Geocentric(position_au=Distance(
         m=TPpos[iy,:]).au, t=t)
-        #lat,lon,rad = pos.frame_latlon(itrs)
-        position = wgs84.geographic_position_of(posGC)
+        #lat,lon,rad = pos.frame_latlon(itrs) old setting for geocentric position
+        position = wgs84.geographic_position_of(posGC)  #gives geodetic coordinates
         alt = position.elevation
         lat = position.latitude
         lon = position.longitude
@@ -60,19 +55,19 @@ def col_pos(ccditem, x, nheights=None, splineTPgeo=False):
     
 # %%
 # Determine the main time span
-start_time = DT.datetime(2023,2,15,00,0,0)
-stop_time = DT.datetime(2023,2,22,00,0,0)
+start_time = DT.datetime(2023,2,15,1,3,0)
+stop_time = DT.datetime(2023,2,15,1,23,0)
 channel = 'IR1'
 strip_dir = 'v'
 centercol = 22
 
 # %% read data in certain latitude span
-df = read_MATS_data(start_time,stop_time,version=0.5,level='1b',filter={"TPlat":[50,90],'NROW': [0,400]})
-df.to_pickle('3weekfeb')
+df = read_MATS_data(start_time,stop_time,filter={"TPlat":[50,90],'NROW': [0,400]},version=0.5,level='1b')
+df.to_pickle('4weekfeb')
 "change latitude filter depending on if you want to look at north or south pole."
 
 # %% Reads in data from file
-items = pd.read_pickle('3weekfeb')
+items = pd.read_pickle('15feborb11')
 items = items[items['channel'] == channel]
 
 #%% Plotting a chosen image
@@ -114,46 +109,54 @@ plt.plot(lat_list, '.')
 plt.plot(TPlat_list,'.')
 scipy.io.savemat('lat15feborb10',{'latlist': lat_list, 'label':'latitude'}) #saves to matlabfile
 
-# %% altitudes for one event
-times = getTPtimes(items)
-times_strings = [dt.strftime("%H:%M:%S") for dt in times]  #as strings
+# %% altitudes for all strips and keogram for it, even airglow
+dates = []
+time_strings = []  #as strings
 altitudes= []
 for n, item in items.iterrows():
     ccdimage = item['ImageCalibrated']
-    ccd_strip= ccdimage[:,centercol]  #full image [0:200,0:45]
+    ccd_strip= ccdimage[:,centercol]  #creates strip object #full image [0:200,0:45]
     #finds the row of the max value of each center strip
-    row = np.argmax(ccd_strip[155:]) + 155 
+    row = np.argmax(ccd_strip[160:]) + 160 
+    #row = np.argmax(ccd_strip)
     #calculates altitude of the max value
     TPgeo = col_pos(item,centercol)
     [lat,lon,altitude] = TPgeo[row,:]
-    print(row,altitude)
-
+    #print(row,altitude)
+    date = item.EXPDate
+    dates.append(date)
+    time_strings.append(date.strftime("%d/%m %H:%M:%S"))
     altitudes.append(altitude)
-plt.plot(times_strings,altitudes, '.')
-plt.xticks(times_strings[::int(len(times_strings)/10)], rotation=30)
-plt.title('15 February Orbit 11')
-plt.ylabel('Altitude (km)')
-plt.grid()
+    print(row,altitude,date)
+
 matrix = makeStripMatrix(items,channel,strip_dir)
 scipy.io.savemat('keogram_mat',{'keogram_mat': matrix, 'label':'values'}) #saves to matlabfile
 scipy.io.savemat('alt15feb',{'alt15feb': altitudes, 'label':'altitudes'}) #saves to matlabfile
-scipy.io.savemat('time15feb',{'time15feb': times_strings, 'label':'times'}) #saves to matlabfile
+scipy.io.savemat('time15feb',{'time15feb': time_strings, 'label':'times'}) #saves to matlabfile
+
+plt.plot(time_strings,altitudes, '.')
+plt.xticks(time_strings[::int(len(dates)/13)], rotation=30)
+plt.title('15 February')
+plt.ylabel('Altitude (km)')
+plt.grid()
 
 # %% load settings for orbit_altitudes function
 start_time = DT.datetime(2023,2,15,00,0,0)
-stop_time = DT.datetime(2023,2,16,00,0,0)
+stop_time = DT.datetime(2023,2,22,00,0,0)
 channel = 'IR1'
 strip_dir = 'v'
 centercol = 22
-airglowlim = 155
-
-items = pd.read_pickle('15febIR1')
-items = items[items['channel'] == channel]
+airglowlim = 160
 numdays = stop_time-start_time #number of days
 Tperiod = timedelta(minutes=100)
 
+# %%
+items = pd.read_pickle('3weekfeb')
+items = items[items['channel'] == channel]
+
+
 # %%  gets altitude and latitudes of keograms for every orbit per day, save in list
-def orbit_altitudes(items, numdays, Tperiod):
+def orbit_events(items, numdays, Tperiod):
     n = 0
     # list of the maximum values (one max per orbit)
     altmaxes = []
@@ -161,9 +164,10 @@ def orbit_altitudes(items, numdays, Tperiod):
     maxlon = []
     maxtime = []
     maxtime_strings = []
+    maxintensities = []
 
     #list with all altitudes above threshold
-    allaltitudes = []  
+    allaltitudes = []
     alltimes_strings = []
 
     # loop that goes through number of days
@@ -184,48 +188,56 @@ def orbit_altitudes(items, numdays, Tperiod):
                 latitudes_orbit = []
                 longitudes_orbit = []
                 times_orbit = []
+                intensities_orbit = []
                 
                 if len(orbit) == 0 :
                     continue
                 else:
-                    time0 = time.time()
-                    # for loops goes through the image strips in a orbit
+                    #time0 = time.time()
+                    # for loop goes through the image strips in a orbit
                     for n, ccd in orbit.iterrows():
                         ccdimage = ccd['ImageCalibrated']
                         ccd_strip= ccdimage[:,centercol]
                         #finds the row of the max intensity value of each strip
                         row = np.argmax(ccd_strip[airglowlim:]) + airglowlim                       
                         
+                        #if the maximum intensity is lower than this threshold, skip strip
                         if row <= airglowlim + 3:
+                            allaltitudes.append(0)
+                            timestamp = ccd.EXPDate
+                            alltimes_strings.append(timestamp.strftime("%d/%m %H:%M:%S"))
                             continue
                         else:
-                        #kolla bara altituden på minst två eller tre punkter upp,
-                        #strunta i att kolla de punkterna under gränsen
+                        #threshold (a few points from airglow limit), points below will not be checked
                             TPgeo = col_pos(ccd,centercol)
                             [lat,lon,altitude] = TPgeo[row,:]
                             timestamp = ccd.EXPDate
-                            #gets the position of the max intensity point of each strip
-                            #print(row,altitude)
+                            #gets the position coordinates of the max intensity point of each strip
+                            print(row, altitude,ccdimage.item(row,centercol), timestamp)
                             #Temporary position lists for each orbit
                             altitudes_orbit.append(altitude)
                             latitudes_orbit.append(lat)
                             longitudes_orbit.append(lon)
                             times_orbit.append(timestamp)
-
+                            intensities_orbit.append(ccdimage.item(row,centercol))
                             #lists of all maximum altitude values of each strip
                             allaltitudes.append(altitude)
-                            alltimes_strings.append(timestamp.strftime("%d/%m %H:%M"))
-                    print(time.time()-time0)
-                    maxalt = (max(altitudes_orbit)) #the maximum altitude point of an orbit
-                    ind = altitudes_orbit.index(maxalt)
+                            alltimes_strings.append(timestamp.strftime("%d/%m %H:%M:%S"))
+                    #print(time.time()-time0)
+                    if len(altitudes_orbit) == 0 :
+                        pass
+                    else:
 
-                    #lists with maximums for each orbit
-                    altmaxes.append(maxalt)
-                    maxlat.append(latitudes_orbit[ind]) #adds the latitude corresponding to max altitude
-                    maxlon.append(longitudes_orbit[ind]) #adds the longitude corresponding to max altitude
-                    maxtime.append(times_orbit[ind])
-                    maxtime_strings.append(times_orbit[ind].strftime("%d/%m %H:%M"))
-                    
+                        maxalt = (max(altitudes_orbit)) #the maximum altitude point of an orbit, will be two points for two peaks
+                        ind = altitudes_orbit.index(maxalt)
+
+                        #lists with maximums for each orbit
+                        altmaxes.append(maxalt)
+                        maxlat.append(latitudes_orbit[ind]) #adds the latitude corresponding to max altitude
+                        maxlon.append(longitudes_orbit[ind]) #adds the longitude corresponding to max altitude
+                        maxtime.append(times_orbit[ind])
+                        maxtime_strings.append(times_orbit[ind].strftime("%d/%m %H:%M:%S"))
+                        maxintensities.append(intensities_orbit[ind])
                 n = i+1 #start number for next orbit
                 nextorbit_startdate = items.iloc[n].EXPDate
 
@@ -236,11 +248,13 @@ def orbit_altitudes(items, numdays, Tperiod):
                     print(orbit_startdate)
                     break
         #saving to matlab files
-        scipy.io.savemat('altitudesfeb',{'altitudes15feb': allaltitudes, 'label':'altitudes'}) 
-        scipy.io.savemat('maxalt15feb',{'maxalt15feb': altmaxes, 'label':'altitudes'}) 
-        scipy.io.savemat('maxtime15feb',{'maxtime15feb': maxtime_strings, 'label':'times'}) 
-        scipy.io.savemat('maxlat15feb',{'maxlat15feb': maxlat, 'label':'latitudes'}) 
-        scipy.io.savemat('maxlon15feb',{'maxlon15feb': maxlon, 'label':'longitudes'})
+        scipy.io.savemat('altitudesfeb',{'altitudesfeb': allaltitudes, 'label':'altitudes'}) 
+        scipy.io.savemat('alltimesfeb',{'alltimesfeb': alltimes_strings, 'label':'times'}) 
+        scipy.io.savemat('maxaltfeb',{'maxaltfeb': altmaxes, 'label':'altitudes'}) 
+        scipy.io.savemat('maxtimefeb',{'maxtimefeb': maxtime_strings, 'label':'times'}) 
+        scipy.io.savemat('maxlatfeb',{'maxlatfeb': maxlat, 'label':'latitudes'}) 
+        scipy.io.savemat('maxlonfeb',{'maxlonfeb': maxlon, 'label':'longitudes'})
+        scipy.io.savemat('maxintensities',{'maxintensities': maxintensities, 'label':'intensities'})
 
         #plt.plot(maxtime_strings,altmaxes, '.') 
         #plt.xticks(maxtime_strings[::int(len(maxtime)/20)], rotation=30)
