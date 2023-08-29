@@ -1,12 +1,12 @@
 #%%
 from mats_utils.rawdata.read_data import read_MATS_data
 import datetime as DT
-import pandas as pd 
+import pandas as pd
 import numpy as np
 import scipy
 import math
-import matplotlib.pyplot as plt 
-from mats_utils.geolocation.coordinates import TPpos, satpos
+import matplotlib.pyplot as plt
+from mats_utils.geolocation.coordinates import TPpos
 from matplotlib.backends.backend_pdf import PdfPages
 #%%
 class CenterStrip:
@@ -29,7 +29,7 @@ class CenterStrip:
         return  np.transpose(self.strip)
 
 # Make a keogram of a specific channel and CCD-objects
-def makeStripMatrix(df, channel_type, strip_dir):
+def makeStripMatrix(df, channel_type, strip_dir ='v'):
 
     IR_list = df[df['channel'] == channel_type]
     strips_matrix = []  #matrix of concatenated strips
@@ -134,16 +134,16 @@ def plotKeogram(df, channels, strip_dir):
     plt.show()
 
 # %%  Settings to run for normal plot with various channels
-start_time = DT.datetime(2023,2,15,00,0,0)
-stop_time = DT.datetime(2023,2,16,00,0,0)
-channels = ['IR1']  #list of what channels we want to plot
-strip_dir = 'v'  #vertical 'v' or horiozontal 'h' direction of the strip
-# %%
-df = read_MATS_data(start_time,stop_time,version=0.5,level='1b',filter={'NROW': [0,400]})  #"TPlat":[50,90]
-df.to_pickle('15febtest')
-# %%
-items = pd.read_pickle('15febtest')
-items = items[items['channel'] == channels[0]]
+def Main():
+    start_time = DT.datetime(2023,2,15,00,0,0)
+    stop_time = DT.datetime(2023,2,16,00,0,0)
+    channels = ['IR1']  #list of what channels we want to plot
+    strip_dir = 'v'  #vertical 'v' or horiozontal 'h' direction of the strip
+    df = read_MATS_data(start_time,stop_time,version=0.5,level='1b',filter={'NROW': [0,400]})  #"TPlat":[50,90]
+    df.to_pickle('15febtest')
 
+    items = pd.read_pickle('15febtest')
+    items = items[items['channel'] == channels[0]]
 
+    #plotKeogram(items, channels, strip_dir)
 # %%
