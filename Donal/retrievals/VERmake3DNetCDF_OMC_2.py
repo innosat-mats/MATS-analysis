@@ -73,7 +73,7 @@ offset = 300
 num_profiles = 100 #use 50 profiles for inversion
 df = df.loc[offset:offset+num_profiles-1]
 df = df.reset_index(drop=True)
-columns = np.arange(1,df["NCOL"][0],1)
+columns = np.arange(1,df["NCOL"][0],2)
 k_row = 0
 
 #Generate grid for mid measurement
@@ -89,6 +89,10 @@ observation_normal = np.cross(posecef_first,posecef_last)
 observation_normal = observation_normal/np.linalg.norm(observation_normal)
 posecef_mid_unit = posecef_mid/np.linalg.norm(posecef_mid)
 ecef_to_local = R.align_vectors([[1,0,0],[0,1,0]],[posecef_mid_unit,observation_normal])[0]
+
+filename = "ecef_to_local.pkl"
+with open(filename, "wb") as file:
+    pickle.dump((ecef_to_local), file)
 
 ecipos.append(df['afsGnssStateJ2000'][mid][0:3])
 d = df['EXPDate'][mid]
@@ -211,4 +215,4 @@ profiles = np.array(profiles)
 # %%
 filename = "jacobian_3.pkl"
 with open(filename, "wb") as file:
-    pickle.dump((profiles, edges, ks), file)
+    pickle.dump((profiles, edges, ks, ecef_to_local), file)
