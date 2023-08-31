@@ -20,9 +20,9 @@ Jonas/AlbedoFM_Calib_Tdep_Radiance_vs_bits.mat
 Jonas/AlbedoFM_Thermistors_Temp_vs_bits.mat
 OleM/Donal_stuff/data/moon.pkl
 Jonas/Latest-selected.zip
-OleM/de421.bsp
+*de421.bsp
 Linda/output/
-Linda/.DS_Store
+*.DS_Store
 Linda/__pycache__/
 Louis/geolocation/nadir_geo.py
 Louis/geolocation/nadir_geo.sh
@@ -31,3 +31,5 @@ Louis/geolocation/geolocation test.py
 Louis/monitoring/monitoring_Nickolay.sh
 Louis/monitoring/monitoring_routine_Nickolay.py
 Louis/artifact/miscelleanous.py
+Linda/Private/
+*__pycache__*
