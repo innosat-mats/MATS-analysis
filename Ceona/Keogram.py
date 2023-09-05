@@ -15,10 +15,14 @@ class CenterStrip:
         self.strip = []
         self.latitude = TPpos(CCDobject)[0]  #the first position of TPpos gives the latitude
         self.time =  pd.to_datetime(CCDobject['EXPDate'])
+        self.maxalt = 0
+        self.maxlat = 0
+        self.maxlon = 0
+        self.maxI = 0
 
-    "Makes a strip object from the image"
     def makeVerticalStrip(self):
-        "finds the center pixel"
+        "Makes a vertical strip object from the image"
+        #finds the center pixel
         center = math.ceil(len(self.image[0])/2)
         self.strip = self.image[:,int(center)]
         return  self.strip
