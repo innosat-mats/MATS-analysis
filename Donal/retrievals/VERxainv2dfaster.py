@@ -15,13 +15,13 @@ from skyfield.positionlib import Geocentric, ICRF
 from skyfield.units import Distance
 import xarray as xr
 from scipy.sparse.linalg import inv,spsolve
-from oem_functions import linear_oem_sp
 import pickle
 import scipy.sparse as sp
 from oem import oem_basic_sparse_2
 from os.path import expanduser
 import time
 import scipy.stats as stats
+#%matplotlib widget
 
 def geoid_radius(latitude):
     '''
@@ -59,20 +59,7 @@ with open(filename, "rb") as file:
     [edges, k, ecef_to_local] = pickle.load(file)
 
 
-# %%
-def remove_empty_columns(matrix):
-
-    _,I = np.nonzero(np.sum(matrix,0))
-    _,I_0 = np.where(np.sum(matrix,0)==0)
-    cleaned_matrix = matrix[:,I]
-
-    return cleaned_matrix, I_0,I
-
-
-def reinsert_zeros(vector, indexes):
-    for idx in indexes:
-        vector.insert(idx, 0)
-        
+# %%  
 #ch=ir2
 mr = []
 error2_retrieval = []
@@ -126,7 +113,7 @@ print(end_time-start_time,' sec')
 plt.figure()
 plt.plot((k_reduced @ (x_hat)))
 plt.plot(y)
-plt.show()
+
 #%%
 plt.figure()
 plt.plot((k_reduced @ (x_hat)))
@@ -134,7 +121,7 @@ plt.plot(y)
 plt.plot(k_reduced @ xa)
 plt.legend(['K x_hat','y','K xa'])
 plt.xlim([15000,15500])
-plt.show()
+
 
 #x_hat_old = x_hat
 #x_hat = np.zeros([k.shape[1],1])
@@ -143,10 +130,11 @@ plt.show()
 #%%
 x_hat_reshape1 = np.array(x_hat).reshape(len(edges[0])-1,-1 )
 #x_hat_reshape1 = np.array(x_hat).reshape(-1,len(edges[0])-1 )
-
+plt.figure()
 plt.plot(x_hat_reshape1[:,1:-2])
-plt.show()
+
 # %%
+plt.figure()
 plt.pcolor((edges[2][0:-1]+edges[2][1::])/2,(edges[0][0:-1]-6360000)*1e-3,x_hat_reshape1)
 #plt.xlim([-0.1,0.11])
 plt.xlim([edges[2][5],edges[2][-7]])
@@ -154,11 +142,13 @@ plt.xlabel('Angle Along Orbit (radians)')
 plt.ylabel('Altitude (km)')
 plt.ylim([50,120])
 plt.clim()
-plt.title('2D tomographic retrieval nightglow IR2')
-plt.show()
+plt.title('2D tomographic retrieval nightglow IR1')
+plt.colorbar()
+
 
 
 # %%
+plt.figure()
 plt.contourf((edges[2][0:-1]+edges[2][1::])/2,(edges[0][0:-1]-6360000)*1e-3,x_hat_reshape1)
 plt.xlim([edges[2][5],edges[2][-7]])
 plt.colorbar()
@@ -166,7 +156,7 @@ plt.xlabel('Angle Along Orbit (radians)')
 plt.ylabel('Altitude (km)')
 plt.ylim([50,120])
 plt.title('2D tomographic retrieval nightglow IR1')
-plt.show()
+
 
 # %%
 
@@ -205,7 +195,7 @@ ratio=(x_hat_ir1/x_hat_ir2).reshape(len(edges[0])-1,-1 )
 # %%
 plt.figure()
 plt.contourf((edges[2][0:-1]+edges[2][1::])/2,
-             (edges[0][0:-1]-6360000)*1e-3,ratio,
+             (edges[0][0:-1]-6360000)*1e-3,0.6*ratio,
              levels=np.linspace(0,2,11))
 plt.clim([0,2])
 plt.colorbar()
@@ -226,9 +216,14 @@ plt.figure()
 
 
 plt.pcolor((edges[2][0:-1]+edges[2][1::])/2,
-             (edges[0][0:-1]-6360000)*1e-3,tempspl(0.6*ratio))#,levels=np.linspace(160,250,10) )
-plt.clim([160,250])
+             (edges[0][0:-1]-6360000)*1e-3,tempspl(0.6*ratio))#,levels=np.linspace(110,210,11) )
+plt.clim([110,210])
 plt.xlim([edges[2][1],edges[2][-2]])
-plt.ylim([60,110])
+plt.ylim([90,110])
 plt.colorbar()
+# %%
+plt.figure()
+plt.plot(tempspl(0.6*ratio).mean(axis=1),(edges[0][0:-1]-6360000)*1e-3)
+plt.xlim([110,210])
+plt.ylim([90,110])
 # %%

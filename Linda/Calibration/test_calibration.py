@@ -17,6 +17,7 @@ def calibrate(CCDitem, instrument):
         image_desmeared,
         image_dark_sub,
         image_calib_nonflipped,
+        mage_calib_flipped,
         image_calibrated,
         errors
     ) = L1_calibrate(CCDitem, instrument)
@@ -64,13 +65,18 @@ CCDitems['image_calibrated']=CCDitems.apply(lambda CCDitem: calibrate(CCDitem,in
 
 #%%
 ir1=CCDitems[CCDitems.channel=='IR1']
-
+ir2=CCDitems[CCDitems.channel=='IR2']
+ir3=CCDitems[CCDitems.channel=='IR3']
+ir4=CCDitems[CCDitems.channel=='IR4']
+uv1=CCDitems[CCDitems.channel=='UV1']
 uv2=CCDitems[CCDitems.channel=='UV2']
 #calibrate_CCDitems(CCDitems, Instrument(calibration_file))
 
-fig, ax=plt.subplots(1)
-plot_CCDimage(ir1.iloc[0]['image_calibrated'], fig, ax, clim=[0, 200])
-
+fig, ax=plt.subplots(2,1)
+plot_CCDimage(ir1.iloc[0]['image_calibrated'], fig, ax[0])
+plot_CCDimage(ir2.iloc[0]['image_calibrated'], fig, ax[1])
+#plot_CCDimage(ir1.iloc[0]['image_calibrated'], fig, ax[0], clim=[0,7])
+#plot_CCDimage(ir2.iloc[0]['image_calibrated'], fig, ax[1],clim=[0,7])
 
 # def plot_image(CCD, ax=None, fig=None, outpath=None,
 #                nstd=2, cmap='inferno', ranges=None,
@@ -78,6 +84,8 @@ plot_CCDimage(ir1.iloc[0]['image_calibrated'], fig, ax, clim=[0, 200])
 #                fontsize=10):
 # %%
 #%%
-
+"""
 all_channels_plot(uv2[:2], './output/test/', optimal_range=True)
 generate_gif('./output/test/ALL','output/film_staticdots.gif' )
+
+"""

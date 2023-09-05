@@ -33,7 +33,7 @@ print(len(df))
 
 
 #%%
-dfl1a=df[:6]
+dfl1a=df
 for index, CCDitem in dfl1a.iterrows():
     plot_image(CCDitem, save=False)
 
@@ -49,16 +49,16 @@ instrument=Instrument(calibration_file)
 dfl1b=calibrate_dataframe(dfl1a, instrument, debug_outputs=True)
 #%%
 xstart=0
-xstop=200
-ystart=100
-ystop=300
+xstop=2027 #200
+ystart=0 #100
+ystop=512 #300
 
 for i, CCDitem in dfl1b.iterrows():
     fig, ax=plt.subplots(3,1)
     plot_CCDimage( CCDitem['image_desmeared'][xstart:xstop, ystart:ystop], fig, ax[2], title='after desmearing')
     plot_CCDimage( CCDitem['image_bias_sub'][xstart:xstop, ystart:ystop], fig, ax[0], title='prior to desmearing')
-    plot_CCDimage( (CCDitem['image_bias_sub']-CCDitem['image_desmeared'])[xstart:xstop, ystart:ystop], fig, ax[1], title='desmearing correction', clim=[0,0.5])
+    plot_CCDimage( (CCDitem['image_bias_sub']-CCDitem['image_desmeared'])[xstart:xstop, ystart:ystop], fig, ax[1], title='desmearing correction', clim=[0, 0.5])
 
-    print(max, (CCDitem['image_bias_sub']-CCDitem['image_desmeared']).max())
+
 
 # %%
