@@ -1,35 +1,16 @@
 # %%
 from mats_utils.rawdata.read_data import read_MATS_data
 import datetime as DT
-import pandas as pd 
+import pandas as pd
 from datetime import timedelta
-import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt
 from Keogram import makeStripMatrix, getTPLatitudes, getSatDates
 from matplotlib.backends.backend_pdf import PdfPages
 import numpy as np
 import time
 
-# Determine the main time span and settings for multiple plots
-start_time = DT.datetime(2023,2,1,00,00,0)
-stop_time = DT.datetime(2023,2,8,00,00,0)
-channel = 'IR1'
-strip_dir = 'v'
-filename = "1weekfebIR1_l1b.pdf"
-numdays = stop_time-start_time #number of days
-Tperiod = timedelta(minutes=100)
-
-# %% puts data in file temp_data
-df = read_MATS_data(start_time,stop_time,version=0.5,level='1b',filter={"TPlat":[50,90],'NROW': [0,400]})
-df.to_pickle('1to7febdata')
-"change latitude filter depending on if you want to look at north or south pole."
-
-#%% Reads in data from file
-items = pd.read_pickle('1to7febdata')
-items = items[items['channel'] == channel]
-
 # %% Saves keograms for every orbit per day on a pdf page.
 def orbit_pdf(items, channel, strip_dir, filename, numdays, Tperiod):
-    daystart = start_time
     
     pdf = PdfPages(filename)
     n = 0
@@ -45,7 +26,6 @@ def orbit_pdf(items, channel, strip_dir, filename, numdays, Tperiod):
         #the first subplot number
         orbnum = 1
         
-
         #this for loop goes through the images starting from the end of previous orbit
         for i in range(n, len(items)-1):
             #print(i)
@@ -69,7 +49,7 @@ def orbit_pdf(items, channel, strip_dir, filename, numdays, Tperiod):
                     #plotting latitude vs time for the first orbit
                     axs[0].plot(dates,satlatitudes,'.')
                     axs[0].set_xlabel('Time')
-                    axs[0].set_ylabel('Latitude')
+                    axs[0].set_ylabel('Latitude of tangent point')
                     axs[0].set_xlim(dates[0],dates[-1])
                     axs[0].grid(linestyle='-')
                     axs[0].set_title(dates[0].date(), fontsize=16)
@@ -105,4 +85,27 @@ def orbit_pdf(items, channel, strip_dir, filename, numdays, Tperiod):
         
     pdf.close()
     return
- # %%
+ # %% To run the code above
+def Main():
+    # Determine the main time span and settings for multiple plots
+    start_time = DT.datetime(2023,2,15,00,00,0)
+    stop_time = DT.datetime(2023,2,22,00,00,0)
+    channel = 'IR1'
+    strip_dir = 'v'
+    filename = "3weekfebIR1_l1b.pdf"
+    numdays = stop_time-start_time #number of days
+    Tperiod = timedelta(minutes=100)
+
+    # puts data in file temp_data
+    #df = read_MATS_data(start_time,stop_time,version=0.5,level='1b',filter={"TPlat":[50,90],'NROW': [0,400]})
+    #df.to_pickle('3weekfeb')
+    #"change latitude filter depending on if you want to look at north or south pole."
+    # Reads in data from file
+    items = pd.read_pickle('3weekfeb')
+    items = items[items['channel'] == channel]
+
+    orbit_pdf(items, channel, strip_dir, filename, numdays, Tperiod)
+
+    return
+
+
