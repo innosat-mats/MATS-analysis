@@ -92,6 +92,21 @@ def KeogramAltitudes(items,channel):
     plt.title('15 February')
     plt.ylabel('Altitude (km)')
     plt.grid()
+
+# %%
+def IntensityPeak(aurorapeaks):
+    collim = 10
+    rowlim = 145
+    peak_images = []
+    sumofpeaks = 0
+    
+    for strip in aurorapeaks:
+ 
+        im_part = strip.image[rowlim:,collim:]
+        im_sum = np.sum(im_part) #sum the top part of image
+        peak_images.append(im_sum)
+        sumofpeaks = sumofpeaks + im_sum
+    return peak_images, sumofpeaks/len(peak_images)
 # %%
 def IntensityEvent(aurorastrips):
     "Adds all aurora images together from from each orbit. Saves in list"
@@ -137,7 +152,7 @@ def orbit_events(items, numdays, Tperiod):
     maxtime_strings = []
     maxintensities = []
     aurorastrips = []
-    aurorastripsMax = []
+    aurorapeaks = []
 
     #list with all max altitudes (and times) with aurora, not only one per orbit
     allaltitudes = []
@@ -199,7 +214,7 @@ def orbit_events(items, numdays, Tperiod):
                             new_strip.maxlon = lon
                             new_strip.maxalt = altitude
                             new_strip.maxI = intensity
-                            print(row, altitude, intensity, timestamp)
+                            #print(row, altitude, intensity, timestamp)
                             
                             alt_orbit.append(altitude)
                             lat_orbit.append(lat)
@@ -227,7 +242,7 @@ def orbit_events(items, numdays, Tperiod):
                         maxtime.append(T_orbit[ind])
                         maxtime_strings.append(T_orbit[ind].strftime("%d/%m %H:%M:%S"))
                         maxintensities.append(intensities_orbit[ind])
-                        aurorastripsMax.append(aurorastrips[ind])
+                        aurorapeaks.append(aurorastrips[ind])
                         
   
                 n = i+1 #start number for next orbit
@@ -248,7 +263,7 @@ def orbit_events(items, numdays, Tperiod):
         scipy.io.savemat('maxlonfeb',{'maxlonfeb': maxlon, 'label':'longitudes'})
         scipy.io.savemat('maxintensities',{'maxintensities': maxintensities, 'label':'intensities'})          
 
-    return aurorastrips
+    return aurorapeaks
 
 # %%
 def Main():
@@ -272,5 +287,5 @@ def Main():
     return auroralist
 # %%
 auroralist = Main()
-IntensityEvent(auroralist)
+IntensityPeak(auroralist)
 # %%
