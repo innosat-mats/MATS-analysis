@@ -15,7 +15,7 @@ from datetime import datetime, timedelta, timezone
 import pandas as pd 
 import matplotlib.pyplot as plt 
 import numpy as np
-from Keogram import makeStripMatrix, getSatDates, 
+from Keogram import makeStripMatrix, CenterStrip
 import time
 
 def col_pos(ccditem, x, nheights=None, splineTPgeo=False):
@@ -53,15 +53,16 @@ def col_pos(ccditem, x, nheights=None, splineTPgeo=False):
     else:
         return TPgeo 
 
-#%% Plotting a chosen image
+#%% Plot a chosen image
 def saveSpecIm(ccditem):
     ccdimage = ccditem['ImageCalibrated']
     #saves the matrix to matlab-file
     scipy.io.savemat('aurorapic2',{'ccdimage': ccdimage, 'label':'intensity'}) #saves to matlabfile
     return
 
-# %% altitudes for all strips and keogram for it, even airglow
+# %% 
 def KeogramAltitudes(items,channel):
+    "altitudes for all strips and keogram for it, above row 160"
     centercol = 22
     dates = []
     time_strings = []  #as strings
@@ -69,10 +70,8 @@ def KeogramAltitudes(items,channel):
     for n, item in items.iterrows():
         ccdimage = item['ImageCalibrated']
         ccd_strip= ccdimage[:,centercol]  #creates strip object #full image [0:200,0:45]
-        "finds the row of the max value of each center strip"
-        row = np.argmax(ccd_strip)
-        #if only some of the points above certain limit
-        #row = np.argmax(ccd_strip[160:]) + 160 
+        #only some of the points above certain limit
+        row = np.argmax(ccd_strip[160:]) + 160 
         "calculates altitude of the max value"
         TPgeo = col_pos(item,centercol)
         [lat,lon,altitude] = TPgeo[row,:]
@@ -81,7 +80,7 @@ def KeogramAltitudes(items,channel):
         dates.append(date)
         time_strings.append(date.strftime("%d/%m %H:%M:%S"))
         altitudes.append(altitude)
-        print(row,altitude,date)
+        #print(row,altitude,date)
 
     matrix = makeStripMatrix(items,channel)
     scipy.io.savemat('keogram_mat',{'keogram_mat': matrix, 'label':'values'}) #saves to matlabfile
@@ -93,12 +92,43 @@ def KeogramAltitudes(items,channel):
     plt.title('15 February')
     plt.ylabel('Altitude (km)')
     plt.grid()
+# %%
+def IntensityEvent(aurorastrips):
+    "Adds all aurora images together from from each orbit. Saves in list"
+    airglowlim = 160
+    orbit_peak = []
+    start_time = aurorastrips[0].time
+    sumorbit = 0
 
-# %%  gets altitude and latitudes of keograms for every orbit per day, save in list
+    for strip in aurorastrips:
+        
+        if strip.time-start_time < timedelta(minutes=7):
+            im_part = strip.image[airglowlim:,:]
+            im_sum = np.sum(im_part) #sum the top part of image
+            sumorbit = sumorbit + im_sum
+
+            if strip == aurorastrips[-1]:
+                orbit_peak.append(sumorbit)
+
+        else:
+            orbit_peak.append(sumorbit)
+            sumorbit = 0
+            im_part = strip.image[airglowlim:,:]
+            im_sum = np.sum(im_part) #sum the top part of image
+            sumorbit = im_sum 
+            start_time = strip.time
+
+    #orbit_mean = np.sum(orbit_peak)/len(orbit_peak)
+    
+    return orbit_peak
+
+# %%  
 def orbit_events(items, numdays, Tperiod):
+    "gets the aurora peak maximums position for every orbit per day, save in list"
     n = 0
     centercol = 22
     airglowlim = 160
+    auroraintensity = 50
     # list of the maximum values (one max per orbit)
     altmaxes = []
     maxlat = []
@@ -106,8 +136,10 @@ def orbit_events(items, numdays, Tperiod):
     maxtime = []
     maxtime_strings = []
     maxintensities = []
+    aurorastrips = []
+    aurorastripsMax = []
 
-    #list with all altitudes above threshold
+    #list with all max altitudes (and times) with aurora, not only one per orbit
     allaltitudes = []
     alltimes_strings = []
 
@@ -123,70 +155,89 @@ def orbit_events(items, numdays, Tperiod):
             if deltat < Tperiod/2:
                 continue
             if deltat > Tperiod/2:  #if this is True, next image will belong to next orbit.                         
+                
                 #creates orbit from index n to i
                 orbit = items.iloc[n:i]
-                altitudes_orbit = [] #contains altitudes for all the max intensity points in an orbit
-                latitudes_orbit = []
-                longitudes_orbit = []
-                times_orbit = []
+                
+                #Temporary position lists for all the max intensity points in an orbit
+                alt_orbit = []
+                lat_orbit = []
+                lon_orbit = []
+                T_orbit = []
                 intensities_orbit = []
                 
                 if len(orbit) == 0 :
                     continue
                 else:
                     #time0 = time.time()
-                    # for loop goes through the image strips in a orbit
+                    # This for loop goes through the images belonging to an orbit
                     for n, ccd in orbit.iterrows():
-                        ccdimage = ccd['ImageCalibrated']
-                        ccd_strip= ccdimage[:,centercol]
-                        #finds the row of the max intensity value of each strip
-                        row = np.argmax(ccd_strip[airglowlim:]) + airglowlim                       
+                        #ccdimage = ccd['ImageCalibrated']
+                        #ccd_strip= ccdimage[:,centercol]
+                        new_strip = CenterStrip(ccd)
+                        new_strip.makeVerticalStrip() #creates strip object
+                        ccd_strip = new_strip.strip
+
+                        #finds the row of the max intensity value of each strip, above airglow limit
+                        row = np.argmax(ccd_strip[airglowlim:]) + airglowlim
+                        #gives the row of the maximum 10 rows above the limit to check for aurora there.
+                        top_max = np.argmax(ccd_strip[airglowlim+10:]) + airglowlim + 10        
                         
-                        #if the maximum intensity is lower than this threshold, skip strip
-                        if row <= airglowlim + 3:
-                            allaltitudes.append(0)
-                            timestamp = ccd.EXPDate
+                        timestamp = ccd.EXPDate
+
+                        if ccd_strip.item(top_max) < auroraintensity:
+                            #If no aurora we set the altitude for that strip max to 0
+                            allaltitudes.append(0)  
                             alltimes_strings.append(timestamp.strftime("%d/%m %H:%M:%S"))
-                            continue
+
                         else:
-                        #threshold (a few points from airglow limit), points below will not be checked
+                            #gets the position coordinates of the max intensity point of strips with aurora
                             TPgeo = col_pos(ccd,centercol)
                             [lat,lon,altitude] = TPgeo[row,:]
-                            timestamp = ccd.EXPDate
-                            #gets the position coordinates of the max intensity point of each strip
-                            print(row, altitude,ccdimage.item(row,centercol), timestamp)
-                            #Temporary position lists for each orbit
-                            altitudes_orbit.append(altitude)
-                            latitudes_orbit.append(lat)
-                            longitudes_orbit.append(lon)
-                            times_orbit.append(timestamp)
-                            intensities_orbit.append(ccdimage.item(row,centercol))
+                            intensity = ccd_strip.item(row)
+                            new_strip.maxlat = lat
+                            new_strip.maxlon = lon
+                            new_strip.maxalt = altitude
+                            new_strip.maxI = intensity
+                            print(row, altitude, intensity, timestamp)
+                            
+                            alt_orbit.append(altitude)
+                            lat_orbit.append(lat)
+                            lon_orbit.append(lon)
+                            T_orbit.append(timestamp)
+                            intensities_orbit.append(intensity)
                             #lists of all maximum altitude values of each strip
                             allaltitudes.append(altitude)
                             alltimes_strings.append(timestamp.strftime("%d/%m %H:%M:%S"))
+
+                            aurorastrips.append(new_strip)
                     #print(time.time()-time0)
-                    if len(altitudes_orbit) == 0 :
+                    
+                    if len(alt_orbit) == 0 :
                         pass
                     else:
-
-                        maxalt = (max(altitudes_orbit)) #the maximum altitude point of an orbit, will be two points for two peaks
-                        ind = altitudes_orbit.index(maxalt)
-
-                        #lists with maximums for each orbit
+                        maxalt = (max(alt_orbit)) #the maximum altitude point of an orbit, will be two points for two peaks
+                        #to add the second peak if two exists, use time or distance condition
                         altmaxes.append(maxalt)
-                        maxlat.append(latitudes_orbit[ind]) #adds the latitude corresponding to max altitude
-                        maxlon.append(longitudes_orbit[ind]) #adds the longitude corresponding to max altitude
-                        maxtime.append(times_orbit[ind])
-                        maxtime_strings.append(times_orbit[ind].strftime("%d/%m %H:%M:%S"))
+                        ind = alt_orbit.index(maxalt)
+                            
+                        #lists with maximums for each orbit
+                        maxlat.append(lat_orbit[ind]) #adds the latitude corresponding to max altitude
+                        maxlon.append(lon_orbit[ind]) #adds the longitude corresponding to max altitude
+                        maxtime.append(T_orbit[ind])
+                        maxtime_strings.append(T_orbit[ind].strftime("%d/%m %H:%M:%S"))
                         maxintensities.append(intensities_orbit[ind])
+                        aurorastripsMax.append(aurorastrips[ind])
+                        
+  
                 n = i+1 #start number for next orbit
                 nextorbit_startdate = items.iloc[n].EXPDate
-
                 #comparing the day at start of the new orbit with the active orbits start.
                 if orbit_startdate.day != nextorbit_startdate.day:
                     #then we want to quit this for loop and start a new day
                     print("new day")
                     print(orbit_startdate)
+                    
                     break
         #saving to matlab files
         scipy.io.savemat('altitudesfeb',{'altitudesfeb': allaltitudes, 'label':'altitudes'}) 
@@ -195,20 +246,14 @@ def orbit_events(items, numdays, Tperiod):
         scipy.io.savemat('maxtimefeb',{'maxtimefeb': maxtime_strings, 'label':'times'}) 
         scipy.io.savemat('maxlatfeb',{'maxlatfeb': maxlat, 'label':'latitudes'}) 
         scipy.io.savemat('maxlonfeb',{'maxlonfeb': maxlon, 'label':'longitudes'})
-        scipy.io.savemat('maxintensities',{'maxintensities': maxintensities, 'label':'intensities'})
+        scipy.io.savemat('maxintensities',{'maxintensities': maxintensities, 'label':'intensities'})          
 
-        #plt.plot(maxtime_strings,altmaxes, '.') 
-        #plt.xticks(maxtime_strings[::int(len(maxtime)/20)], rotation=30)
-        #plt.title('15 february')
-        #plt.ylabel('Altitude (km)')
-        #plt.grid()             
-
-    return
+    return aurorastrips
 
 # %%
 def Main():
     start_time = DT.datetime(2023,2,15,00,0,0)
-    stop_time = DT.datetime(2023,2,22,00,0,0)
+    stop_time = DT.datetime(2023,2,16,0,0,0)
     channel = 'IR1'
     numdays = stop_time-start_time #number of days
     Tperiod = timedelta(minutes=100)
@@ -217,10 +262,15 @@ def Main():
     #df.to_pickle('4weekfeb')
     #"change latitude filter depending on if you want to look at north or south pole."
 
-    items = pd.read_pickle('3weekfeb')
+    items = pd.read_pickle('15feb')
     items = items[items['channel'] == channel]
-
-    #orbit_events(items,numdays,Tperiod)
+    #pic = items.iloc[100]
+    auroralist = orbit_events(items,numdays,Tperiod)
+    #IntensityEvent(auroralist)
     #KeogramAltitudes(items,channel)
-    #saveSpecIm(ccditem)
-    return
+    #saveSpecIm(pic)
+    return auroralist
+# %%
+auroralist = Main()
+IntensityEvent(auroralist)
+# %%
