@@ -45,8 +45,8 @@ for i, filename in enumerate(filenames):
     x_hat_reshaped = np.array(x_hat).reshape(len(radius_grid),len(acrosstrack_grid),len(alongtrack_grid))
 
     crop_r = np.array([6.4,6.5])*1e6
-    crop_across = np.array([-0.02,0.02])
-    crop_along = np.array([-0.25,0.25])
+    crop_across = np.array([-0.03,0.03])
+    crop_along = np.array([-0.5,0.5])
 
     condition = lambda x: (x > crop_r[0]) and (x < crop_r[1])
     r_index = [index for index, value in enumerate(radius_grid) if condition(value)]
@@ -91,13 +91,10 @@ for i, filename in enumerate(filenames):
     all_lat[:,:,:,i] = interpolated_lat
     all_interpolated[:,:,:,i] = interpolated_values
 # %%
-#for i in range(all_interpolated.shape[3]):
-    # plt.pcolor(along_grid-0.4*i,alt_grid,all_interpolated[:,10,:,i],vmin=0,vmax=1e13)
+for i in range(all_interpolated.shape[3]):
+    plt.pcolor(along_grid-0.4*i,alt_grid,all_interpolated[:,10,:,i],vmin=0,vmax=3e12)
 
-# for i in range(all_interpolated.shape[3]):
-#     plt.pcolor(lon_grid,lat_grid,all_interpolated[10,:,:,i].T,vmin=0,vmax=3e13)
-
-# plt.show()
+plt.show()
 # %%
 ds = xr.Dataset(
     data_vars=dict(
