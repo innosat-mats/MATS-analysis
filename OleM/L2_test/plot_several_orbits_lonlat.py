@@ -92,7 +92,7 @@ for i, filename in enumerate(filenames):
     all_interpolated[:,:,:,i] = interpolated_values
 # %%
 for i in range(all_interpolated.shape[3]):
-    plt.pcolor(along_grid-0.4*i,alt_grid,all_interpolated[:,10,:,i],vmin=0,vmax=3e12)
+    plt.pcolor(along_grid-0.9*i,alt_grid,all_interpolated[:,10,:,i],vmin=0,vmax=5e12)
 
 plt.show()
 # %%
