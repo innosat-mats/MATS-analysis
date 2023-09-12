@@ -26,8 +26,8 @@ def col_pos(ccditem, x, nheights=None, splineTPgeo=False):
     t = ts.from_datetime(d)
     #gets the cameras position and attitude data
     ecipos = ccditem['afsGnssStateJ2000'][0:3] #uses the J2000 equinox epoch,for the global navigation satellite system
-    q = ccditem['afsAttitudeState']
-    quat = R.from_quat(np.roll(q, -1))
+    q = ccditem['afsAttitudeState']  #Written in Euler parameters
+    quat = R.from_quat(np.roll(q, -1))  #the last element is put first
     qprime = R.from_quat(ccditem['qprime'])
     ypixels = np.linspace(0, ccditem['NROW'], nheights)
     TPpos = np.zeros((len(ypixels), 3))
