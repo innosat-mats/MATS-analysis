@@ -10,8 +10,9 @@ import numpy as np
 import time
 
 # %% Saves keograms for every orbit per day on a pdf page.
-def orbit_pdf(items, channel, strip_dir, filename, numdays, Tperiod):
-    
+def orbit_pdf(items, channel, strip_dir, filename, numdays):
+    Tperiod = timedelta(minutes=100)
+    #one orbit = ca 90 min
     pdf = PdfPages(filename)
     n = 0
     
@@ -33,9 +34,9 @@ def orbit_pdf(items, channel, strip_dir, filename, numdays, Tperiod):
 
             #checks the time change for each image
             deltat = items.iloc[i+1].EXPDate-items.iloc[i].EXPDate
-            if deltat < Tperiod/2:
+            if deltat < Tperiod/2: 
                 continue
-            if deltat > Tperiod/2:  #if this is True, next image will belong to next orbit.                         
+            if deltat > Tperiod/2: #if this is True, next image will belong to next orbit.                         
                 #creates orbit from index n to i
                 orbit = items.iloc[n:i]
                 dates = getSatDates(orbit)
@@ -76,7 +77,8 @@ def orbit_pdf(items, channel, strip_dir, filename, numdays, Tperiod):
                     print(orbit_startdate)
 
                     break
-
+    
+                
         time0 = time.time()   #seems to take around 225 s which is way to slow
         #fig.savefig('plot.png')
         pdf.savefig(fig)
@@ -94,7 +96,6 @@ def Main():
     strip_dir = 'v'
     filename = "3weekfebIR1_l1b.pdf"
     numdays = stop_time-start_time #number of days
-    Tperiod = timedelta(minutes=100)
 
     # puts data in file temp_data
     #df = read_MATS_data(start_time,stop_time,version=0.5,level='1b',filter={"TPlat":[50,90],'NROW': [0,400]})
@@ -104,7 +105,7 @@ def Main():
     items = pd.read_pickle('3weekfeb')
     items = items[items['channel'] == channel]
 
-    orbit_pdf(items, channel, strip_dir, filename, numdays, Tperiod)
+    orbit_pdf(items, channel, strip_dir, filename, numdays)
 
     return
 
