@@ -17,16 +17,17 @@ def orbit_pdf(items, channel, strip_dir, filename, numdays):
     # loop that goes through number of days
     for day in range(1,numdays.days+1):
         maxorbits = 15 #assumed maximum possible orbits in one day
-        fig, axs = plt.subplots(nrows=2*maxorbits, ncols=2, figsize=(16.54,80), gridspec_kw={'height_ratios': [2]*(2*maxorbits)})
+        fig, axs = plt.subplots(nrows=maxorbits, ncols=2, figsize=(16.54,40), gridspec_kw={'height_ratios': [2]*(maxorbits)})
         #the first subplot number
-        orbnum = 0
+        orbnum = 1
         subplotNum = 0
+        orbcheck = False  #to check if previous orbit was the same as now
 
         #this for loop goes through the images starting from the end of previous orbit
         for i in range(n, len(items)-1):
             
             orbit_startdate = items.iloc[n].EXPDate
-
+            
             #checks the time change for each image
             deltat = items.iloc[i+1].EXPDate-items.iloc[i].EXPDate
             if deltat < Tperiod/6: 
@@ -42,8 +43,11 @@ def orbit_pdf(items, channel, strip_dir, filename, numdays):
                     #gets the matrix corresponding to that hemisphere
                     matrix = makeStripMatrix(NH,channel,strip_dir)
 
-                    print('NH',subplotNum,orbnum)
-                    
+                    if orbcheck == True:
+                        subplotNum += 1
+                        orbnum += 1
+                    print('NH',subplotNum,orbnum, len(NH))
+
                     #plots the orbit found from n to current i
                     if channel == 'IR2':
                         axs[subplotNum,0].pcolormesh(dates,range(matrix.shape[0]),matrix, rasterized = True, vmin=-20, vmax=260) # rasterized makes a pixel image instead of vector graphic
@@ -53,7 +57,8 @@ def orbit_pdf(items, channel, strip_dir, filename, numdays):
                     axs[subplotNum,0].set_title(f"Orbit {orbnum} Northern Hemisphere")
                     axs[subplotNum,0].set_xticks(dates[::20])
                     axs[subplotNum,0].set_xticklabels(times_strings[::20], rotation = 30) 
-                    
+                    orbcheck = True
+
                 if items.iloc[i].TPlat < 0: #south hemisphere
                     SH = items.iloc[n:i]
                     if len(SH) == 0 :
@@ -68,13 +73,14 @@ def orbit_pdf(items, channel, strip_dir, filename, numdays):
                         axs[subplotNum,1].pcolormesh(dates,range(matrix.shape[0]),matrix, rasterized = True, vmin=-20, vmax=260) # rasterized makes a pixel image instead of vector graphic
                     else:
                         axs[subplotNum,1].pcolormesh(dates,range(matrix.shape[0]),matrix, rasterized = True) # rasterized makes a pixel image instead of vector graphic, less saving time
-                    print('SH',subplotNum,orbnum)
+                    print('SH',subplotNum,orbnum, len(SH))
 
                     axs[subplotNum,1].set_title(f"Orbit {orbnum} Southern Hemisphere")
                     axs[subplotNum,1].set_xticks(dates[::20])
                     axs[subplotNum,1].set_xticklabels(times_strings[::20], rotation = 30) 
                     orbnum += 1
                     subplotNum += 1
+                    orbcheck = False
                 
                 suptitle = fig.suptitle(f"{orbit_startdate.date()} Ch IR1", fontsize=16)   
                 suptitle.set_y(0.999)
@@ -98,15 +104,15 @@ def orbit_pdf(items, channel, strip_dir, filename, numdays):
  # %% To run the code above
 def Main():
     # Determine the main time span and settings for multiple plots
-    start_time = DT.datetime(2023,2,15,00,00,0)
-    stop_time = DT.datetime(2023,2,17,00,00,0)
+    start_time = DT.datetime(2023,2,8,00,00,0)
+    stop_time = DT.datetime(2023,2,15,00,00,0)
     channel = 'IR1'
     strip_dir = 'v'
-    filename = "1516febIR1test.pdf"
+    filename = "2weekfebIR1_l1b.pdf"
     numdays = stop_time-start_time #number of days
 
-    items = pd.read_pickle('1516feb')
-    print(len(items))
+    items = pd.read_pickle('8to14febIR1')
+   
     orbit_pdf(items, channel, strip_dir, filename, numdays)
 
     return
