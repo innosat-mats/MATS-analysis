@@ -5,9 +5,9 @@ from mats_l2_processing.forward_model import calc_jacobian, cart2sph
 import pickle
 from datetime import datetime
 from mats_utils.rawdata.read_data import read_MATS_data
-from mats_l2_processing.inverse_model import do_inversion
+from mats_l2_processing.inverse_model import do_inversion, generate_xa_from_gaussian
 from mats_l2_processing.grids import center_grid,localgrid_to_lat_lon_alt_3D
-
+import time 
 #%%
 starttime=datetime(2023,3,31,21,0)
 stoptime=datetime(2023,3,31,22,35)
@@ -26,14 +26,24 @@ for offset in offsets:
 
     y, ks, altitude_grid_edges, alongtrack_grid_edges,acrosstrack_grid_edges, ecef_to_local = calc_jacobian(df_batch,columns,rows)
 
-    y = y.reshape(-1)
-    y = np.matrix(y)
+    radius_grid = center_grid(altitude_grid_edges)
+    alongtrack_grid = center_grid(alongtrack_grid_edges)
+    acrosstrack_grid = center_grid(acrosstrack_grid_edges)
 
-    x_hat = do_inversion(ks,y)
+    non_uniform_ecef_grid_altitude,non_uniform_ecef_grid_lon,non_uniform_ecef_grid_lat,non_uniform_ecef_grid_r = localgrid_to_lat_lon_alt_3D(radius_grid,acrosstrack_grid,alongtrack_grid,ecef_to_local)
+
+    xa = generate_xa_from_gaussian(non_uniform_ecef_grid_altitude)*2e12+1e11
+    y = y.flatten()
+
+    tic = time.time()
+    x_hat = do_inversion(ks,y,xa=xa)
+    toc = time.time()
+
+    print(toc-tic)
 
     filename = str(offset) + ".pkl"
     with open(filename, "wb") as file:
-        pickle.dump((x_hat, y, ks, altitude_grid_edges, alongtrack_grid_edges,acrosstrack_grid_edges, ecef_to_local), file)
+        pickle.dump((x_hat, y, ks, altitude_grid_edges, alongtrack_grid_edges,acrosstrack_grid_edges, ecef_to_local,non_uniform_ecef_grid_altitude,non_uniform_ecef_grid_lon,non_uniform_ecef_grid_lat,non_uniform_ecef_grid_r), file)
 
 
 # # %% reshape x_hat
