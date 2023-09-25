@@ -8,13 +8,14 @@ import math
 import matplotlib.pyplot as plt
 from mats_utils.geolocation.coordinates import TPpos
 from matplotlib.backends.backend_pdf import PdfPages
-#%%
+
 class CenterStrip:
     def __init__(self, CCDobject):
         self.image = CCDobject['ImageCalibrated']   #for L1b otherwise 'IMAGE'
         self.strip = []
         self.latitude = TPpos(CCDobject)[0]  #the first position of TPpos gives the latitude
         self.time =  pd.to_datetime(CCDobject['EXPDate'])
+        self.maxrow = 0
         self.maxalt = 0
         self.maxlat = 0
         self.maxlon = 0
@@ -32,9 +33,8 @@ class CenterStrip:
         self.strip = self.image[int(center),:]
         return  np.transpose(self.strip)
 
-# Make a keogram of a specific channel and CCD-objects
 def makeStripMatrix(df, channel_type, strip_dir ='v'):
-
+    "Creates the keogram matrix of a specific channel and list of CCD-objects"
     IR_list = df[df['channel'] == channel_type]
     strips_matrix = []  #matrix of concatenated strips
 
@@ -57,32 +57,23 @@ def makeStripMatrix(df, channel_type, strip_dir ='v'):
         strips_matrix = np.array(strips_matrix)
     return np.transpose(strips_matrix)
 
-#Get a list of latitudes and dates for TP
-def getTimePos(df):
-    listoflatitudes= []
-    listofexpdates = []
-    for index, row in df.iterrows():
-        listoflatitudes.append(row.TPlat)
-        listofexpdates.append(row.EXPDate)
-    return listoflatitudes, listofexpdates
-
 def getTPLatitudes(objects):
+    "Get a list of latitudes for TP"
     TPlat_list= []
     for n, CCD in objects.iterrows():
         TPlat_list.append(CCD.TPlat)
     return TPlat_list
 
-
 def getSatDates(objects):
+    "Get a list of dates for TP"
     listofdates = []
     for n, row in objects.iterrows():
         listofdates.append(row.EXPDate)
     return listofdates
-#%%
-# Makes a plot of the matrix made with makeStripMatrix()
+
 def plotKeogram(df, channels, strip_dir):
-    
-    #gives at least 2 plots, one from image-matrix and one with the latitudes
+    "Makes a simple keogram plot, given a list of ccds with their corresponding TPlatitudes."
+    "Shows 2 plots, one from image-matrix and one with the latitudes"
     if len(channels)==1 :
         IR_list = df[df['channel'] == channels[0]]
         fig,axs = plt.subplots(nrows=2, ncols=1,sharex='all')
@@ -127,8 +118,6 @@ def plotKeogram(df, channels, strip_dir):
             matrix = makeStripMatrix(df,channels[i],strip_dir)  
             axs[i].pcolormesh(dates,range(matrix.shape[0]),matrix, vmax=1500)
             axs[i].set_title(f"Channel {channels[i]}")
-            #plt.gcf().autofmt_xdate()
-            #plt.tight_layout()
        
     #plt.tight_layout()
     #plt.gcf().autofmt_xdate()
