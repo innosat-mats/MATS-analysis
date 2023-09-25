@@ -16,7 +16,7 @@ def orbit_pdf(items, channel, strip_dir, filename, numdays):
     
     # loop that goes through number of days
     for day in range(1,numdays.days+1):
-        maxorbits = 15 #assumed maximum possible orbits in one day
+        maxorbits = 16 #assumed maximum possible orbits in one day
         fig, axs = plt.subplots(nrows=maxorbits, ncols=2, figsize=(16.54,40), gridspec_kw={'height_ratios': [2]*(maxorbits)})
         #the first subplot number
         orbnum = 1
@@ -104,14 +104,14 @@ def orbit_pdf(items, channel, strip_dir, filename, numdays):
  # %% To run the code above
 def Main():
     # Determine the main time span and settings for multiple plots
-    start_time = DT.datetime(2023,2,8,00,00,0)
-    stop_time = DT.datetime(2023,2,15,00,00,0)
+    start_time = DT.datetime(2023,3,1,00,00,0)
+    stop_time = DT.datetime(2023,3,8,00,00,0)
     channel = 'IR1'
     strip_dir = 'v'
-    filename = "2weekfebIR1_l1b.pdf"
+    filename = "1weekmarIR1_l1b.pdf"
     numdays = stop_time-start_time #number of days
 
-    items = pd.read_pickle('8to14febIR1')
+    items = pd.read_pickle('1to7marIR1')
    
     orbit_pdf(items, channel, strip_dir, filename, numdays)
 
