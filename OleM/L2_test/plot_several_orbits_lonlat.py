@@ -11,8 +11,8 @@ from matplotlib import pyplot as plt
 import numpy as np
 from scipy.interpolate import griddata
 import xarray as xr
-folder = "/home/olemar/Projects/Universitetet/MATS/MATS-analysis/L2_test/"
-filenames = ["0","50","100","150","200","250","300","350","400","450","500","550","600","650","700","750","800"]
+folder = "/home/olemar/Projects/Universitetet/MATS/MATS-analysis/L2_test2/"
+filenames = ["0","50","100","150","200","250","300","350","400"]
 #filenames = ["500","550","600","650","700","750","800"]
 
 all_data = []
@@ -21,11 +21,11 @@ all_lon_grid = []
 all_lat_grid = []
 
 #%% Define the regular grid
-alt_grid = np.arange(70e3, 110e3, 2e3)
+alt_grid = np.arange(70e3, 110e3, 1e3)
 #lon_grid = np.arange(-90, 0, 0.02)
 #lat_grid = np.arange(-90, 0, 0.1)
-along_grid = np.arange(-0.5, 0.5, 0.01)
-across_grid = np.arange(-0.05, 0.05, 0.005)
+along_grid = np.arange(-0.5, 0.5, 0.005)
+across_grid = np.arange(-0.05, 0.05, 0.0025)
 
 all_interpolated = np.zeros([len(alt_grid),len(across_grid),len(along_grid),len(filenames)])
 #all_interpolated = np.zeros([len(alt_grid),len(lon_grid),len(lat_grid),len(filenames)])
@@ -44,9 +44,9 @@ for i, filename in enumerate(filenames):
     alongtrack_grid = center_grid(alongtrack_grid_edges)
     x_hat_reshaped = np.array(x_hat).reshape(len(radius_grid),len(acrosstrack_grid),len(alongtrack_grid))
 
-    crop_r = np.array([6.4,6.5])*1e6
-    crop_across = np.array([-0.03,0.03])
-    crop_along = np.array([-0.5,0.5])
+    crop_r = np.array([6,7])*1e6
+    crop_across = np.array([-0.04,0.04])
+    crop_along = np.array([-1,1])
 
     condition = lambda x: (x > crop_r[0]) and (x < crop_r[1])
     r_index = [index for index, value in enumerate(radius_grid) if condition(value)]
@@ -92,7 +92,10 @@ for i, filename in enumerate(filenames):
     all_interpolated[:,:,:,i] = interpolated_values
 # %%
 for i in range(all_interpolated.shape[3]):
-    plt.pcolor(along_grid-0.9*i,alt_grid,all_interpolated[:,10,:,i],vmin=0,vmax=5e12)
+    column = 17
+    I = ~np.isnan(all_lat[10,column,:,i])
+    if I.any():
+        plt.pcolor(all_lat[0,column,I,i],alt_grid+5e4*i,all_interpolated[:,column,I,i],vmin=0,vmax=5e12)
 
 plt.show()
 # %%
