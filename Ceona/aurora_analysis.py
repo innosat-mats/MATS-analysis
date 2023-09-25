@@ -80,8 +80,9 @@ def KeogramAltitudes(items,channel):
     plt.ylabel('Altitude (km)')
     plt.grid()
 
-# %%
+# %% Used to get the geodetic coordinates of a pixel
 def col_pos(ccditem, x, nheights=None, splineTPgeo=False):
+    "Returns the geodetic coordinates of a pixel, lat, lon and altitude"
     if nheights == None:
         nheights = ccditem['NROW']
     d = ccditem['EXPDate']
@@ -136,8 +137,8 @@ def IntensityPeak(aurorastrip):
     
     rowlow = aurorastrip.maxrow - 4
     rowtop = aurorastrip.maxrow + 4
-    if rowtop >= len(aurorastrip):
-        im_part = aurorastrip.image[rowlow:len(aurorastrip),collow:coltop]
+    if rowtop >= len(aurorastrip.image):
+        im_part = aurorastrip.image[rowlow:len(aurorastrip.image),collow:coltop]
     else:
         im_part = aurorastrip.image[rowlow:rowtop,collow:coltop]
     im_sum = np.sum(im_part) #sum the surrounding part of the peak
@@ -149,17 +150,16 @@ def aurora_strips(items, numdays, Tperiod):
     n = 0
     centercol = 22
     airglowlim = 160
-    auroraintensity = 60
+    auroramean = 50
     aurorastrips = []
     aurorastripsNH = []
     aurorastripsSH = []
-
     # loop that goes through number of days
     for day in range(1,numdays.days+1):
         #this for loop goes through the images starting from the end of previous orbit
         for i in range(n, len(items)-1):
             orbit_startdate = items.iloc[n].EXPDate
-
+            
             #checks the time change for each image
             deltat = items.iloc[i+1].EXPDate-items.iloc[i].EXPDate
             if deltat < Tperiod/6:
@@ -167,6 +167,7 @@ def aurora_strips(items, numdays, Tperiod):
             else:  #if this is True, next image will belong to next orbit.                         
                 
                 if items.iloc[i].TPlat > 0: #north hemisphere
+                    auroraintensity = 55
                     #creates orbit from index n to i
                     NH = items.iloc[n:i]
                     if len(NH) == 0 : #if empty, go to next hemisphere
@@ -186,23 +187,24 @@ def aurora_strips(items, numdays, Tperiod):
                         #gives the row of the maximum 10 rows above the limit to check that aurora is there as well
                         top_max = np.argmax(ccd_strip[airglowlim+10:]) + airglowlim + 10        
                         if ccd_strip.item(top_max) > auroraintensity:
-                            if top_mean > auroraintensity:
+                            if top_mean > auroramean:
                                 #create strip objects of the aurora columns
                                 new_strip = CenterStrip(ccd)
                                 new_strip.makeVerticalStrip()
                                 ccd_strip = new_strip.strip
 
                                 #sets the position coordinates of the max intensity point of strips with aurora
-                                [lat,lon,altitude,intensity] = set_aurora_spec(new_strip,ccd,row,centercol)
-                                timestamp = ccd.EXPDate
-                                print(top_max,ccd_strip.item(top_max))
-                                print(row, altitude, intensity, timestamp)
+                                set_aurora_spec(new_strip,ccd,row,centercol)
 
                                 #list of aurora strip objects
                                 aurorastripsNH.append(new_strip)
                                 aurorastrips.append(new_strip)       
 
                 if items.iloc[i].TPlat < 0: #south hemisphere
+                    if items.iloc[i].TPlat > -50 and items.iloc[i].TPlon > -90 and items.iloc[i].TPlon < 40:
+                        continue
+                    
+                    auroraintensity = 70
                     SH = items.iloc[n:i]
                     if len(SH) == 0 :
                         continue
@@ -218,7 +220,7 @@ def aurora_strips(items, numdays, Tperiod):
                         top_max = np.argmax(ccd_strip[airglowlim+10:]) + airglowlim + 10        
                         
                         if ccd_strip.item(top_max) > auroraintensity:
-                            if top_mean > auroraintensity:
+                            if top_mean > auroramean:
                                 #create strip objects of the aurora columns
                                 new_strip = CenterStrip(ccd)
                                 new_strip.makeVerticalStrip()
@@ -226,9 +228,9 @@ def aurora_strips(items, numdays, Tperiod):
 
                                 #sets the position coordinates of the max intensity point of strips with aurora
                                 [lat,lon,altitude,intensity] = set_aurora_spec(new_strip,ccd,row,centercol)
-                                timestamp = ccd.EXPDate
-                                print(top_max,ccd_strip.item(top_max))
-                                print(row, altitude, intensity, timestamp)
+                                #timestamp = ccd.EXPDate
+                                #print(top_max,ccd_strip.item(top_max), top_mean)
+                                #print(row, altitude, timestamp)
 
                                 #list of aurora strip objects
                                 aurorastripsSH.append(new_strip)
@@ -242,85 +244,81 @@ def aurora_strips(items, numdays, Tperiod):
                     print("new day", orbit_startdate)
                     
                     break
-        
+    save_strips(aurorastripsNH,'aurorastripsNH.mat','aurorastripsNH')
+    save_strips(aurorastripsSH,'aurorastripsSH.mat','aurorastripsSH')
+    save_strips(aurorastrips,'aurorastrips.mat','aurorastrips')
+
     return aurorastrips
 
 # %% 
 def get_all_altitudes(aurorastrips):
     "Get all altitudes from given list of aurora strip objects"
-    #list with all max altitudes (and times) with aurora, not only one per orbit
     allaltitudes = []
-    alltimes_strings = []
-    for strip in aurorastrips:
+    for index, strip in enumerate(aurorastrips):
         altitude = strip.maxalt
-        timestamp = strip.time
         allaltitudes.append(altitude)
-        alltimes_strings.append(timestamp.strftime("%d/%m %H:%M:%S"))
-    scipy.io.savemat('altitudesfeb',{'altitudesfeb': allaltitudes, 'label':'altitudes'}) 
-    scipy.io.savemat('alltimesfeb',{'alltimesfeb': alltimes_strings, 'label':'times'})                               
     return allaltitudes
 
-# %% Not ready to use yet, goal is to get only the peak points
-""" def get_aurora_max(aurorastrips):
-    # list of the maximum values (one max per orbit)
+def get_aurora_max(aurorastrips):
+    "Get the peak points of each aurora cluster"
+    peak_strips = [] # list of the peak point strips for all events.
+    allaltitudes = get_all_altitudes(aurorastrips)
+    n = 0                    
+    for i in range(n,len(aurorastrips)-1):
+        strip = aurorastrips[i]
+        deltat = aurorastrips[i+1].time-strip.time
+        
+        if deltat < timedelta(minutes=5): #time between events
+            continue
+        else:
+            event = allaltitudes[n:i] 
+            if len(event) == 0:
+                continue
+            
+            peak = max(aurorastrips[n:i],key=lambda x: x.maxalt)
+            #ind = np.argmax(event)
+            #pixelI = aurorastrips[n+ind].strip
+            #rad = aurorastrips[n+ind].maxrow
+            #print(rad, pixelI[rad],aurorastrips[n+ind].time)
+            
+            peak_strips.append(peak)
+            n = i+1
+    save_strips(peak_strips,'peakstrips.mat','peakstrips')
+    
+    return
+
+def save_strips(aurorastrips,filename,structname):
     maxalt = []
+    maxrow = []
     maxlat = []
     maxlon = []
-    maxtime = []
-    maxtime_strings = []
-    maxintensities = []
-    allaltitude = get_all_altitudes(aurorastrips)
-    "Gets the peak points"                    
+    times = []
+    intensities = []
     for strip in aurorastrips:
-        #sorted_indices = np.argsort(alt_orbit)[::-1]
-        #ind1 = sorted_indices[0]
-        #ind2 = sorted_indices[1]
-        #strip.time
-        #check so that the second maximum is not the same crossing
-        if abs(Time[ind1]-Time[ind2]) > timedelta(minutes=6):  
-            maxalt = [max1,max2]
-            #lists with 1 or 2 maximums for each orbit
-            maxlat.append([maxlat1,maxlat2]) #adds the latitude corresponding to max altitude
-            maxlon.append([maxlon1,maxlon2]) #adds the longitude corresponding to max altitude
-            maxtime.append([Time[ind1],Time[ind2]])
-            maxtime_strings.append([Time[ind1].strftime("%d/%m %H:%M:%S"),Time[ind2].strftime("%d/%m %H:%M:%S")])
-            maxintensities.append([intensities[ind1],intensities[ind2]])
-            aurorapeaks.append([aurorastrips[ind1],aurorastrips[ind2]])
+        maxrow.append(strip.maxrow)
+        maxalt.append(strip.maxalt)
+        maxlat.append(strip.maxlat)
+        maxlon.append(strip.maxlon)
+        timestamp = strip.time
+        times.append(timestamp.strftime("%d/%m %H:%M:%S"))
+        intensities.append(strip.maxI)
 
-        else:
-            maxalt = [maxalt1,0]
-            maxlat.append([maxlat1,0]) #adds the latitude corresponding to max altitude
-            maxlon.append([maxlon1,0]) #adds the longitude corresponding to max altitude
-            maxtime.append([Time[ind1],0])
-            maxtime_strings.append([Time[ind1].strftime("%d/%m %H:%M:%S"),0])
-            maxintensities.append([intensities[ind1],0])
-            aurorapeaks.append([aurorastrips[ind1],0])
-        #to add the second peak if two exists, use time or distance condition
-        altmaxes.append(maxalt)    
-    #saving to matlab files
-    scipy.io.savemat('maxaltfeb',{'maxaltfeb': maxalt, 'label':'altitudes'}) 
-    scipy.io.savemat('maxtimefeb',{'maxtimefeb': maxtime_strings, 'label':'times'})         scipy.io.savemat('maxlatfeb',{'maxlatfeb': maxlat, 'label':'latitudes'}) 
-    scipy.io.savemat('maxlonfeb',{'maxlonfeb': maxlon, 'label':'longitudes'})
-    scipy.io.savemat('maxintensities',{'maxintensities': maxintensities, 'label':'intensities'})          
+    peakdf = pd.DataFrame({'row': maxrow ,'alt': maxalt, 'lat': maxlat, 'lon': maxlon, 'maxI': intensities, 'time' : times})  
+    scipy.io.savemat(filename, {structname: peakdf.to_dict('list')})
 
-    return """
+    return
 # %%
 def Main(items):
     start_time = DT.datetime(2023,2,15,0,0,0)
     stop_time = DT.datetime(2023,2,17,0,0,0)
-    channel = 'IR1'
     numdays = stop_time-start_time #number of days
     Tperiod = timedelta(minutes=100)
-
-    #df = read_MATS_data(start_time,stop_time,filter={"TPlat":[50,90],'NROW': [0,400]},version=0.5,level='1b')
-    #df.to_pickle('4weekfeb')
-    #"change latitude filter depending on if you want to look at north or south pole."
-
     auroralist = aurora_strips(items,numdays,Tperiod)
-    get_all_altitudes(auroralist)
-    return
+    get_aurora_max(auroralist)
+    return 
 
 # %%
 items = pd.read_pickle('15to16febIR1')
 
 # %%
+
