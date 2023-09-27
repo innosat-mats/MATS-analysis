@@ -8,15 +8,15 @@ import numpy as np
 from aurora_analysis import set_aurora_spec, save_strips
 
 start_time = DT.datetime(2023,2,15,0,0,0)
-stop_time = DT.datetime(2023,2,22,0,0,0)
+stop_time = DT.datetime(2023,2,17,0,0,0)
 numdays = stop_time-start_time #number of days
 Tperiod = timedelta(minutes=100)
-items = pd.read_pickle('15to22febIR1')
+items = pd.read_pickle('15to16febIR1')
 
 
 # %%
 def all_strips(items, numdays, Tperiod):
-    "returns all strips"
+    "returns all strips, saves as panda list"
     n = 0
     orb = 0
     centercol = 22
@@ -106,4 +106,10 @@ def all_strips(items, numdays, Tperiod):
     save_strips(strips,'allstrips.mat','allstrips')
     return
     
+
+def get_stripRow(strips):
+    "Get all rows from given list of strip objects"
+    allrows = strips['row']
+    return allrows
+
 # %%
