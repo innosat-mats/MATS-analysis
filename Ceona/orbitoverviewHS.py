@@ -1,4 +1,5 @@
 # %%
+# Functions to create overviews for one hemisphere only
 from mats_utils.rawdata.read_data import read_MATS_data
 import datetime as DT
 import pandas as pd
@@ -10,7 +11,7 @@ import numpy as np
 import time
 
 # %% Saves keograms for every orbit per day on a pdf page.
-def orbit_pdf(items, channel, strip_dir, filename, numdays):
+def orbit_pdfHS(items, channel, strip_dir, filename, numdays):
     Tperiod = timedelta(minutes=100)
     #one orbit = ca 90 min
     pdf = PdfPages(filename)
@@ -105,7 +106,7 @@ def Main():
     items = pd.read_pickle('3weekfeb')
     items = items[items['channel'] == channel]
 
-    orbit_pdf(items, channel, strip_dir, filename, numdays)
+    orbit_pdfHS(items, channel, strip_dir, filename, numdays)
 
     return
 
