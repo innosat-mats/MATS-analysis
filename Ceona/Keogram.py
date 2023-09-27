@@ -40,7 +40,7 @@ def makeStripMatrix(df, channel_type, strip_dir ='v'):
 
     #creates a matrix from vertical strips
     if strip_dir == 'v':
-        #iterates through the CCDobjects (each row) and creates a strip
+        #iterates through the CCDobjects (each panda row) and creates a strip
         for index, row in IR_list.iterrows():
             new_strip = CenterStrip(row) #creates strip object
             new_strip.makeVerticalStrip()
@@ -49,7 +49,7 @@ def makeStripMatrix(df, channel_type, strip_dir ='v'):
 
     #creates a matrix from horizontal strips
     if strip_dir== 'h':
-        #iterates through the CCDobjects (each row) and creates a strip
+        #iterates through the CCDobjects (each panda row) and creates a strip
         for index, row in IR_list.iterrows():
             new_strip = CenterStrip(row)  #creates strip object
             new_strip.makeHorizontalStrip()
