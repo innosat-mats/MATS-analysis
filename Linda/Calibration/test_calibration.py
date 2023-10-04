@@ -9,6 +9,9 @@ from mats_utils.plotting.plotCCD import orbit_plot, simple_plot, plot_image
 import matplotlib.pyplot as plt
 from mats_utils.plotting.plotCCD import all_channels_plot
 from mats_utils.plotting.animate import generate_gif
+import sys
+sys.path.append('/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda')
+from lindas_own_functions import rename_CCDitem_entries
 
 def calibrate(CCDitem, instrument):
     (
@@ -47,15 +50,15 @@ CCDitems=df
 
 
 
+CCDitems=rename_CCDitem_entries(CCDitems)
 
+# CCDitems['NCBIN CCDColumns'] = CCDitems['NCBINCCDColumns'] 
+# CCDitems['GAIN Truncation'] = CCDitems['GAINTruncation'] 
+# CCDitems['NCBIN FPGAColumns'] = CCDitems['NCBINFPGAColumns']
 
-CCDitems['NCBIN CCDColumns'] = CCDitems['NCBINCCDColumns'] 
-CCDitems['GAIN Truncation'] = CCDitems['GAINTruncation'] 
-CCDitems['NCBIN FPGAColumns'] = CCDitems['NCBINFPGAColumns']
-
-mylist=[]
-CCDitems['BC'] = [mylist for i in CCDitems.index]
-CCDitems['GAIN Mode'] = CCDitems['GAINMode'] 
+# mylist=[]
+# CCDitems['BC'] = [mylist for i in CCDitems.index]
+# CCDitems['GAIN Mode'] = CCDitems['GAINMode'] 
 
 
 img_cal=calibrate(df.iloc[0], instrument)
@@ -83,9 +86,13 @@ plot_CCDimage(ir2.iloc[0]['image_calibrated'], fig, ax[1])
 #                optimal_range=False, format='png', save=True,
 #                fontsize=10):
 # %%
+
+
+
 #%%
 """
 all_channels_plot(uv2[:2], './output/test/', optimal_range=True)
 generate_gif('./output/test/ALL','output/film_staticdots.gif' )
 
 """
+# %%

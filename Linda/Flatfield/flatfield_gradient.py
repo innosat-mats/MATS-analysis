@@ -1,8 +1,9 @@
+# Plots the horizontal average of several images, flipping the filpped channels
 #%% Import modules
 import os
 #os.chdir('/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda')
 from mats_utils.rawdata.read_data import read_MATS_data
-from mats_utils.plotting.plotting_functions import create_imagecube
+from lindas_own_functions import create_imagecube
 from mats_utils.plotting.plotCCD import all_channels_plot
 from mats_utils.plotting.animate import generate_gif
 #from lindas_own_functions import collapsandplot
@@ -87,7 +88,7 @@ elif daynight=='day':
 # generate_gif('./output/test/ALL','output/film_'+ daynight +'.gif' )
 
 #%%
-channels=['IR1','IR2','IR3','IR4','UV1','UV2']
+channels=['IR1','IR2','IR3','IR4']
 sigmode='HSM'
 fig_coef, ax_coef=plt.subplots(6,1, figsize=(10,14))
 for ind, channel in enumerate(channels):
