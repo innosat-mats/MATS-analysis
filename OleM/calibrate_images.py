@@ -11,17 +11,17 @@ calibration_file ="/home/olemar/Projects/Universitetet/MATS/MATS-L1-processing/s
 instrument = Instrument(calibration_file)
 
 #%% Select on explicit time
-start_time = DT.datetime(2023, 2, 17, 1, 0)
-stop_time = DT.datetime(2023, 2, 17, 12, 0)
+start_time = DT.datetime(2023, 5, 5, 12, 0)
+stop_time = DT.datetime(2023, 5, 5, 13, 0)
 
 #%%
-#df = read_MATS_data(start_time,stop_time,version='0.6',level='1a',dev=False)
+df = read_MATS_data(start_time,stop_time,version='0.6',level='1a',dev=False)
 
 #%%
-df_ph = read_MATS_PM_data(start_time,stop_time,version='0.1',level='1b')
+#df_ph = read_MATS_PM_data(start_time,stop_time,version='0.1',level='1b')
 
 #%%
-#CCDitems = dataframe_to_ccd_items(df)
+CCDitems = dataframe_to_ccd_items(df)
 
 #%%
 

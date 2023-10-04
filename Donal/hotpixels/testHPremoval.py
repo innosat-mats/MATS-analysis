@@ -7,11 +7,15 @@ import datetime as DT
 import matplotlib.pylab as plt
 from mats_utils.rawdata.read_data import read_MATS_data
 from mats_utils.geolocation.coordinates import satpos
+import pickle
 #%%
 startdate=DT.datetime(2023,4,22,10,0)
 enddate=DT.datetime(2023,4,22,11,10)
-df=read_MATS_data(startdate,end_date=enddate,version=0.6)
-
+startdate=DT.datetime(2023,3,31,21,0)
+stopdate=DT.datetime(2023,3,31,22,35)
+# dftop=read_MATS_data(starttime,stoptime,level="1b",version="0.4")
+df=read_MATS_data(startdate,end_date=stopdate,version=0.6)
+#%%
 print('Number of images = ',df.shape[0])
 clim=999
 plt.close('all')
@@ -27,10 +31,10 @@ for ch in [ir1,ir2,ir3,ir4]:
     print (ccdnames[ch.CCDSEL.iloc[0]-1],  ch.shape[0])
 uv2.shape
 # %%
-i=0
+i=400
 
 ch=ir3;clims=[0,60]
-ch=ir1;clims=[0,2000]
+ch=ir2;clims=[0,2000]
 #ch=ir4;clims=[0,60]
 #ch=ir3;clims=[0,10]
 #ch=uv2;clims=[0,800]
@@ -65,4 +69,12 @@ plt.title("{:4s} Lat = {:8.3f} Lon = {:8.3f} {:s}".format('HotPixels', TPlat, TP
 #plt.clim(clims)
 plt.colorbar()
 plt.show()
+# %%
+#ir2f=ir2[ir2.NROW==187].reset_index(drop=True)
+for i in range(len(ir1)):
+    image=ir1.IMAGE.iloc[i]
+    ir1.IMAGE.iloc[i]=image - HP
+# %%
+with open('ir1mars31.pickle', 'wb') as handle:
+     pickle.dump(ir1, handle)
 # %%
