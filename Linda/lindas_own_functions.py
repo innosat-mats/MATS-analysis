@@ -85,7 +85,8 @@ def create_imagecube(CCDitems, image_specification='IMAGE'):
     if image_specification!='IMAGE' and image_specification!='image_calibrated':
         Warning('image_specification must be "IMAGE" or "image-calibrated"')
     imagelist=[]
-    for CCDitem in CCDitems:
+    #for CCDitem in CCDitems:
+    for index, CCDitem in CCDitems.iterrows():    
         image=CCDitem[image_specification]
         imagelist.append(image)
 
@@ -132,4 +133,5 @@ def rename_CCDitem_entries(df):
     mylist=[]
     df['BC'] = [mylist for i in df.index]
     df['GAIN Mode'] = df['GAINMode'] 
+    return df
 

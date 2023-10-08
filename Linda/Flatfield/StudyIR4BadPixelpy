@@ -1,0 +1,109 @@
+#%%
+import numpy as np
+from database_generation import flatfield as flatfield
+from pathlib import Path
+from database_generation.experimental_utils import plot_CCDimage
+import matplotlib.pyplot as plt
+from mats_utils.rawdata.read_data import read_MATS_data
+import datetime as DT
+
+calibration_file='/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/calibration_data_linda.toml'
+
+
+channel='IR4'
+
+
+
+flatfield_w_baffle=flatfield.read_flatfield_w_baffle(calibration_file, channel)
+
+flatfield_wo_baffle_HSM = flatfield.read_flatfield_wo_baffle(calibration_file, channel, sigmode='HSM')
+flatfield_wo_baffle_LSM = flatfield.read_flatfield_wo_baffle(calibration_file, channel, sigmode='LSM')
+
+
+
+#%%
+
+starttime=DT.datetime(2023,1,11,0,0,0)
+endtime=DT.datetime(2023,1,14,0,0,0)
+
+filter={'CCDSEL': [2, 2], 'NRBIN': [1, 1], 'NCBINCCDColumns': [1, 1], 'NCOL':[2047,2048], 'NROW':[511,512]} 
+#dfl1b = read_MATS_data(starttime, endtime,filter,level='1b',version='0.4')
+dfl1a = read_MATS_data(starttime, endtime,filter,level='1a',version='0.5')
+#%%
+inorbit0=dfl1a.iloc[0]['IMAGE']
+inorbit1=dfl1a.iloc[1]['IMAGE']
+
+
+fig, ax = plt.subplots(5,2, figsize=[8,10])
+
+
+
+plot_CCDimage(flatfield_wo_baffle_HSM,fig, ax[0,0], title=channel+' wo flatfield HSM')
+plot_CCDimage(flatfield_wo_baffle_HSM[93:100,1095:1105],fig, ax[0,1], title=channel+' wo flatfield HSM', clim='minmax' )
+
+plot_CCDimage(flatfield_wo_baffle_LSM,fig, ax[1,0], title=channel+' wo flatfield LSM')
+plot_CCDimage(flatfield_wo_baffle_LSM[93:100,1095:1105],fig, ax[1,1], title=channel+' wo flatfield LSM', clim='minmax')
+
+plot_CCDimage(flatfield_w_baffle,fig, ax[2,0], title=channel+' w flatfield ')
+plot_CCDimage(flatfield_w_baffle[93:100,1095:1105],fig, ax[2,1], title=channel+' w flatfield', clim='minmax')
+
+plot_CCDimage(inorbit0,fig, ax[3,0], title=channel+' inorbit ')
+plot_CCDimage(inorbit0[93:100,1095:1105],fig, ax[3,1], title=channel+' inorbit', clim='minmax')
+
+plot_CCDimage(inorbit1,fig, ax[4,0], title=channel+' inorbit ')
+plot_CCDimage(inorbit1[93:100,1095:1105],fig, ax[4,1], title=channel+' inorbit', clim='minmax')
+
+
+
+
+# %%
+
+# Below Stuff to be run in run_make_flatfields.py
+
+import matplotlib.pyplot as plt
+# plt.figure()
+# plt.plot(zs[100,1000:1200]) 
+# x = np.where(zs[100,:] > 1.2)
+# print(x) 
+# plt.figure()
+# plt.plot(zs[:200,1100]) 
+# plt.figure()
+# plt.plot(ratiofield[100,1000:1200]) 
+# plt.figure()
+# plt.plot(ratiofield[:200,1100]) 
+
+
+# plt.figure()
+# plt.pcolor(ratiofield[90:100,1095:1110]) 
+# plt.figure()
+# plt.pcolor(zs[:200,1000:1200]) 
+# plt.colorbar()
+
+
+smallratiofield=ratiofield[90:100,1090:1110]
+
+ratmax = np.where(smallratiofield > 1.2)
+ratiofield[97,1101]
+
+
+# fig, ax = plt.subplots(2,1, figsize=[8,10])
+
+# im=ax[0].pcolormesh(flatfield_wo_baffle[90:100,1095:1110]) 
+# fig.colorbar(im,cax=ax[0])
+# ax[0].set_title('wo baffle')
+
+
+
+
+
+# %%
+fig, ax = plt.subplots(2,2, figsize=[8,10])
+
+plot_CCDimage(flatfield_wo_baffle,fig, ax[0,0], title=channel+' wo flatfield ')
+plot_CCDimage(flatfield_wo_baffle[93:100,1095:1105],fig, ax[0,1], title=channel+' wo flatfield', clim='minmax' )
+
+plot_CCDimage(flatfield_w_baffle,fig, ax[1,0], title=channel+' w flatfield ')
+plot_CCDimage(flatfield_w_baffle[93:100,1095:1105],fig, ax[1,1], title=channel+' w flatfield', clim='minmax')
+
+     
+# %%
