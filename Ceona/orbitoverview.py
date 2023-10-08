@@ -1,6 +1,6 @@
 # %%
 # functions to create overview including plots for both hemispheres.
-# and 
+# and overview with aurora points plotted on the keograms
 import datetime as DT
 import pandas as pd
 from datetime import timedelta
@@ -34,7 +34,7 @@ def orbit_pdf(items, channel, strip_dir, filename, numdays):
             
             #checks the time change for each image
             deltat = items.iloc[i+1].EXPDate-items.iloc[i].EXPDate
-            if deltat < Tperiod/6: 
+            if deltat < Tperiod/6 and i < len(items)-2: 
                 continue
             else:                          
                 #creates orbit from index n to i
@@ -55,7 +55,7 @@ def orbit_pdf(items, channel, strip_dir, filename, numdays):
                     if channel == 'IR2':
                         axs[subplotNum,0].pcolormesh(dates,range(matrix.shape[0]),matrix, rasterized = True, vmin=-20, vmax=260) # rasterized makes a pixel image instead of vector graphic
                     else:
-                        axs[subplotNum,0].pcolormesh(dates,range(matrix.shape[0]),matrix, rasterized = True) # rasterized makes a pixel image instead of vector graphic, less saving time
+                        axs[subplotNum,0].pcolormesh(dates,range(matrix.shape[0]),matrix, rasterized = True, vmin=0, vmax=480) # rasterized makes a pixel image instead of vector graphic, less saving time
                     
                     axs[subplotNum,0].set_title(f"Orbit {orbnum} Northern Hemisphere")
                     axs[subplotNum,0].set_xticks(dates[::20])
@@ -75,7 +75,7 @@ def orbit_pdf(items, channel, strip_dir, filename, numdays):
                     if channel == 'IR2':
                         axs[subplotNum,1].pcolormesh(dates,range(matrix.shape[0]),matrix, rasterized = True, vmin=-20, vmax=260) # rasterized makes a pixel image instead of vector graphic
                     else:
-                        axs[subplotNum,1].pcolormesh(dates,range(matrix.shape[0]),matrix, rasterized = True) # rasterized makes a pixel image instead of vector graphic, less saving time
+                        axs[subplotNum,1].pcolormesh(dates,range(matrix.shape[0]),matrix, rasterized = True, vmin=0, vmax=480) # rasterized makes a pixel image instead of vector graphic, less saving time
 
                     axs[subplotNum,1].set_title(f"Orbit {orbnum} Southern Hemisphere")
                     axs[subplotNum,1].set_xticks(dates[::20])
@@ -100,7 +100,7 @@ def orbit_pdf(items, channel, strip_dir, filename, numdays):
         plt.tight_layout(h_pad=1)
         pdf.savefig(fig)
         plt.close(fig)
-        
+
     pdf.close()
     return pdf
 
@@ -128,7 +128,7 @@ def overview_points(items, channel, allrows, filename, numdays):
             
             #checks the time change for each image
             deltat = items.iloc[i+1].EXPDate-items.iloc[i].EXPDate
-            if deltat < Tperiod/6: 
+            if deltat < Tperiod/6 and i < len(items)-2: 
                 continue
             else:                          
                 #creates orbit from index n to i
@@ -152,7 +152,7 @@ def overview_points(items, channel, allrows, filename, numdays):
                         axs[subplotNum,0].scatter(dates,allrows[n:i], marker='.', color="red")
 
                     else:
-                        axs[subplotNum,0].pcolormesh(dates,range(matrix.shape[0]),matrix, rasterized = True) # rasterized makes a pixel image instead of vector graphic, less saving time
+                        axs[subplotNum,0].pcolormesh(dates,range(matrix.shape[0]),matrix, rasterized = True, vmin=0, vmax=480) # rasterized makes a pixel image instead of vector graphic, less saving time
                         axs[subplotNum,0].scatter(dates,allrows[n:i], marker='.', color="red")
 
                     axs[subplotNum,0].set_title(f"Orbit {orbnum} Northern Hemisphere")
@@ -175,7 +175,7 @@ def overview_points(items, channel, allrows, filename, numdays):
                         axs[subplotNum,1].scatter(dates, allrows[n:i], marker='.', color="red")
 
                     else:
-                        axs[subplotNum,1].pcolormesh(dates,range(matrix.shape[0]),matrix, rasterized = True) # rasterized makes a pixel image instead of vector graphic, less saving time
+                        axs[subplotNum,1].pcolormesh(dates,range(matrix.shape[0]),matrix, rasterized = True, vmin=0, vmax=480) # rasterized makes a pixel image instead of vector graphic, less saving time
                         axs[subplotNum,1].scatter(dates,allrows[n:i], marker='.', color="red")
                         
 
