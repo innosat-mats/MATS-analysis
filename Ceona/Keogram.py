@@ -6,20 +6,22 @@ import numpy as np
 import scipy
 import math
 import matplotlib.pyplot as plt
-from mats_utils.geolocation.coordinates import TPpos
 from matplotlib.backends.backend_pdf import PdfPages
 
 class CenterStrip:
     def __init__(self, CCDobject):
         self.image = CCDobject['ImageCalibrated']   #for L1b otherwise 'IMAGE'
         self.strip = []
-        self.latitude = TPpos(CCDobject)[0]  #the first position of TPpos gives the latitude
+        self.latitude = CCDobject.TPlat
         self.time =  pd.to_datetime(CCDobject['EXPDate'])
         self.maxrow = 0
         self.maxalt = 0
         self.maxlat = 0
         self.maxlon = 0
         self.maxI = 0
+        self.MagLT = 0
+        self.Maglat = 0
+        self.Maglon = 0
 
     def makeVerticalStrip(self):
         "Makes a vertical strip object from the image"
