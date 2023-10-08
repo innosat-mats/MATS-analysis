@@ -22,6 +22,7 @@ OleM/Donal_stuff/data/moon.pkl
 Jonas/Latest-selected.zip
 *de421.bsp
 Linda/output/
+Linda/Calibration/output/
 *.DS_Store
 Linda/__pycache__/
 Louis/geolocation/nadir_geo.py
