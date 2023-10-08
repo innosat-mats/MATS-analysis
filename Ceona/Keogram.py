@@ -35,11 +35,10 @@ class CenterStrip:
         self.strip = self.image[int(center),:]
         return  np.transpose(self.strip)
 
-def makeStripMatrix(df, channel_type, strip_dir ='v'):
-    "Creates the keogram matrix of a specific channel and list of CCD-objects"
-    IR_list = df[df['channel'] == channel_type]
+def makeStripMatrix(IR_list, strip_dir ='v'):
+    "Creates the keogram matrix and corresponding list of strips, from specific channel and list of CCD-items"
     strips_matrix = []  #matrix of concatenated strips
-
+    strips_list = []
     #creates a matrix from vertical strips
     if strip_dir == 'v':
         #iterates through the CCDobjects (each panda row) and creates a strip
@@ -47,6 +46,7 @@ def makeStripMatrix(df, channel_type, strip_dir ='v'):
             new_strip = CenterStrip(row) #creates strip object
             new_strip.makeVerticalStrip()
             strips_matrix.append(new_strip.strip)
+            strips_list.append(new_strip)
         strips_matrix = np.array(strips_matrix)
 
     #creates a matrix from horizontal strips
@@ -56,8 +56,9 @@ def makeStripMatrix(df, channel_type, strip_dir ='v'):
             new_strip = CenterStrip(row)  #creates strip object
             new_strip.makeHorizontalStrip()
             strips_matrix.append(new_strip.strip)
+            strips_list.append(new_strip)
         strips_matrix = np.array(strips_matrix)
-    return np.transpose(strips_matrix)
+    return np.transpose(strips_matrix) , strips_list
 
 def getTPLatitudes(objects):
     "Get a list of latitudes for TP"
