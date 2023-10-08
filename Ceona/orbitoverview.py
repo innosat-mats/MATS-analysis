@@ -11,7 +11,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 import numpy as np
 
 # %% Saves keograms for every orbit per day on a pdf page.
-def orbit_pdf(items, channel, strip_dir, filename, numdays):
+def orbit_pdf(items, channel, filename, numdays):
     "Saves keograms for every orbit per day on a pdf page"
     Tperiod = timedelta(minutes=100)
     #one orbit = ca 90 min
@@ -45,7 +45,7 @@ def orbit_pdf(items, channel, strip_dir, filename, numdays):
                     dates = getSatDates(NH)
                     times_strings = [dt.strftime("%H:%M") for dt in dates]  #as strings
                     #gets the matrix corresponding to that hemisphere
-                    matrix = makeStripMatrix(NH,channel,strip_dir)
+                    matrix, stripslist = makeStripMatrix(NH)
 
                     if orbcheck == True:
                         subplotNum += 1
@@ -69,7 +69,7 @@ def orbit_pdf(items, channel, strip_dir, filename, numdays):
                     dates = getSatDates(SH)
                     times_strings = [dt.strftime("%H:%M") for dt in dates]  #as strings
                     #gets the matrix corresponding to that hemisphere
-                    matrix = makeStripMatrix(SH,channel,strip_dir)
+                    matrix, stripslist = makeStripMatrix(SH)
 
                     #plots the orbit found from n to current i
                     if channel == 'IR2':
@@ -140,7 +140,7 @@ def overview_points(items, channel, allrows, filename, numdays):
                     dates = getSatDates(NH)
                     times_strings = [dt.strftime("%H:%M") for dt in dates]  #as strings
                     #gets the matrix corresponding to that hemisphere
-                    matrix = makeStripMatrix(NH,channel)
+                    matrix, stripslist = makeStripMatrix(NH)
 
                     if orbcheck == True:
                         subplotNum += 1
@@ -167,7 +167,7 @@ def overview_points(items, channel, allrows, filename, numdays):
                     dates = getSatDates(SH)
                     times_strings = [dt.strftime("%H:%M") for dt in dates]  #as strings
                     #gets the matrix corresponding to that hemisphere
-                    matrix = makeStripMatrix(SH,channel)
+                    matrix, stripslist = makeStripMatrix(SH)
 
                     #plots the orbit found from n to current i
                     if channel == 'IR2':
@@ -209,17 +209,17 @@ def overview_points(items, channel, allrows, filename, numdays):
  # %% To run the code above
 def Main():
     # Determine the main time span and settings for multiple plots
-    start_time = DT.datetime(2023,2,15,00,00,0)
-    stop_time = DT.datetime(2023,2,22,00,00,0)
+    start_time = DT.datetime(2023,3,8,00,00,0)
+    stop_time = DT.datetime(2023,3,15,00,00,0)
     channel = 'IR1'
-    filename = "3weekfebIR1_l1b.pdf"
+    filename = "2weekmarIR1_red.pdf"
     numdays = stop_time-start_time #number of days
 
-    items = pd.read_pickle('15to21febIR1')
+    items = pd.read_pickle('8to14marIR1')
     #orbit_pdf(items, channel, strip_dir, filename, numdays)
     
     #Run this to read in all the strips, and to get the row parameter for each strip.
-    allstrips = pd.read_pickle('allstrips3week')
+    allstrips = pd.read_pickle('allstrips')
     allrows = get_stripRow(allstrips)
     overview_points(items,channel,allrows,filename,numdays)
     return
