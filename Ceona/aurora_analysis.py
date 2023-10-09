@@ -19,7 +19,7 @@ import time
 from aacgmv2 import get_aacgm_coord
 #Shepherd, S. G. (2014), Altitude‐adjusted corrected geomagnetic coordinates: Definition and functional approximations, Journal of Geophysical Research: Space Physics, 119, 7501–7521, doi:10.1002/2014JA020264.
 #https://aacgmv2.readthedocs.io/en/latest/usage.html#convert-geographic-magnetic-coordinates
-# %%
+# %% Other functions
 def IntensityEvent(aurorastrips):
     "Adds all aurora images together from from each orbit. Saves in list"
     airglowlim = 160
@@ -152,109 +152,7 @@ def IntensityPeak(aurorastrip):
         im_part = aurorastrip.image[rowlow:rowtop,collow:coltop]
     im_sum = np.sum(im_part) #sum the surrounding part of the peak
     return im_sum
- 
-def aurora_strips(items, numdays, Tperiod):
-    """returns the aurora strips and the peak maximums, save in list"""
-    n = 0
-    orb = 0
-    centercol = 22
-    airglowlim = 160
-    auroramean = 50
-    aurorastrips = []
-    aurorastripsNH = []
-    aurorastripsSH = []
-    # loop that goes through number of days
-    for day in range(1,numdays.days+1):
-        #this for loop goes through the images starting from the end of previous orbit
-        for i in range(n, len(items)-1):
-            startday = items.iloc[orb].EXPDate
 
-            #checks the time change for each image
-            deltat = items.iloc[i+1].EXPDate-items.iloc[i].EXPDate
-            if deltat < Tperiod/6 and i < len(items)-2:
-                continue
-            else:  #if this is True, next image will belong to next orbit.                         
-                if items.iloc[i].TPlat > 0: #north hemisphere
-                    auroraintensity = 55
-                    #creates orbit from index n to i
-                    NH = items.iloc[orb:i+1]
-                    if len(NH) == 0 : #if empty, go to next hemisphere
-                        continue
-                    # This for loop goes through the images belonging to NH
-                    for k, ccd in NH.iterrows():
-                        ccdimage = ccd['ImageCalibrated']
-                        ccd_strip = ccdimage[:,centercol]
-
-                        #finds the row of the max intensity value of each strip, above airglow limit
-                        row = np.argmax(ccd_strip[airglowlim:]) + airglowlim
-
-                        #if row >= airglowlim + 5 and ccd_strip.item[row] > auroraintensity:
-                        top_mean = np.sum(ccd_strip[airglowlim+10:])/len(ccd_strip[airglowlim+10:])
-
-                        #gives the row of the maximum 10 rows above the limit to check that aurora is there as well
-                        top_max = np.argmax(ccd_strip[airglowlim+10:]) + airglowlim + 10        
-                        if ccd_strip.item(top_max) > auroraintensity:
-                            if top_mean > auroramean:
-                                
-                                #create strip objects of the aurora columns
-                                new_strip = CenterStrip(ccd)
-                                new_strip.makeVerticalStrip()
-                                ccd_strip = new_strip.strip
-                                #sets the position coordinates of the max intensity point of strips with aurora
-                                set_aurora_spec(new_strip,ccd,row)
-
-                                #list of aurora strip objects
-                                aurorastripsNH.append(new_strip)
-                                aurorastrips.append(new_strip)       
-                elif items.iloc[i].TPlat < 0: #south hemisphere
-                    auroraintensity = 70
-                    SH = items.iloc[orb:i+1]
-                    if len(SH) == 0 :
-                        continue
-                    for k, ccd in SH.iterrows():
-                        st1 = time.time()
-                        ccdimage = ccd['ImageCalibrated']
-                        ccd_strip = ccdimage[:,centercol]
-
-                        #finds the row of the max intensity value of each strip, above airglow limit
-                        row = np.argmax(ccd_strip[airglowlim:]) + airglowlim
-                        top_mean = np.sum(ccd_strip[airglowlim+10:])/len(ccd_strip[airglowlim+10:])
-
-                        #gives the row of the maximum 10 rows above the limit to check for aurora there.
-                        top_max = np.argmax(ccd_strip[airglowlim+10:]) + airglowlim + 10        
-                        
-                        if ccd_strip.item(top_max) > auroraintensity:
-                            if SH.iloc[k].satlat > -50 and SH.iloc[k].satlon > -90 and SH.iloc[k].satlon < 40:
-                                pass
-                            elif top_mean > auroramean:
-                                #create strip objects of the aurora columns only
-                                new_strip = CenterStrip(ccd)
-                                new_strip.makeVerticalStrip()
-
-                                #sets the position coordinates of the max intensity point of strips with aurora
-                                set_aurora_spec(new_strip,ccd,row)
-                                
-                                #list of aurora strip objects
-                                aurorastripsSH.append(new_strip)
-                                aurorastrips.append(new_strip) 
-                        print(time.time()-st1)                
-
-                orb = i+1 
-                nextday_startdate = items.iloc[orb].EXPDate
-                #comparing the day at start of the new orbit with the active orbits start.
-                if startday.day != nextday_startdate.day:
-                    n = orb
-                    #then we want to quit this for loop and start a new day
-                    print("new day", nextday_startdate)
-                    
-                    break
-    save_strips(aurorastripsNH,'aurorastripsNH.mat','aurorastripsNH')
-    save_strips(aurorastripsSH,'aurorastripsSH.mat','aurorastripsSH')
-    save_strips(aurorastrips,'aurorastrips.mat','aurorastrips')
-
-    return aurorastrips
-
-# %% 
 def get_all_altitudes(strips):
     "Get all altitudes from given list of aurora strip objects"
     allaltitudes = []
@@ -329,6 +227,108 @@ def save_strips(aurorastrips,filename,structname):
     scipy.io.savemat(filename, {structname: pandastrips.to_dict('list')})
 
     return
+
+def aurora_strips(items, numdays, Tperiod):
+    """returns the aurora strips and the peak maximums, save in list"""
+    n = 0
+    orb = 0
+    centercol = 22
+    airglowlim = 160
+    auroramean = 50
+    aurorastrips = []
+    aurorastripsNH = []
+    aurorastripsSH = []
+    # loop that goes through number of days
+    for day in range(1,numdays.days+1):
+        #this for loop goes through the images starting from the end of previous orbit
+        for i in range(n, len(items)-1):
+            startday = items.iloc[orb].EXPDate
+
+            #checks the time change for each image
+            deltat = items.iloc[i+1].EXPDate-items.iloc[i].EXPDate
+            if deltat < Tperiod/6 and i < len(items)-2:
+                continue
+            else:  #if this is True, next image will belong to next orbit.                         
+                if items.iloc[i].TPlat > 0: #north hemisphere
+                    auroraintensity = 55
+                    #creates orbit from index n to i
+                    NH = items.iloc[orb:i+1]
+                    if len(NH) == 0 : #if empty, go to next hemisphere
+                        continue
+                    # This for loop goes through the images belonging to NH
+                    for k, ccd in NH.iterrows():
+                        ccdimage = ccd['ImageCalibrated']
+                        ccd_strip = ccdimage[:,centercol]
+
+                        #finds the row of the max intensity value of each strip, above airglow limit
+                        row = np.argmax(ccd_strip[airglowlim:]) + airglowlim
+
+                        #if row >= airglowlim + 5 and ccd_strip.item[row] > auroraintensity:
+                        top_mean = np.sum(ccd_strip[airglowlim+10:])/len(ccd_strip[airglowlim+10:])
+
+                        #gives the row of the maximum 10 rows above the limit to check that aurora is there as well
+                        top_max = np.argmax(ccd_strip[airglowlim+10:]) + airglowlim + 10        
+                        if ccd_strip.item(top_max) > auroraintensity:
+                            if top_mean > auroramean:
+                                
+                                #create strip objects of the aurora columns
+                                new_strip = CenterStrip(ccd)
+                                new_strip.makeVerticalStrip()
+                                ccd_strip = new_strip.strip
+                                #sets the position coordinates of the max intensity point of strips with aurora
+                                set_aurora_spec(new_strip,ccd,row)
+
+                                #list of aurora strip objects
+                                aurorastripsNH.append(new_strip)
+                                aurorastrips.append(new_strip)       
+                elif items.iloc[i].TPlat < 0: #south hemisphere
+                    auroraintensity = 70
+                    SH = items.iloc[orb:i+1]
+                    if len(SH) == 0 :
+                        continue
+                    for k, ccd in SH.iterrows():
+                        st1 = time.time()
+                        ccdimage = ccd['ImageCalibrated']
+                        ccd_strip = ccdimage[:,centercol]
+
+                        #finds the row of the max intensity value of each strip, above airglow limit
+                        row = np.argmax(ccd_strip[airglowlim:]) + airglowlim
+                        top_mean = np.sum(ccd_strip[airglowlim+10:])/len(ccd_strip[airglowlim+10:])
+
+                        #gives the row of the maximum 10 rows above the limit to check for aurora there.
+                        top_max = np.argmax(ccd_strip[airglowlim+10:]) + airglowlim + 10        
+                        
+                        #Check to not include SAA strips in list of aurora strips
+                        if SH.iloc[k].TPlat >= -60 and SH.iloc[k].TPlon >= 0 and SH.iloc[k].TPlon <= 40 or (SH.iloc[k].TPlat >= -60 and SH.iloc[k].TPlon >= 300):
+                            pass
+                        elif ccd_strip.item(top_max) > auroraintensity:
+                            if top_mean > auroramean:
+                                #create strip objects of the aurora columns only
+                                new_strip = CenterStrip(ccd)
+                                new_strip.makeVerticalStrip()
+
+                                #sets the position coordinates of the max intensity point of strips with aurora
+                                set_aurora_spec(new_strip,ccd,row)
+                                
+                                #list of aurora strip objects
+                                aurorastripsSH.append(new_strip)
+                                aurorastrips.append(new_strip) 
+                        print(time.time()-st1)                
+
+                orb = i+1 
+                nextday_startdate = items.iloc[orb].EXPDate
+                #comparing the day at start of the new orbit with the active orbits start.
+                if startday.day != nextday_startdate.day:
+                    n = orb
+                    #then we want to quit this for loop and start a new day
+                    print("new day", nextday_startdate)
+                    
+                    break
+    save_strips(aurorastripsNH,'aurorastripsNH.mat','aurorastripsNH')
+    save_strips(aurorastripsSH,'aurorastripsSH.mat','aurorastripsSH')
+    save_strips(aurorastrips,'aurorastrips.mat','aurorastrips')
+
+    return aurorastrips
 # %%
 def Main(items):
     start_time = DT.datetime(2023,2,15,0,0,0)
