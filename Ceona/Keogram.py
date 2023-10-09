@@ -8,6 +8,7 @@ import math
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
+"""Class Centerstrip function library with keogram matrix funtions"""
 class CenterStrip:
     def __init__(self, CCDobject):
         self.image = CCDobject['ImageCalibrated']   #for L1b otherwise 'IMAGE'
@@ -61,22 +62,27 @@ def makeStripMatrix(IR_list, strip_dir ='v'):
     return np.transpose(strips_matrix) , strips_list
 
 def getTPLatitudes(objects):
-    "Get a list of latitudes for TP"
+    "Return list of latitudes from list of CCD-items"
     TPlat_list= []
     for n, CCD in objects.iterrows():
         TPlat_list.append(CCD.TPlat)
     return TPlat_list
 
 def getSatDates(objects):
-    "Get a list of dates for TP"
+    "Return list of dates from list of CCD-items"
     listofdates = []
     for n, row in objects.iterrows():
         listofdates.append(row.EXPDate)
     return listofdates
 
+def get_stripRow(strips):
+    "Get all row values from given list of strip objects (Centerstrip class)"
+    allrows = strips['row']
+    return allrows
+
+"""Old function for testing and plotting keograms for several channels
 def plotKeogram(df, channels, strip_dir):
-    "Makes a simple keogram plot, given a list of ccds with their corresponding TPlatitudes."
-    "Shows 2 plots, one from image-matrix and one with the latitudes"
+    #Given a list of ccds. Returns and saves (matlabfile) 2 plots, one from keogram-matrix and one with the TPlatitudes
     if len(channels)==1 :
         IR_list = df[df['channel'] == channels[0]]
         fig,axs = plt.subplots(nrows=2, ncols=1,sharex='all')
@@ -128,18 +134,5 @@ def plotKeogram(df, channels, strip_dir):
     scipy.io.savemat('lat28feb',{'lat28feb': latitudes, 'label':'altitudes'}) #saves to matlabfile
     scipy.io.savemat('time28feb',{'time28feb': times_strings, 'label':'times'}) #saves to matlabfile
     plt.show()
-
-# %%  Settings to run for normal plot with various channels
-def Main():
-    start_time = DT.datetime(2023,2,15,00,0,0)
-    stop_time = DT.datetime(2023,2,16,00,0,0)
-    channels = ['IR1']  #list of what channels we want to plot
-    strip_dir = 'v'  #vertical 'v' or horiozontal 'h' direction of the strip
-    df = read_MATS_data(start_time,stop_time,version=0.5,level='1b',filter={'NROW': [0,400]})  #"TPlat":[50,90]
-    df.to_pickle('15febtest')
-
-    items = pd.read_pickle('15febtest')
-    items = items[items['channel'] == channels[0]]
-
-    #plotKeogram(items, channels, strip_dir)
+"""
 # %%
