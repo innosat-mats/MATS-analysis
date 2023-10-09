@@ -134,15 +134,14 @@ def overview_points(items, channel, allrows, filename, numdays):
             else:                          
                 #creates orbit from index n to i
                 if items.iloc[i].TPlat > 0: #north hemisphere
-                    NH = items.iloc[n:i]
+                    NH = items.iloc[n:i+1]
 
                     if len(NH) == 0 :
                         continue
                     dates = getSatDates(NH)
                     times_strings = [dt.strftime("%H:%M") for dt in dates]  #as strings
                     #gets the matrix corresponding to that hemisphere
-                    #matrix, stripslist = makeStripMatrix(NH)
-                    matrix, stripslist = gradientmatrix(NH,airglowlim=145)
+                    matrix, stripslist = makeStripMatrix(NH)
                     if orbcheck == True:
                         subplotNum += 1
                         orbnum += 1
@@ -162,15 +161,14 @@ def overview_points(items, channel, allrows, filename, numdays):
                     orbcheck = True
 
                 if items.iloc[i].TPlat < 0: #south hemisphere
-                    SH = items.iloc[n:i]
+                    SH = items.iloc[n:i+1]
                     if len(SH) == 0 :
                         continue
                     dates = getSatDates(SH)
                     times_strings = [dt.strftime("%H:%M") for dt in dates]  #as strings
                     #gets the matrix corresponding to that hemisphere
-                    #matrix, stripslist = makeStripMatrix(SH)
-                    matrix, stripslist = gradientmatrix(SH,airglowlim=145)
-
+                    matrix, stripslist = makeStripMatrix(SH)
+                    
                     #plots the orbit found from n to current i
                     if channel == 'IR2':
                         axs[subplotNum,1].pcolormesh(dates,range(matrix.shape[0]),matrix, rasterized = True, vmin=-20, vmax=260) # rasterized makes a pixel image instead of vector graphic
