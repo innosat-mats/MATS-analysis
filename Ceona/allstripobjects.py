@@ -88,11 +88,6 @@ def all_strips(items):
     #save_strips(stripsNH,'allstripsNH2weekfeb.mat','allstripsNH')
     #save_strips(stripsSH,'allstripsSH2weekfeb.mat','allstripsSH')
     return
-    
-def get_stripRow(strips):
-    "Get all rows from given list of strip objects"
-    allrows = strips['row']
-    return allrows
 
 def sattelite_MLT(items):
     MLT = []
