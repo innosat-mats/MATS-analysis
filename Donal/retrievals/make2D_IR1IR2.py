@@ -25,8 +25,8 @@ import ref_index as RF
 
 # %%
 msis=xr.load_dataset(expanduser('~donal/projekt/SIW/MATS-analysis/Donal/retrievals/Datafiles/msis_cmam_climatology_200.nc'))
-sigma=np.load(expanduser('~donal/projekt/SIW/MATS-analysis/Donal/retrievals/o2Abandsigma100-400.npy'))
-emission=np.load(expanduser('~donal/projekt/SIW/MATS-analysis/Donal/retrievals/o2Abandemission100-400.npy'))
+sigma=np.load(expanduser('~donal/projekt/SIW/MATS-analysis/Donal/retrievals/Datafiles/o2Abandsigma100-600.npy'))
+emission=np.load(expanduser('~donal/projekt/SIW/MATS-analysis/Donal/retrievals/Datafiles/o2Abandemission100-600.npy'))
 #%%
 dftop = pd.read_pickle(expanduser('~donal/projekt/SIW/verdec'))
 #%%
@@ -71,7 +71,7 @@ def prepare_profile(ch):
     heights = np.array(cs(range(ch['NROW'])))
     profile = np.array(image[0:-10, col-2:col+2].mean(axis=1)*1e13)
     profile = profile*1000/ch.TEXPMS #until files fixed
-    common_heights = np.arange(60000,110250,250)
+    common_heights = np.arange(60000,110250,1000)
     profile=np.interp(common_heights,heights[0:-10],profile)
     return common_heights, profile, heights
 
@@ -187,8 +187,61 @@ tanheights2ecivec=CubicSpline(orig_heights[ypixels],ecivec.T)
 to_ecef=R.from_matrix(itrs.rotation_at(ts.from_datetime(df['EXPDate'][mid])))
 
 #select row to calculate jacobian for
-irow = 0
+irow = 90
 ecivec=cs_eci(irow)
+ecefvec=to_ecef.apply(ecivec)
+localvec=ecef_to_local.apply(ecefvec)
+
+#%%
+
+@jit
+def interpT(x,xs,ys):
+    ix=jnp.floor(x-100).astype(int)
+    return ((x-xs[ix-1])*ys[ix,:].T + (xs[ix]-x)*ys[ix-1,:].T)/(xs[ix]-xs[ix-1])
+@jit
+def interppos(pos,inArray):
+    iz=jnp.array(jnp.floor((pos[:,0]-edges[0][0])/jnp.diff(edges[0]).mean()),dtype=int)
+    ix=jnp.array(jnp.floor((pos[:,2]-edges[2][0])/jnp.diff(edges[2]).mean()),dtype=int)
+    return inArray[iz,0,ix]
+    #return((inArray[iz,0,ix]+inArray[iz+1,0,ix+1])/2)
+
+# @jit
+def ir1fun(pos,path_step ,o2s,atm):
+       VER,Temps=atm
+       VER=jnp.array(VER)
+       Temps=jnp.array(Temps)
+       pos=jnp.array(pos)
+       startT= jnp.linspace(100,600,501)
+       pathtemps=interppos(pos,Temps)
+       #print(pathtemps)
+       sigmas=interpT(pathtemps,startT,sigma)
+       #print(sigmas.max())
+       emissions=interpT(pathtemps,startT,emission)
+       o2=interppos(pos,o2s)
+       tau = (sigmas*o2).cumsum(axis=1)*path_step * 1e5
+       #print(tau)
+       VERs=interppos(pos,VER)
+       res=filters@(jnp.exp(-tau)*VERs*emissions)
+       return res[0].sum()
+   
+@jit
+def ir2fun(pos,path_step ,o2s,atm):
+       VER,Temps=atm
+       VER=jnp.array(VER)
+       Temps=jnp.array(Temps)
+       pos=jnp.array(pos)
+       startT= jnp.linspace(100,600,501)
+       pathtemps=interppos(pos,Temps)
+       #print(pathtemps)
+       sigmas=interpT(pathtemps,startT,sigma)
+       #print(sigmas.max())
+       emissions=interpT(pathtemps,startT,emission)
+       o2=interppos(pos,o2s)
+       tau = (sigmas*o2).cumsum(axis=1)*path_step * 1e5
+       #print(tau)
+       VERs=interppos(pos,VER)
+       res=filters@(jnp.exp(-tau)*VERs*emissions)
+       return res[1].sum()
 #%%
 zs=np.linalg.norm(ecipos[-1])
 theta=np.arccos(np.dot(ecipos[-1],ecivec)/zs)
@@ -196,22 +249,23 @@ b=2*zs*np.cos(theta)
 root=np.sqrt(b**2+4*((120e3+localR)**2 - zs**2))
 s_120_1 =(-b-root)/2
 s_120_2 =(-b+root)/2
-
-#%%
-#s_120_1=findheight(t,ecipos[-1],ecivec,140e3,bracket=(10e5,20e5)).x
-#s_120_2=findheight(t,ecipos[-1],ecivec,140e3,bracket=(30e5,60e5)).x
-steps=600 #m steps
+steps=2500 #m steps
 s_steps = np.arange(s_120_1,s_120_2,steps)
-pos=np.expand_dims(ecipos[-1], axis=0).T+s_steps*np.expand_dims(ecivec, axis=0).T
-posecef_i=(to_ecef.apply(pos.T).astype('float32'))
-posecef_i = ecef_to_local.apply(posecef_i) #convert to local
-posecef_i_sph = cart2sph(posecef_i)   #x: height, y: acrosstrac (angle), z:  along track (angle)
-altitude_grid = np.arange(localR+40e3,localR+120e3,1e3)
+#pos=np.expand_dims(ecipos[-1], axis=0).T+s_steps*np.expand_dims(ecivec, axis=0).T
+#posecef_i=(to_ecef.apply(pos.T).astype('float32'))
+#posecef_i = ecef_to_local.apply(posecef_i) #convert to local
+#posecef_i_sph = cart2sph(posecef_i)   #x: height, y: acrosstrac (angle), z:  along track (angle)
+satecefpos=to_ecef.apply(ecipos[-1])
+satlocalpos=ecef_to_local.apply(satecefpos)
+poslocal_i=(np.expand_dims(satlocalpos, axis=0).T+s_steps*np.expand_dims(localvec, axis=0).T).astype('float32')
+poslocal_i_sph = cart2sph(poslocal_i.T)   
+poslocal_i_sph=np.array(poslocal_i_sph).T   
+altitude_grid = np.arange(localR+30e3,localR+121e3,1e3)
 
-posecef_i_sph=np.array(posecef_i_sph).T
+
 acrosstrack_grid = np.array([-0.3,0.3])
 #acrosstrack_grid = np.linspace(posecef_i_sph[:,1].min(),posecef_i_sph[:,1].max(),1)
-alongtrack_grid = np.linspace(posecef_i_sph[:,2].min(),posecef_i_sph[:,2].max(),100)
+alongtrack_grid = np.linspace(poslocal_i_sph[:,2].min(),poslocal_i_sph[:,2].max(),100)
 alongtrack_grid[0] = alongtrack_grid[0]-0.5
 alongtrack_grid[-1] = alongtrack_grid[-1]+0.5
 edges=[]
@@ -229,67 +283,17 @@ VERarray=np.zeros_like(Tarray)
 o2array=np.zeros_like(Tarray)
 for i,retlat in enumerate(ret_lats):
     localR = np.linalg.norm(sfapi.wgs84.latlon(retlat, ret_lons[i], elevation_m=0).at(t).position.m)
+    #print(retlat,localR,np.max(rs-localR))
     Tarray[:,0,i]=msis.T.sel(month=d.month).interp(lat=retlat,z=(rs-localR)/1000)
     o2array[:,0,i]=msis.o2.sel(month=d.month).interp(lat=retlat,z=(rs-localR)/1000)
     VERarray[:,0,i]=2e3*1e6*stats.norm.pdf((rs-localR)/1000,88,4.5)+1e3*1e6 *np.exp(-((rs-localR)/1000-60)/20)
     
-#Calculate the weights 
-minarg=posecef_i_sph[:,0].argmin()
-distances=(s_steps-s_steps[minarg])/1000 #to km for intepolation
-target_tangent=tanheights[0]/1000
-@jit
-def interpT(x,xs,ys):
-    ix=jnp.floor(x-100).astype(int)
-    return ((x-xs[ix-1])*ys[ix,:].T + (xs[ix]-x)*ys[ix-1,:].T)/(xs[ix]-xs[ix-1])
-@jit
-def interppos(pos,inArray):
-    iz=jnp.array(jnp.floor((pos[:,0]-edges[0][0])/jnp.diff(edges[0]).mean()),dtype=int)
-    ix=jnp.array(jnp.floor((pos[:,2]-edges[2][0])/jnp.diff(edges[2]).mean()),dtype=int)
-    return inArray[iz,0,ix]
-    #return((inArray[iz,0,ix]+inArray[iz+1,0,ix+1])/2)
 
-@jit
-def ir1fun(pos,path_step ,o2s,atm=[VERarray,Tarray]):
-       VER,Temps=atm
-       VER=jnp.array(VER)
-       Temps=jnp.array(Temps)
-       pos=jnp.array(pos)
-       startT= jnp.linspace(100,400,301)
-       pathtemps=interppos(pos,Temps)
-       #print(pathtemps)
-       sigmas=interpT(pathtemps,startT,sigma)
-       #print(sigmas.max())
-       emissions=interpT(pathtemps,startT,emission)
-       o2=interppos(pos,o2s)
-       tau = (sigmas*o2).cumsum(axis=1)*path_step * 1e5
-       #print(tau)
-       VERs=interppos(pos,VER)
-       res=filters@(jnp.exp(-tau)*VERs*emissions)
-       return res[0].sum()
-   
-@jit
-def ir2fun(pos,path_step ,o2s,atm=[VERarray,Tarray]):
-       VER,Temps=atm
-       VER=jnp.array(VER)
-       Temps=jnp.array(Temps)
-       pos=jnp.array(pos)
-       startT= jnp.linspace(100,400,301)
-       pathtemps=interppos(pos,Temps)
-       #print(pathtemps)
-       sigmas=interpT(pathtemps,startT,sigma)
-       #print(sigmas.max())
-       emissions=interpT(pathtemps,startT,emission)
-       o2=interppos(pos,o2s)
-       tau = (sigmas*o2).cumsum(axis=1)*path_step * 1e5
-       #print(tau)
-       VERs=interppos(pos,VER)
-       res=filters@(jnp.exp(-tau)*VERs*emissions)
-       return res[1].sum()
-ir1calc ,[vergrad1,tgrad1] =value_and_grad(ir1fun,argnums=3)(np.array(posecef_i_sph),steps,o2array,[VERarray,Tarray])
-ir2calc ,[vergrad2,tgrad2] =value_and_grad(ir2fun,argnums=3)(np.array(posecef_i_sph),steps,o2array,[VERarray,Tarray])
+ir1calc ,[vergrad1,tgrad1] =value_and_grad(ir1fun,argnums=3)(np.array(poslocal_i_sph),steps,o2array,[VERarray,Tarray])
+ir2calc ,[vergrad2,tgrad2] =value_and_grad(ir2fun,argnums=3)(np.array(poslocal_i_sph),steps,o2array,[VERarray,Tarray])
 hist=np.vstack([np.hstack([vergrad1[:,0,:],tgrad1[:,0,:]]),np.hstack([vergrad2[:,0,:],tgrad2[:,0,:]])])
 #%%
-fig = go.Figure(data=[go.Scatter3d(x=posecef_i_sph[::1,0]-localR, y=posecef_i_sph[::1,1], z=posecef_i_sph[::1,2],mode='markers')])
+fig = go.Figure(data=[go.Scatter3d(x=poslocal_i_sph[::1,0]-localR, y=poslocal_i_sph[::1,1], z=poslocal_i_sph[::1,2],mode='markers')])
 fig.show()
 
 #%%
@@ -317,6 +321,8 @@ heights = []
 ecipos = []
 ecivecs = []
 posecef_sph=[]
+ir1calcs=[]
+ir2calcs=[]
 
 for i in range(len(df)):
     print(i)
@@ -347,6 +353,7 @@ for i in range(len(df)):
 
     to_ecef=R.from_matrix(itrs.rotation_at(ts.from_datetime(df['EXPDate'][i])))
     satecefpos=to_ecef.apply(ecipos[-1])
+    satlocalpos=ecef_to_local.apply(satecefpos)
     
     #calculate jacobian for each row
     #for irow in range(df['NROW'].iloc[i]-10):
@@ -354,6 +361,7 @@ for i in range(len(df)):
         #ecivec=cs_eci(irow)
         ecivec=tanheights2ecivec(tanheights[irow])
         ecefvec=to_ecef.apply(ecivec)
+        localvec=ecef_to_local.apply(ecefvec)
         zs=np.linalg.norm(ecipos[-1])
         theta=np.arccos(np.dot(ecipos[-1],ecivec)/zs)
         b=2*zs*np.cos(theta)
@@ -361,24 +369,26 @@ for i in range(len(df)):
         s_120_1 =(-b-root)/2
         s_120_2 =(-b+root)/2
         s_steps = np.arange(s_120_1,s_120_2,steps)
-        posecef_i=(np.expand_dims(satecefpos, axis=0).T+s_steps*np.expand_dims(ecefvec, axis=0).T).astype('float32')
-        posecef_i = ecef_to_local.apply(posecef_i.T) #convert to local (for middle alongtrack measurement)
-        posecef_i_sph = cart2sph(posecef_i)   
-        posecef_i_sph=np.array(posecef_i_sph) .T   
+        #posecef_i=(np.expand_dims(satecefpos, axis=0).T+s_steps*np.expand_dims(ecefvec, axis=0).T).astype('float32')
+        poslocal_i=(np.expand_dims(satlocalpos, axis=0).T+s_steps*np.expand_dims(localvec, axis=0).T).astype('float32')
+        #posecef_i = ecef_to_local.apply(posecef_i.T) #convert to local (for middle alongtrack measurement)
+        poslocal_i_sph = cart2sph(poslocal_i.T)   
+        poslocal_i_sph=np.array(poslocal_i_sph) .T   
         #hist, _ = np.histogramdd(posecef_i_sph[::1,:],edges)
-        #Calculate the weights 
-        minarg=posecef_i_sph[:,0].argmin()
-        distances=(s_steps-s_steps[minarg])/1000 #to km for intepolation
-        target_tangent=tanheights[irow]/1000
-        ir1calc ,[vergrad1,tgrad1] =value_and_grad(ir1fun,argnums=3)(np.array(posecef_i_sph),steps,o2array,[VERarray,Tarray])
+
+        ir1calc ,[vergrad1,tgrad1] =value_and_grad(ir1fun,argnums=3)(poslocal_i_sph,steps,o2array,[VERarray,Tarray])
         print(ir1calc)
-        ir2calc ,[vergrad2,tgrad2] =value_and_grad(ir2fun,argnums=3)(np.array(posecef_i_sph),steps,o2array,[VERarray,Tarray])
+        ir1calcs.append(ir1calc)
+        ir2calc ,[vergrad2,tgrad2] =value_and_grad(ir2fun,argnums=3)(poslocal_i_sph,steps,o2array,[VERarray,Tarray])
         print(ir2calc)
+        ir2calcs.append(ir2calc)
         hist=np.vstack([np.hstack([vergrad1[:,0,:],tgrad1[:,0,:]]),np.hstack([vergrad2[:,0,:],tgrad2[:,0,:]])])
         k = hist.reshape(-1)
         #print('rowsum = ',k.sum())
         ks[k_row,:] = k
         k_row = k_row+1
+        with open("runningfile_1", "wb") as file:
+            pickle.dump((i,irow,ir1calcs,ir2calcs,ks ), file)
     
         
     
@@ -410,6 +420,10 @@ inputdata.to_netcdf('IR1IR2test_400-520.nc')
 filename = "jacobianIR1IR2_400-520.pkl"
 with open(filename, "wb") as file:
     pickle.dump((edges, ks, ecef_to_local), file)
+#%%
+filename = "intensityIR1IR2_400-520.pkl"
+with open(filename, "wb") as file:
+    pickle.dump((ir1calc,ir2calc), file)
 
 # %%
 z1,p1,orig_heights=prepare_profile(ir1.iloc[i])
@@ -435,5 +449,6 @@ plt.figure()
 plt.plot(3.57/8.16*p1/p2,z1)
 plt.xlim([0.1,0.8])
  # %%
-
+with open("runningfile_1", "rb") as file:
+    [i,irow,ir1calcs,ir2calcs,ks] = pickle.load(file)
 # %%
