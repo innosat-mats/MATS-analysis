@@ -205,7 +205,7 @@ def interppos(pos,inArray):
     return inArray[iz,0,ix]
     #return((inArray[iz,0,ix]+inArray[iz+1,0,ix+1])/2)
 
-# @jit
+@jit
 def ir1fun(pos,path_step ,o2s,atm):
        VER,Temps=atm
        VER=jnp.array(VER)
@@ -220,7 +220,7 @@ def ir1fun(pos,path_step ,o2s,atm):
        o2=interppos(pos,o2s)
        tau = (sigmas*o2).cumsum(axis=1)*path_step * 1e5
        #print(tau)
-       VERs=interppos(pos,VER)
+       VERs=interppos(pos,VER)*path_step*1e5
        res=filters@(jnp.exp(-tau)*VERs*emissions)
        return res[0].sum()
    
@@ -239,7 +239,7 @@ def ir2fun(pos,path_step ,o2s,atm):
        o2=interppos(pos,o2s)
        tau = (sigmas*o2).cumsum(axis=1)*path_step * 1e5
        #print(tau)
-       VERs=interppos(pos,VER)
+       VERs=interppos(pos,VER)*path_step*1e5
        res=filters@(jnp.exp(-tau)*VERs*emissions)
        return res[1].sum()
 #%%
@@ -285,8 +285,8 @@ for i,retlat in enumerate(ret_lats):
     localR = np.linalg.norm(sfapi.wgs84.latlon(retlat, ret_lons[i], elevation_m=0).at(t).position.m)
     #print(retlat,localR,np.max(rs-localR))
     Tarray[:,0,i]=msis.T.sel(month=d.month).interp(lat=retlat,z=(rs-localR)/1000)
-    o2array[:,0,i]=msis.o2.sel(month=d.month).interp(lat=retlat,z=(rs-localR)/1000)
-    VERarray[:,0,i]=2e3*1e6*stats.norm.pdf((rs-localR)/1000,88,4.5)+1e3*1e6 *np.exp(-((rs-localR)/1000-60)/20)
+    o2array[:,0,i]=msis.o2.sel(month=d.month).interp(lat=retlat,z=(rs-localR)/1000)/1e6 # to cm-3
+    VERarray[:,0,i]=2e3*1e6*stats.norm.pdf((rs-localR)/1000,88,4.5)+2e2*1e6 *np.exp(-((rs-localR)/1000-60)/20)
     
 
 ir1calc ,[vergrad1,tgrad1] =value_and_grad(ir1fun,argnums=3)(np.array(poslocal_i_sph),steps,o2array,[VERarray,Tarray])
@@ -324,7 +324,7 @@ posecef_sph=[]
 ir1calcs=[]
 ir2calcs=[]
 
-for i in range(len(df)):
+for i in range(2,len(df)):
     print(i)
 
     zs, p = prepare_measurment(ir1.iloc[i],ir2.iloc[i],ir3.iloc[i],ir4.iloc[i])
@@ -378,17 +378,17 @@ for i in range(len(df)):
 
         ir1calc ,[vergrad1,tgrad1] =value_and_grad(ir1fun,argnums=3)(poslocal_i_sph,steps,o2array,[VERarray,Tarray])
         print(ir1calc)
-        ir1calcs.append(ir1calc)
+        ir1calcs.append(np.array(ir1calc))
         ir2calc ,[vergrad2,tgrad2] =value_and_grad(ir2fun,argnums=3)(poslocal_i_sph,steps,o2array,[VERarray,Tarray])
         print(ir2calc)
-        ir2calcs.append(ir2calc)
+        ir2calcs.append(np.array(ir2calc))
         hist=np.vstack([np.hstack([vergrad1[:,0,:],tgrad1[:,0,:]]),np.hstack([vergrad2[:,0,:],tgrad2[:,0,:]])])
         k = hist.reshape(-1)
         #print('rowsum = ',k.sum())
         ks[k_row,:] = k
         k_row = k_row+1
-        with open("runningfile_1", "wb") as file:
-            pickle.dump((i,irow,ir1calcs,ir2calcs,ks ), file)
+    with open("runningfile_1", "wb") as file:
+        pickle.dump((i,irow,ir1calcs,ir2calcs,profiles,ks ), file)
     
         
     
@@ -450,5 +450,12 @@ plt.plot(3.57/8.16*p1/p2,z1)
 plt.xlim([0.1,0.8])
  # %%
 with open("runningfile_1", "rb") as file:
-    [i,irow,ir1calcs,ir2calcs,ks] = pickle.load(file)
+    [i,irow,ir1calcs,ir2calcs,profiles,ks] = pickle.load(file)
 # %%
+plt.figure()
+plt.pcolor(vergrad1[:,0,:])
+plt.colorbar()
+#%%
+plt.figure()
+plt.plot(ir1calcs)
+#%%
