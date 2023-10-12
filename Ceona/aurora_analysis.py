@@ -8,7 +8,7 @@ from mats_l1_processing.pointing import pix_deg
 from skyfield.units import Distance
 from skyfield.toposlib import wgs84
 from skyfield.positionlib import Geocentric
-import datetime as DT
+import time
 from datetime import timedelta
 import pandas as pd 
 import matplotlib.pyplot as plt 
@@ -182,7 +182,44 @@ def aurora_strips(items, numdays, Tperiod):
 
     return aurorastrips
 """
-# %% Aurora analysis functios 
+# %% Function for tangent point magnetic coordinates
+def TPpos(ccditem):
+    """Function giving the GPS TP in magnetic coordinates
+    Arguments:
+        ccditem or dataframe with the 'afsTangentPointECI'
+    Returns:
+        TPMlat: latitude of TP (degrees)
+        TPMlon: longitude of TP (degrees)
+        TPmlt: Magnetic local time (hours)
+    """
+    eci= ccditem['afsTangentPointECI']
+    d = ccditem['EXPDate']
+    ts= load.timescale()
+    t = ts.from_datetime(d)
+    pos = Geocentric(position_au=Distance(
+        m=eci).au, t=t)
+    position = wgs84.geographic_position_of(pos)
+    TPalt = position.elevation.km
+    TPlat = position.latitude.degrees
+    TPlon = position.longitude.degrees
+    mlat, mlon, mlt = get_aacgm_coord(TPlat,TPlon,TPalt,ccditem.EXPDate, method='ALLOWTRACE')
+    return mlat, mlon, mlt
+
+def TP_MLT(items):
+    MLT = []
+    Mlat = []
+    for k, ccd in items.iterrows():
+        st = time.time()
+        mlat, mlon, mlt = TPpos(ccd)
+        print(time.time()-st)
+        MLT.append(mlt)
+        Mlat.append(mlat)
+    
+    scipy.io.savemat('MLT.mat',{'MLT': MLT, 'label':'mlt'}) #saves to matlabfile
+    scipy.io.savemat('MLat.mat',{'Mlat': Mlat, 'label':'mlat'}) #saves to matlabfile
+    return
+
+# %% Aurora analysis functions 
 def col_pos(ccditem, x, nheights=None, splineTPgeo=False):
     """Returns the geodetic coordinates of a pixel, lat, lon and altitude"""
     if nheights == None:
@@ -237,10 +274,10 @@ def set_aurora_spec(strip,ccd,row):
     #intensity integration of the peak strip image, if I want only a pixel value, ccd_strip.item(row)
     intensity = IntensityPeak(strip)
     strip.maxI = intensity
-    return [lat,lon,altitude,intensity]
+    return
 
 def IntensityPeak(aurorastrip):
-    "Integrate the intensity of a strips original image"
+    "Integrates the intensity of a strips original image"
     collow = 14
     coltop = 30
     
@@ -254,7 +291,7 @@ def IntensityPeak(aurorastrip):
     return im_sum
 
 def get_all_altitudes(strips):
-    "Get all altitudes from given list of aurora strip objects"
+    "Returns lis of all altitudes from given list of aurora strip objects"
     allaltitudes = []
     for index, strip in enumerate(strips):
         altitude = strip.maxalt
@@ -273,12 +310,13 @@ def get_aurora_max(aurorastrips):
         nextstrip = aurorastrips[i+1]
         deltat = nextstrip.time-strip.time
         
-        if deltat < timedelta(minutes=4): #time of aurora event
+        if deltat < timedelta(minutes=4): #Belongs to same cluster
             continue
         else:
-            event = allaltitudes[n:i]
+            #New cluster, check the peak for the previous cluster
+            event = allaltitudes[n:i+1]
             print(n,i,len(event)) 
-            if len(event) == 0:
+            if len(event) < 4:
                 continue
             
             peak = max(aurorastrips[n:i+1],key=lambda x: x.maxalt)
@@ -292,9 +330,9 @@ def get_aurora_max(aurorastrips):
                 peak_stripsSH.append(peak)
             peak_strips.append(peak)
             n = i+1
-    save_strips(peak_strips,'peakstrips.mat','peakstrips')
-    save_strips(peak_stripsNH,'peakstripsNH.mat','peakstripsNH')
-    save_strips(peak_stripsSH,'peakstripsSH.mat','peakstripsSH')
+    save_strips(peak_strips,'peaks3Wfeb.mat','peak3Wfeb')
+    save_strips(peak_stripsNH,'peaksNH3Wfeb.mat','peaksNH3Wfeb')
+    save_strips(peak_stripsSH,'peaksSH3Wfeb.mat','peaksSH3Wfeb')
 
     return
 
