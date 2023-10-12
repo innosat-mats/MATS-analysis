@@ -62,7 +62,7 @@ def overview_grad(items, channel, allrows, filename, numdays):
                         axs[subplotNum,0].scatter(dates,allrows[n:i+1], marker='.', color="red")
 
                     else:
-                        axs[subplotNum,0].pcolormesh(dates,range(matrix.shape[0]),matrix, rasterized = True, vmin=0, vmax=480) # rasterized makes a pixel image instead of vector graphic, less saving time
+                        axs[subplotNum,0].pcolormesh(dates,range(matrix.shape[0]),matrix, rasterized = True, vmin=-30, vmax=300) # rasterized makes a pixel image instead of vector graphic, less saving time
                         axs[subplotNum,0].scatter(dates,allrows[n:i+1], marker='.', color="red")
 
                     axs[subplotNum,0].set_title(f"Orbit {orbnum} Northern Hemisphere")
@@ -85,7 +85,7 @@ def overview_grad(items, channel, allrows, filename, numdays):
                         axs[subplotNum,1].scatter(dates, allrows[n:i+1], marker='.', color="red")
 
                     else:
-                        axs[subplotNum,1].pcolormesh(dates,range(matrix.shape[0]),matrix, rasterized = True, vmin=0, vmax=480) # rasterized makes a pixel image instead of vector graphic, less saving time
+                        axs[subplotNum,1].pcolormesh(dates,range(matrix.shape[0]),matrix, rasterized = True, vmin=-30, vmax=300) # rasterized makes a pixel image instead of vector graphic, less saving time
                         axs[subplotNum,1].scatter(dates,allrows[n:i+1], marker='.', color="red")
                         
 
