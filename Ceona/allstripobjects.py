@@ -1,4 +1,4 @@
-# %% create list of strips.
+# %% create list of all strips.
 import datetime as DT
 import pandas as pd
 from Keogram import CenterStrip
