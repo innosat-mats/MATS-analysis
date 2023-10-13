@@ -218,9 +218,9 @@ def ir1fun(pos,path_step ,o2s,atm):
        #print(sigmas.max())
        emissions=interpT(pathtemps,startT,emission)
        o2=interppos(pos,o2s)
-       tau = (sigmas*o2).cumsum(axis=1)*path_step * 1e5
+       tau = (sigmas*o2).cumsum(axis=1)*path_step * 1e2 #m -> cm
        #print(tau)
-       VERs=interppos(pos,VER)*path_step*1e5
+       VERs=interppos(pos,VER)*path_step*1e2 #m -> cm
        res=filters@(jnp.exp(-tau)*VERs*emissions)
        return res[0].sum()
 
@@ -238,9 +238,9 @@ def ir2fun(pos,path_step ,o2s,atm):
        #print(sigmas.max())
        emissions=interpT(pathtemps,startT,emission)
        o2=interppos(pos,o2s)
-       tau = (sigmas*o2).cumsum(axis=1)*path_step * 1e5
+       tau = (sigmas*o2).cumsum(axis=1)*path_step * 1e2 #m -> cm
        #print(tau)
-       VERs=interppos(pos,VER)*path_step*1e5
+       VERs=interppos(pos,VER)*path_step*1e2 #m -> cm
        res=filters@(jnp.exp(-tau)*VERs*emissions)
        return res[1].sum()
 
