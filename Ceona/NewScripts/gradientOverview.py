@@ -50,7 +50,7 @@ def overview_grad(items, channel, allrows, filename, numdays):
                     dates = getSatDates(NH)
                     times_strings = [dt.strftime("%H:%M") for dt in dates]  #as strings
                     #gets the matrix corresponding to that hemisphere
-                    matrix, stripslist = gradientmatrix(NH,airglowlim=145)
+                    matrix, stripslist = gradientmatrix(NH,airglowlim=120)
                     
                     if orbcheck == True:
                         subplotNum += 1
@@ -59,11 +59,11 @@ def overview_grad(items, channel, allrows, filename, numdays):
                     #plots the orbit found from n to current i
                     if channel == 'IR2':
                         axs[subplotNum,0].pcolormesh(dates,range(matrix.shape[0]),matrix, rasterized = True, vmin=-20, vmax=260) # rasterized makes a pixel image instead of vector graphic
-                        axs[subplotNum,0].scatter(dates,allrows[n:i+1], marker='.', color="red")
+                        axs[subplotNum,0].scatter(dates,allrows[n:i+1], marker='.', s = 5, color="red")
 
                     else:
                         axs[subplotNum,0].pcolormesh(dates,range(matrix.shape[0]),matrix, rasterized = True, vmin=-30, vmax=300) # rasterized makes a pixel image instead of vector graphic, less saving time
-                        axs[subplotNum,0].scatter(dates,allrows[n:i+1], marker='.', color="red")
+                        axs[subplotNum,0].scatter(dates,allrows[n:i+1], marker='.', s = 5,color="red")
 
                     axs[subplotNum,0].set_title(f"Orbit {orbnum} Northern Hemisphere")
                     axs[subplotNum,0].set_xticks(dates[::20])
@@ -77,16 +77,16 @@ def overview_grad(items, channel, allrows, filename, numdays):
                     dates = getSatDates(SH)
                     times_strings = [dt.strftime("%H:%M") for dt in dates]  #as strings
                     #gets the matrix corresponding to that hemisphere
-                    matrix, stripslist = gradientmatrix(SH,airglowlim=145)
+                    matrix, stripslist = gradientmatrix(SH,airglowlim=120)
 
                     #plots the orbit found from n to current i
                     if channel == 'IR2':
                         axs[subplotNum,1].pcolormesh(dates,range(matrix.shape[0]),matrix, rasterized = True, vmin=-20, vmax=260) # rasterized makes a pixel image instead of vector graphic
-                        axs[subplotNum,1].scatter(dates, allrows[n:i+1], marker='.', color="red")
+                        axs[subplotNum,1].scatter(dates, allrows[n:i+1], marker='.', s = 5, color="red")
 
                     else:
                         axs[subplotNum,1].pcolormesh(dates,range(matrix.shape[0]),matrix, rasterized = True, vmin=-30, vmax=300) # rasterized makes a pixel image instead of vector graphic, less saving time
-                        axs[subplotNum,1].scatter(dates,allrows[n:i+1], marker='.', color="red")
+                        axs[subplotNum,1].scatter(dates,allrows[n:i+1], marker='.', s = 5, color="red")
                         
 
                     axs[subplotNum,1].set_title(f"Orbit {orbnum} Southern Hemisphere")
@@ -119,7 +119,7 @@ def overview_grad(items, channel, allrows, filename, numdays):
  # %% To run the code above
 def Main():
     # Determine the main time span and settings for multiple plots
-    start_time = DT.datetime(2023,2,15,00,00,0)
+    start_time = DT.datetime(2023,2,16,00,00,0)
     stop_time = DT.datetime(2023,2,17,00,00,0)
     channel = 'IR1'
     filename = "test.pdf"
@@ -129,9 +129,15 @@ def Main():
     #orbit_pdf(items, channel, strip_dir, filename, numdays)
     
     #Run this to read in all the strips, and to get the row parameter for each strip.
-    allstrips = pd.read_pickle('allstrips')
+    allstrips = pd.read_pickle('testallstrips')
     allrows = get_stripRow(allstrips)
     overview_grad(items,channel,allrows,filename,numdays)
     return
 
+# %%
+allstripsNH = pd.read_pickle('3WfeballstripsNH')
+allstripsSH = pd.read_pickle('3WfeballstripsSH')
+allstrips = pd.concat([allstripsNH,allstripsSH], ignore_index=True)
+sortitems = allstrips.sort_values(['time'])
+sortitems.to_pickle('3Wfeballstrips')
 # %%
