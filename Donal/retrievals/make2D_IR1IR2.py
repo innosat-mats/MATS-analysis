@@ -30,10 +30,10 @@ emission=np.load(expanduser('~donal/projekt/SIW/MATS-analysis/Donal/retrievals/D
 #%%
 dftop = pd.read_pickle(expanduser('~donal/projekt/SIW/verdec'))
 #%%
-IR1=np.loadtxt('Datafiles/F-N-IR1-ABandCenter_transmission_air_6degr.dat',skiprows=1,unpack=True)
-IR2=np.loadtxt('Datafiles/F-N-IR2-ABandTotal_air_6degr.dat',skiprows=1,unpack=True)
-IR3=np.loadtxt('Datafiles/F-N-IR3-BgShort_transmission_air_6degr.dat',skiprows=1,unpack=True)
-IR4=np.loadtxt('Datafiles/F-N-IR4-BgLong_transmission_air_6degr.dat',skiprows=1,unpack=True)
+IR1=np.loadtxt(expanduser('~donal/projekt/SIW/MATS-analysis/Donal/retrievals/Datafiles/F-N-IR1-ABandCenter_transmission_air_6degr.dat'),skiprows=1,unpack=True)
+IR2=np.loadtxt(expanduser('~donal/projekt/SIW/MATS-analysis/Donal/retrievals/Datafiles/F-N-IR2-ABandTotal_air_6degr.dat'),skiprows=1,unpack=True)
+IR3=np.loadtxt(expanduser('~donal/projekt/SIW/MATS-analysis/Donal/retrievals/Datafiles/F-N-IR3-BgShort_transmission_air_6degr.dat'),skiprows=1,unpack=True)
+IR4=np.loadtxt(expanduser('~donal/projekt/SIW/MATS-analysis/Donal/retrievals/Datafiles/F-N-IR4-BgLong_transmission_air_6degr.dat'),skiprows=1,unpack=True)
 #convert from wavelength in air to wavelength in vacupe
 grid = np.arange(12950, 13200, 0.002)
 IR1[0,:]=RF.air2vac(IR1[0,:])
@@ -205,7 +205,7 @@ def interppos(pos,inArray):
     return inArray[iz,0,ix]
     #return((inArray[iz,0,ix]+inArray[iz+1,0,ix+1])/2)
 
-@jit
+#@jit
 def ir1fun(pos,path_step ,o2s,atm):
        VER,Temps=atm
        VER=jnp.array(VER)
@@ -218,13 +218,14 @@ def ir1fun(pos,path_step ,o2s,atm):
        #print(sigmas.max())
        emissions=interpT(pathtemps,startT,emission)
        o2=interppos(pos,o2s)
-       tau = (sigmas*o2).cumsum(axis=1)*path_step * 1e5
+       tau = (sigmas*o2).cumsum(axis=1)*path_step * 1e2 #m -> cm
        #print(tau)
-       VERs=interppos(pos,VER)*path_step*1e5
+       VERs=interppos(pos,VER)*path_step*1e2 #m -> cm
        res=filters@(jnp.exp(-tau)*VERs*emissions)
        return res[0].sum()
-   
-@jit
+
+ir1grad=grad(ir1fun,argnums=3) 
+#@jit
 def ir2fun(pos,path_step ,o2s,atm):
        VER,Temps=atm
        VER=jnp.array(VER)
@@ -237,11 +238,13 @@ def ir2fun(pos,path_step ,o2s,atm):
        #print(sigmas.max())
        emissions=interpT(pathtemps,startT,emission)
        o2=interppos(pos,o2s)
-       tau = (sigmas*o2).cumsum(axis=1)*path_step * 1e5
+       tau = (sigmas*o2).cumsum(axis=1)*path_step * 1e2 #m -> cm
        #print(tau)
-       VERs=interppos(pos,VER)*path_step*1e5
+       VERs=interppos(pos,VER)*path_step*1e2 #m -> cm
        res=filters@(jnp.exp(-tau)*VERs*emissions)
        return res[1].sum()
+
+ir2grad=grad(ir2fun,argnums=3) 
 #%%
 zs=np.linalg.norm(ecipos[-1])
 theta=np.arccos(np.dot(ecipos[-1],ecivec)/zs)
@@ -289,8 +292,13 @@ for i,retlat in enumerate(ret_lats):
     VERarray[:,0,i]=2e3*1e6*stats.norm.pdf((rs-localR)/1000,88,4.5)+2e2*1e6 *np.exp(-((rs-localR)/1000-60)/20)
     
 
-ir1calc ,[vergrad1,tgrad1] =value_and_grad(ir1fun,argnums=3)(np.array(poslocal_i_sph),steps,o2array,[VERarray,Tarray])
-ir2calc ,[vergrad2,tgrad2] =value_and_grad(ir2fun,argnums=3)(np.array(poslocal_i_sph),steps,o2array,[VERarray,Tarray])
+#ir1calc ,[vergrad1,tgrad1] =value_and_grad(ir1fun,argnums=3)(np.array(poslocal_i_sph),steps,o2array,[VERarray,Tarray])
+#ir2calc ,[vergrad2,tgrad2] =value_and_grad(ir2fun,argnums=3)(np.array(poslocal_i_sph),steps,o2array,[VERarray,Tarray]
+ir1calc=ir1fun(np.asarray(poslocal_i_sph),steps,o2array,[VERarray,Tarray])
+ir12calc=ir2fun(np.asarray(poslocal_i_sph),steps,o2array,[VERarray,Tarray])
+[vergrad1,tgrad1]=ir1grad(np.asarray(poslocal_i_sph),steps,o2array,[VERarray,Tarray])
+[vergrad2,tgrad2]=ir2grad(np.asarray(poslocal_i_sph),steps,o2array,[VERarray,Tarray])
+
 hist=np.vstack([np.hstack([vergrad1[:,0,:],tgrad1[:,0,:]]),np.hstack([vergrad2[:,0,:],tgrad2[:,0,:]])])
 #%%
 fig = go.Figure(data=[go.Scatter3d(x=poslocal_i_sph[::1,0]-localR, y=poslocal_i_sph[::1,1], z=poslocal_i_sph[::1,2],mode='markers')])
@@ -324,7 +332,7 @@ posecef_sph=[]
 ir1calcs=[]
 ir2calcs=[]
 
-for i in range(2,len(df)):
+for i in range(0,len(df)):
     print(i)
 
     zs, p = prepare_measurment(ir1.iloc[i],ir2.iloc[i],ir3.iloc[i],ir4.iloc[i])
@@ -375,15 +383,20 @@ for i in range(2,len(df)):
         poslocal_i_sph = cart2sph(poslocal_i.T)   
         poslocal_i_sph=np.array(poslocal_i_sph) .T   
         #hist, _ = np.histogramdd(posecef_i_sph[::1,:],edges)
+        ir1calc=ir1fun(np.asarray(poslocal_i_sph),steps,o2array,[VERarray,Tarray])
+        ir2calc=ir2fun(np.asarray(poslocal_i_sph),steps,o2array,[VERarray,Tarray])
+        [vergrad1,tgrad1]=ir1grad(np.asarray(poslocal_i_sph),steps,o2array,[VERarray,Tarray])
+        [vergrad2,tgrad2]=ir2grad(np.asarray(poslocal_i_sph),steps,o2array,[VERarray,Tarray])
 
-        ir1calc ,[vergrad1,tgrad1] =value_and_grad(ir1fun,argnums=3)(poslocal_i_sph,steps,o2array,[VERarray,Tarray])
+        #ir1calc ,[vergrad1,tgrad1] =value_and_grad(ir1fun,argnums=3)(poslocal_i_sph,steps,o2array,[VERarray,Tarray])
         print(ir1calc)
-        ir1calcs.append(np.array(ir1calc))
-        ir2calc ,[vergrad2,tgrad2] =value_and_grad(ir2fun,argnums=3)(poslocal_i_sph,steps,o2array,[VERarray,Tarray])
+        ir1calcs.append(ir1calc.item())
+        #ir2calc ,[vergrad2,tgrad2] =value_and_grad(ir2fun,argnums=3)(poslocal_i_sph,steps,o2array,[VERarray,Tarray])
         print(ir2calc)
-        ir2calcs.append(np.array(ir2calc))
+        ir2calcs.append(ir2calc.item())
         hist=np.vstack([np.hstack([vergrad1[:,0,:],tgrad1[:,0,:]]),np.hstack([vergrad2[:,0,:],tgrad2[:,0,:]])])
         k = hist.reshape(-1)
+        #del vergrad1,vergrad2,tgrad1,tgrad2
         #print('rowsum = ',k.sum())
         ks[k_row,:] = k
         k_row = k_row+1
@@ -407,8 +420,8 @@ inputdata = xr.Dataset({
     'TPsza': (['time'], df.TPsza),
     'TPssa': (['time'], df.TPssa),
     'ecipos': (['time', 'xyz'], ecipos),   
-    'z':  (['z'], z, {'long_name': 'Approx Altitude', 'units': 'm'}),
-    'profile': (['time', 'z'], profiles, {'long_name': 'LOS  intensity', 'units': 'Photons m-2 nm-1 sr-1 s-1'}),
+    'z':  (['z'], np.asarray(z), {'long_name': 'Approx Altitude', 'units': 'm'}),
+    'profile': (['time', 'z'], np.asarray(profiles), {'long_name': 'LOS  intensity', 'units': 'Photons m-2 nm-1 sr-1 s-1'}),
     'heights': (['time', 'z'],  heights),
     'ret_grid_z': (['z_r'], edges[0]),
     'ret_grid_lon': (['lon_r'], edges[1]),
