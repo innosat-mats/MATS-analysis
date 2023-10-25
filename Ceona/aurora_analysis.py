@@ -348,7 +348,7 @@ def get_aurora_max(aurorastrips,filedate):
 
     return
 
-def save_strips(aurorastrips,filename,structname):
+def save_strips(strips,filename,structname):
     "Creates a panda object of the strip and saves it to matfile"
     maxalt = []
     maxrow = []
@@ -362,7 +362,7 @@ def save_strips(aurorastrips,filename,structname):
     Mlon = []
     MagLT = []
 
-    for strip in aurorastrips:
+    for strip in strips:
         timestamp = strip.time
         maxrow.append(strip.maxrow)
         maxalt.append(strip.maxalt)
