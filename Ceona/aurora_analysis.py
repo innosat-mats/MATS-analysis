@@ -8,15 +8,15 @@ from mats_l1_processing.pointing import pix_deg
 from skyfield.units import Distance
 from skyfield.toposlib import wgs84
 from skyfield.positionlib import Geocentric
-import time
 from datetime import timedelta
 import pandas as pd 
 import matplotlib.pyplot as plt 
 import numpy as np
 from Keogram import makeStripMatrix
 from aacgmv2 import get_aacgm_coord
-#Shepherd, S. G. (2014), Altitude‐adjusted corrected geomagnetic coordinates: Definition and functional approximations, Journal of Geophysical Research: Space Physics, 119, 7501–7521, doi:10.1002/2014JA020264.
-#https://aacgmv2.readthedocs.io/en/latest/usage.html#convert-geographic-magnetic-coordinates
+#Shepherd, S. G. (2014), Altitude‐adjusted corrected geomagnetic coordinates: Definition and functional approximations, 
+#Journal of Geophysical Research: Space Physics, 119, 7501–7521, doi:10.1002/2014JA020264.
+# https://aacgmv2.readthedocs.io/en/latest/usage.html#convert-geographic-magnetic-coordinates
 # %% Other functions and old aurora finder
 def IntensityEvent(aurorastrips):
     "Adds all aurora images together from from each orbit. Saves in list"
@@ -182,15 +182,15 @@ def aurora_strips(items, numdays, Tperiod):
 
     return aurorastrips
 """
-# %% Function for tangent point magnetic coordinates
+# %% Function for tangent point geodetic coordinates
 def TPpos(ccditem):
-    """Function giving the GPS TP in magnetic coordinates
+    """Function giving the GPS TP in geodetic coordinates
     Arguments:
         ccditem or dataframe with the 'afsTangentPointECI'
     Returns:
-        TPMlat: latitude of TP (degrees)
-        TPMlon: longitude of TP (degrees)
-        TPmlt: Magnetic local time (hours)
+        TPlat: latitude of TP (degrees)
+        TPlon: longitude of TP (degrees)
+        TPalt: Geodetic altitude (km)
     """
     eci= ccditem['afsTangentPointECI']
     d = ccditem['EXPDate']
@@ -202,21 +202,30 @@ def TPpos(ccditem):
     TPalt = position.elevation.km
     TPlat = position.latitude.degrees
     TPlon = position.longitude.degrees
-    mlat, mlon, mlt = get_aacgm_coord(TPlat,TPlon,TPalt,ccditem.EXPDate, method='ALLOWTRACE')
-    return mlat, mlon, mlt
+    return TPlat,TPlon,TPalt
 
-def TP_MLT(items):
+def save_TPMLT(items, filename):
+    """Saves the magnetic coordinates of TP separately"""
     MLT = []
     Mlat = []
     for k, ccd in items.iterrows():
-        st = time.time()
-        mlat, mlon, mlt = TPpos(ccd)
-        print(time.time()-st)
+        TPlat,TPlon,TPalt = TPpos(ccd)
+        mlat, mlon, mlt = get_aacgm_coord(TPlat,TPlon,TPalt,ccd.EXPDate, method='ALLOWTRACE')
         MLT.append(mlt)
         Mlat.append(mlat)
-    
-    scipy.io.savemat('MLT.mat',{'MLT': MLT, 'label':'mlt'}) #saves to matlabfile
-    scipy.io.savemat('MLat.mat',{'Mlat': Mlat, 'label':'mlat'}) #saves to matlabfile
+    scipy.io.savemat(filename +'MLT.mat',{filename +'MLT': MLT, 'label':'MLT'}) #saves to matlabfile
+    scipy.io.savemat(filename +'MLat.mat',{filename +'MLat': Mlat, 'label':'MLat'}) #saves to matlabfile
+    return
+
+def set_strip_spec(strip,ccd):
+    """Sets the properties of the non aurora strip objects"""
+    TPlat,TPlon,TPalt = TPpos(ccd)
+    mlat, mlon, mlt = get_aacgm_coord(TPlat,TPlon,TPalt,ccd.EXPDate, method='ALLOWTRACE')
+    strip.maxrow = 107  #tried different values, row 107 gave similar values using colpos as TPpos
+    strip.maxalt = TPalt
+    strip.MagLT = mlt
+    strip.Maglat = mlat
+    strip.Maglon = mlon
     return
 
 # %% Aurora analysis functions 
@@ -291,15 +300,18 @@ def IntensityPeak(aurorastrip):
     return im_sum
 
 def get_all_altitudes(strips):
-    "Returns lis of all altitudes from given list of aurora strip objects"
+    """Arguments: List of strips (class CenterStrip)
+    Returns: list with all altitudes from given list"""
     allaltitudes = []
     for index, strip in enumerate(strips):
         altitude = strip.maxalt
         allaltitudes.append(altitude)
     return allaltitudes
 
-def get_aurora_max(aurorastrips):
-    "Get the peak points of each aurora cluster"
+def get_aurora_max(aurorastrips,filedate):
+    """Function gets the peak point from each aurora cluster
+    Arguments: list of aurora strips (class CenterStrip) and name of file Ex: 3WFeb
+    Returns: List of peak points, and list of NH peaks and SH peaks"""
     peak_strips = [] # list of the peak point strips for all events.
     peak_stripsNH = []
     peak_stripsSH = []
@@ -330,9 +342,9 @@ def get_aurora_max(aurorastrips):
                 peak_stripsSH.append(peak)
             peak_strips.append(peak)
             n = i+1
-    save_strips(peak_strips,'peaks3Wfeb.mat','peak3Wfeb')
-    save_strips(peak_stripsNH,'peaksNH3Wfeb.mat','peaksNH3Wfeb')
-    save_strips(peak_stripsSH,'peaksSH3Wfeb.mat','peaksSH3Wfeb')
+    save_strips(peak_strips,filedate +'peaks.mat',filedate +'peaks')
+    save_strips(peak_stripsNH,filedate +'peaksNH.mat',filedate +'peaksNH')
+    save_strips(peak_stripsSH,filedate +'peaksSH.mat',filedate +'peaksSH')
 
     return
 
@@ -369,4 +381,3 @@ def save_strips(aurorastrips,filename,structname):
     return
 
 # %%
-
