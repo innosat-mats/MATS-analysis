@@ -7,17 +7,15 @@ import pandas as pd
 from datetime import timedelta
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
-import numpy as np
-# setting path
-import sys
-sys.path.append(r'C:\Users\ceona\Documents\GitHub\MATS-analysis\MATS-analysis\Ceona')
-from Keogram import getSatDates, get_stripRow
-from NewScripts.Auroradetection import gradientmatrix
+from Keogram import getSatDates, get_stripRow, makeStripMatrix
+from Auroradetection import gradientmatrix
 
 # %%
 def overview_grad(items, channel, allrows, filename, numdays):
     "Create the overviews with added red dots for the aurora strips max points"
     Tperiod = timedelta(minutes=100)
+    airglowlim = 130
+    auroralim = 150
     #one orbit = ca 90 min
     pdf = PdfPages(filename)
     n = 0
@@ -50,7 +48,7 @@ def overview_grad(items, channel, allrows, filename, numdays):
                     dates = getSatDates(NH)
                     times_strings = [dt.strftime("%H:%M") for dt in dates]  #as strings
                     #gets the matrix corresponding to that hemisphere
-                    matrix, stripslist = gradientmatrix(NH,airglowlim=145)
+                    matrix, stripslist = gradientmatrix(NH,airglowlim,auroralim)
                     
                     if orbcheck == True:
                         subplotNum += 1
@@ -59,15 +57,17 @@ def overview_grad(items, channel, allrows, filename, numdays):
                     #plots the orbit found from n to current i
                     if channel == 'IR2':
                         axs[subplotNum,0].pcolormesh(dates,range(matrix.shape[0]),matrix, rasterized = True, vmin=-20, vmax=260) # rasterized makes a pixel image instead of vector graphic
-                        axs[subplotNum,0].scatter(dates,allrows[n:i+1], marker='.', color="red")
+                        axs[subplotNum,0].scatter(dates,allrows[n:i+1], marker='.', s = 5, color="red")
 
                     else:
                         axs[subplotNum,0].pcolormesh(dates,range(matrix.shape[0]),matrix, rasterized = True, vmin=-30, vmax=300) # rasterized makes a pixel image instead of vector graphic, less saving time
-                        axs[subplotNum,0].scatter(dates,allrows[n:i+1], marker='.', color="red")
+                        axs[subplotNum,0].scatter(dates,allrows[n:i+1], marker='.', s = 5,color="red")
 
                     axs[subplotNum,0].set_title(f"Orbit {orbnum} Northern Hemisphere")
                     axs[subplotNum,0].set_xticks(dates[::20])
                     axs[subplotNum,0].set_xticklabels(times_strings[::20], rotation = 30) 
+                    axs[subplotNum,0].set_ylabel('Row')
+                    axs[subplotNum,0].set_xlabel('Time')
                     orbcheck = True
 
                 if items.iloc[i].TPlat < 0: #south hemisphere
@@ -77,21 +77,24 @@ def overview_grad(items, channel, allrows, filename, numdays):
                     dates = getSatDates(SH)
                     times_strings = [dt.strftime("%H:%M") for dt in dates]  #as strings
                     #gets the matrix corresponding to that hemisphere
-                    matrix, stripslist = gradientmatrix(SH,airglowlim=145)
-
+                    #matrix, stripslist = gradientmatrix(SH,airglowlim,auroralim)
+                    matrix, stripslist = makeStripMatrix(SH)   #use for april 2-4 week
                     #plots the orbit found from n to current i
                     if channel == 'IR2':
-                        axs[subplotNum,1].pcolormesh(dates,range(matrix.shape[0]),matrix, rasterized = True, vmin=-20, vmax=260) # rasterized makes a pixel image instead of vector graphic
-                        axs[subplotNum,1].scatter(dates, allrows[n:i+1], marker='.', color="red")
+                        axs[subplotNum,1].pcolormesh(dates,range(matrix.shape[0]),matrix, rasterized = True, vmin=-50, vmax=340) # rasterized makes a pixel image instead of vector graphic
+                        axs[subplotNum,1].scatter(dates, allrows[n:i+1], marker='.', s = 5, color="red")
 
                     else:
-                        axs[subplotNum,1].pcolormesh(dates,range(matrix.shape[0]),matrix, rasterized = True, vmin=-30, vmax=300) # rasterized makes a pixel image instead of vector graphic, less saving time
-                        axs[subplotNum,1].scatter(dates,allrows[n:i+1], marker='.', color="red")
+                        axs[subplotNum,1].pcolormesh(dates,range(matrix.shape[0]),matrix, rasterized = True, vmin=0, vmax=480) # for April week 2-4
+                        #axs[subplotNum,1].pcolormesh(dates,range(matrix.shape[0]),matrix, rasterized = True, vmin=-30, vmax=300) # rasterized makes a pixel image instead of vector graphic, less saving time
+                        axs[subplotNum,1].scatter(dates,allrows[n:i+1], marker='.', s = 5, color="red")
                         
 
                     axs[subplotNum,1].set_title(f"Orbit {orbnum} Southern Hemisphere")
                     axs[subplotNum,1].set_xticks(dates[::20])
                     axs[subplotNum,1].set_xticklabels(times_strings[::20], rotation = 30) 
+                    axs[subplotNum,1].set_ylabel('Row')
+                    axs[subplotNum,1].set_xlabel('Time')
                     orbnum += 1
                     subplotNum += 1
                     orbcheck = False
@@ -119,17 +122,17 @@ def overview_grad(items, channel, allrows, filename, numdays):
  # %% To run the code above
 def Main():
     # Determine the main time span and settings for multiple plots
-    start_time = DT.datetime(2023,2,15,00,00,0)
-    stop_time = DT.datetime(2023,2,17,00,00,0)
+    start_time = DT.datetime(2023,4,23,00,00,0)
+    stop_time = DT.datetime(2023,5,1,00,00,0)
     channel = 'IR1'
-    filename = "test.pdf"
+    filename = "4wapr_IR1grad.pdf"
     numdays = stop_time-start_time #number of days
 
-    items = pd.read_pickle(r'C:\Users\ceona\Documents\GitHub\MATS-analysis\MATS-analysis\Ceona\15to16febIR1')
+    items = pd.read_pickle(r'MatsData\23to30aprIR1')
     #orbit_pdf(items, channel, strip_dir, filename, numdays)
     
     #Run this to read in all the strips, and to get the row parameter for each strip.
-    allstrips = pd.read_pickle('allstrips')
+    allstrips = pd.read_pickle(r'MatsData\apr4Wallstrips')
     allrows = get_stripRow(allstrips)
     overview_grad(items,channel,allrows,filename,numdays)
     return

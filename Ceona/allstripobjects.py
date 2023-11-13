@@ -1,37 +1,14 @@
-# %% create list of all strips.
+# %% create list of all strips, not used much anymore
 import datetime as DT
 import pandas as pd
 from Keogram import CenterStrip
 import numpy as np
 from aurora_analysis import set_aurora_spec, save_strips
-from skyfield.api import load
-from skyfield.units import Distance
-from skyfield.toposlib import wgs84
-from skyfield.positionlib import Geocentric
-from aacgmv2 import get_aacgm_coord
-import scipy
-import time
 
 start_time = DT.datetime(2023,3,15,0,0,0)
 stop_time = DT.datetime(2023,3,22,0,0,0)
 numdays = stop_time-start_time #number of days
 items = pd.read_pickle('15to21febIR1')
-
-# %%
-def TPpos(ccditem):
-    """Function giving the GPS position in mlat, mlon, mlt"""
-    ecipos= ccditem['afsGnssStateJ2000'][0: 3]
-    d = ccditem['EXPDate']
-    ts= load.timescale()
-    t = ts.from_datetime(d)
-    satpo = Geocentric(position_au=Distance(
-        m=ecipos).au, t=t)
-    position = wgs84.geographic_position_of(satpo)
-    TPalt = position.elevation.km
-    TPlat = position.latitude.degrees
-    TPlon = position.longitude.degrees
-    mlat, mlon, mlt = get_aacgm_coord(TPlat,TPlon,TPalt,ccditem.EXPDate, method='ALLOWTRACE')
-    return mlat, mlon, mlt
 
 # %%
 def all_strips(items):
@@ -87,20 +64,6 @@ def all_strips(items):
     save_strips(strips,'allstrips2weekmar.mat','allstrips')
     #save_strips(stripsNH,'allstripsNH2weekfeb.mat','allstripsNH')
     #save_strips(stripsSH,'allstripsSH2weekfeb.mat','allstripsSH')
-    return
-
-def sattelite_MLT(items):
-    MLT = []
-    Mlat = []
-    for k, ccd in items.iterrows():
-        st = time.time()
-        mlat, mlon, mlt = TPpos(ccd)
-        print(time.time()-st)
-        MLT.append(mlt)
-        Mlat.append(mlat)
-    
-    scipy.io.savemat('MLT.mat',{'MLT': MLT, 'label':'mlt'}) #saves to matlabfile
-    scipy.io.savemat('MLat.mat',{'Mlat': Mlat, 'label':'mlat'}) #saves to matlabfile
     return
 
 # %%
