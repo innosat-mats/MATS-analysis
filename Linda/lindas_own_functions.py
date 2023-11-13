@@ -133,5 +133,6 @@ def rename_CCDitem_entries(df):
     mylist=[]
     df['BC'] = [mylist for i in df.index]
     df['GAIN Mode'] = df['GAINMode'] 
+    df['EXP Date'] = df['EXPDate'] 
     return df
 

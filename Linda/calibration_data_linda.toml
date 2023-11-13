@@ -26,3 +26,6 @@ title = "Level 1 calibration files for testing this package"
 [artifact]
     nadir = '/Users/lindamegner/MATS/MATS-retrieval/MATS-L1-processing/calibration_data/artifact/mask_op.pkl'
     blank = '/Users/lindamegner/MATS/MATS-retrieval/MATS-L1-processing/calibration_data/artifact/blank.pkl'
+[hot_pixels]
+    hot_pixels = '/Users/lindamegner/MATS/MATS-retrieval/MATS-L1-processing/calibration_data/Hotpixels/hpms.db'
+    single_events = '/Users/lindamegner/MATS/MATS-retrieval/MATS-L1-processing/calibration_data/Hotpixels/SE.db'
