@@ -11,8 +11,8 @@ from matplotlib import pyplot as plt
 import numpy as np
 from scipy.interpolate import griddata
 import xarray as xr
-folder = "/home/olemar/Projects/Universitetet/MATS/MATS-analysis/L2_test2/"
-filenames = ["0","50","100","150","200","250","300","350","400"]
+folder = "/home/olemar/Projects/Universitetet/MATS/MATS-analysis/L2_test3/"
+filenames = ["0","50","100","150","200","250"]
 #filenames = ["500","550","600","650","700","750","800"]
 
 all_data = []
@@ -37,7 +37,7 @@ all_lon = np.zeros([len(alt_grid),len(across_grid),len(along_grid),len(filenames
 for i, filename in enumerate(filenames):
     with open(folder + filename + ".pkl", "rb") as file:
         result = pickle.load(file)
-    [x_hat, y, ks, altitude_grid_edges, alongtrack_grid_edges,acrosstrack_grid_edges, ecef_to_local] = result
+    [x_hat, y, ks, altitude_grid_edges, alongtrack_grid_edges,acrosstrack_grid_edges, ecef_to_local,non_uniform_ecef_grid_altitude,non_uniform_ecef_grid_lon,non_uniform_ecef_grid_lat,non_uniform_ecef_grid_r] = result
 
     radius_grid = center_grid(altitude_grid_edges)
     acrosstrack_grid = center_grid(acrosstrack_grid_edges)
