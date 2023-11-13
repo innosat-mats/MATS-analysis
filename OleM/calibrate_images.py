@@ -7,12 +7,12 @@ from mats_l1_processing.instrument import Instrument
 from mats_l1_processing.read_parquet_functions import dataframe_to_ccd_items
 
 #%% 
-calibration_file ="/home/olemar/Projects/Universitetet/MATS/MATS-L1-processing/scripts/calibration_data.toml"    
+calibration_file ="/home/olemar/Projects/Universitetet/MATS/MATS-L1-processing/tests/calibration_data_test.toml"    
 instrument = Instrument(calibration_file)
 
 #%% Select on explicit time
-start_time = DT.datetime(2023, 5, 5, 12, 0)
-stop_time = DT.datetime(2023, 5, 5, 13, 0)
+start_time = DT.datetime(2023, 5, 5, 1, 40)
+stop_time = DT.datetime(2023, 5, 5, 1, 45)
 
 #%%
 df = read_MATS_data(start_time,stop_time,version='0.6',level='1a',dev=False)
