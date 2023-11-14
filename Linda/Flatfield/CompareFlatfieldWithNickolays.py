@@ -45,7 +45,7 @@ rename_CCDitem_entries(df)
 
 #%%
 
-CCDlist= ['IR1', 'IR2','IR3','IR4','UV1','UV2']#,'NADIR']
+CCDlist= ['IR1', 'IR2','IR3','IR4']#,'UV1','UV2']#,'NADIR']
 fig, ax=plt.subplots(len(CCDlist),1)
 for i, channel in enumerate(CCDlist):
     CCD =instrument.get_CCD(channel)

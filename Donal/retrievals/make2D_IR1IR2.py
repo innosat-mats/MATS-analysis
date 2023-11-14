@@ -51,7 +51,7 @@ filters=np.vstack([filter1,filter2])
 # dftop=read_MATS_data(starttime,stoptime,level="1b",version="0.4")
 
 # with open('verdec2d.pickle', 'wb') as handle:
-#     pickle.dump(dftop, handle)#%%
+#     pickle.dump(dftop,handle)#%%
 # df=df[df['channel']!='NADIR']
 ir1 = dftop[dftop['channel'] == 'IR1'].dropna().reset_index(drop=True)#[0:10]
 ir2 = dftop[dftop['channel'] == 'IR2'].dropna().reset_index(drop=True)#[0:10]
@@ -96,7 +96,7 @@ def prepare_measurment(ir1,ir2,ir3,ir4):
     #plt.legend(['IR1','IR2','IR3','IR4','IR3c','IR4c','IR1c','IR2c',])
     #plt.show()
 
-    return np.array([z1,z2]),np.array([p1*3.57,p2*8.16])
+    return np.array(z1),np.array(p1*3.57),np.array(p2*8.16)
 
 @njit(cache=True)
 def cart2sph(pos=np.array([[]])):
@@ -324,7 +324,8 @@ ks = sp.lil_array((len(tanheights)*len(df),len(k)))
 
 #calculate jacobian for all measurements
 
-profiles = []
+ir1profiles = []
+ir2profiles = []
 heights = []
 ecipos = []
 ecivecs = []
@@ -335,8 +336,9 @@ ir2calcs=[]
 for i in range(0,len(df)):
     print(i)
 
-    zs, p = prepare_measurment(ir1.iloc[i],ir2.iloc[i],ir3.iloc[i],ir4.iloc[i])
-    profiles.append(p)
+    zs, ir1m,ir2m = prepare_measurment(ir1.iloc[i],ir2.iloc[i],ir3.iloc[i],ir4.iloc[i])
+    ir1profiles.append(ir1m)
+    ir2profiles.append(ir2m)
     heights.append(zs)
 
     ecipos.append(df.iloc[i]['afsGnssStateJ2000'][0:3])
@@ -400,7 +402,7 @@ for i in range(0,len(df)):
         #print('rowsum = ',k.sum())
         ks[k_row,:] = k
         k_row = k_row+1
-    with open("runningfile_1", "wb") as file:
+    with open("runningfile_2", "wb") as file:
         pickle.dump((i,irow,ir1calcs,ir2calcs,profiles,ks ), file)
     
         
@@ -420,8 +422,9 @@ inputdata = xr.Dataset({
     'TPsza': (['time'], df.TPsza),
     'TPssa': (['time'], df.TPssa),
     'ecipos': (['time', 'xyz'], ecipos),   
-    'z':  (['z'], np.asarray(z), {'long_name': 'Approx Altitude', 'units': 'm'}),
-    'profile': (['time', 'z'], np.asarray(profiles), {'long_name': 'LOS  intensity', 'units': 'Photons m-2 nm-1 sr-1 s-1'}),
+    'z':  (['z'], z, {'long_name': 'Approx Altitude', 'units': 'm'}),
+    'ir1profile': (['time', 'z'], np.asarray(ir1profiles), {'long_name': 'LOS  intensity', 'units': 'Photons m-2 nm-1 sr-1 s-1'}),
+    'ir2profile': (['time', 'z'], np.asarray(ir2profiles), {'long_name': 'LOS  intensity', 'units': 'Photons m-2 nm-1 sr-1 s-1'}),
     'heights': (['time', 'z'],  heights),
     'ret_grid_z': (['z_r'], edges[0]),
     'ret_grid_lon': (['lon_r'], edges[1]),
@@ -436,7 +439,7 @@ with open(filename, "wb") as file:
 #%%
 filename = "intensityIR1IR2_400-520.pkl"
 with open(filename, "wb") as file:
-    pickle.dump((ir1calc,ir2calc), file)
+    pickle.dump((ir1calcs,ir2calcs), file)
 
 # %%
 z1,p1,orig_heights=prepare_profile(ir1.iloc[i])

@@ -1,3 +1,7 @@
+*.pickle
+*.pkl
+*.npy
+*.nc
 OleM/data/
 Louis/tutorial-satpy-half-day/
 Louis/archive/
