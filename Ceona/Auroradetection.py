@@ -23,6 +23,7 @@ def gradientmatrix(items,airglowlim, auroralim):
         #Polynomial regression model
         if rowindex >= auroralim:
             #weird intense spikes above auroralim, like the moon pass, will be ignored in the fit
+            #for April week use y < 400.
             valid_indices = np.where(y < 400)[0]
             y_filt = y[valid_indices]
             x_filt = np.arange(0,len(y_filt))
@@ -48,7 +49,6 @@ def get_strips(items, numdays,filedate):
     """Returns a list of all strips and list of only aurorastrips, using linear regression and set aurora conditions"""
     Tperiod = timedelta(minutes=100)
     airglowlim = 130
-
     n = 0
     allstripsNH = []
     allstripsSH = []
@@ -69,12 +69,12 @@ def get_strips(items, numdays,filedate):
             if deltat < Tperiod/6 and i < len(items)-2: 
                 continue
             else:                          
-                #creates orbit from index n to i+1
+                #creates orbit from index n to i
                 if items.iloc[i].TPlat > 0: #north hemisphere
-                    auroralim = 150    #150 used for pol-reg
-                    auroramean = 15     #15 for pol-reg
-                    auroraintensity = 18   #18 used for pol-reg
-                    NH = items.iloc[n:i+1]
+                    auroralim = 150
+                    auroramean = 15
+                    auroraintensity = 18
+                    NH = items.iloc[n:i+1]  #needs the plus 1 for iloc function
                     if len(NH) == 0 :
                         continue
                    
@@ -104,15 +104,15 @@ def get_strips(items, numdays,filedate):
                         allstrips.append(strip)
 
                 elif items.iloc[i].TPlat < 0: #south hemisphere
-                    auroralim = 120    #150 used for pol-reg
-                    auroramean = 30     #15 for pol-reg  , 30 for normal keogram
+                    auroralim = 120    #150 for pol-reg, 120 for normal keogram
+                    auroramean = 30     #15 for pol-reg, 30 for normal keogram
                     auroraintensity = 40   #18 used for pol-reg, 40 for normal
                     SH = items.iloc[n:i+1]
                     if len(SH) == 0 :
                         continue
                     #gets the removed gradient matrix corresponding to that hemisphere
                     #matrix, striplist = gradientmatrix(SH,airglowlim,auroralim)
-                    matrix, striplist = makeStripMatrix(SH)   #Used for april3W and 4W, when background is linear
+                    matrix, striplist = makeStripMatrix(SH)   #Used for april week 2-4 and may, when background is more linear
 
                     for m, strip in enumerate(striplist):
 
@@ -154,11 +154,11 @@ def get_strips(items, numdays,filedate):
 
     return aurorastrips
 # %%
-testitems = pd.read_pickle(r'C:\Users\ceona\Documents\GitHub\MATS-analysis\MATS-analysis\Ceona\26aprorb3')
-def testLinreg(testitems):
+def testLinreg():
+    testitems = pd.read_pickle(r'C:\Users\ceona\Documents\GitHub\MATS-analysis\MATS-analysis\Ceona\MatsData\26aprorb3')
     """polynomial regression test for short interval (only one orbit), to check keogram as well
     """
-    airglowlim = 120
+    airglowlim = 130
     auroralim = 150
     matrix, striplist = makeStripMatrix(testitems)
     newmatrix = matrix.copy()
@@ -170,7 +170,7 @@ def testLinreg(testitems):
         #Polynomial regression model
         if rowindex >= auroralim:
             #weird intense spikes above auroralim, like the moon pass, will be ignored in the fit
-            valid_indices = np.where(y < 300)[0]
+            valid_indices = np.where(y < 400)[0]
             y_filtered = y[valid_indices]
             x_filt = np.arange(0,len(y_filtered))
             model = np.poly1d(np.polyfit(x_filt, y_filtered, 1))
@@ -187,16 +187,17 @@ def testLinreg(testitems):
             axs[0].plot(y_reg, label = f"y_reg, Row {rowindex}")
             axs[0].plot(y-y_reg, label = f"Row {rowindex} Diff")
             axs[0].set_ylim(-30,400)
-            scipy.io.savemat('y.mat',{'y': y, 'label':'I'}) #saves to matlabfile
-            scipy.io.savemat('y_reg.mat',{'y_reg': y_reg, 'label':'I'}) #saves to matlabfile
+            #scipy.io.savemat('y.mat',{'y': y, 'label':'I'}) #saves to matlabfile
+            #scipy.io.savemat('y_reg.mat',{'y_reg': y_reg, 'label':'I'}) #saves to matlabfile
 
     #Update the strips from the new matrix
     for col, strip in enumerate(striplist):
         strip.strip = newmatrix[:,col]
     
-    scipy.io.savemat('keogramgrad.mat',{'keogramgrad': newmatrix, 'label':'pixel'}) #saves to matlabfile
-    scipy.io.savemat('keogram.mat',{'keogram': matrix, 'label':'pixel'}) #saves to matlabfile
-
+    #scipy.io.savemat('keogramgrad.mat',{'keogramgrad': newmatrix, 'label':'pixel'}) #saves to matlabfile
+    #scipy.io.savemat('keogram.mat',{'keogram': matrix, 'label':'pixel'}) #saves to matlabfile
+    save_strips(striplist,'test' +'allstrips.mat', 'test' +'allstrips')
+    
     axs[1].pcolormesh(newmatrix,vmin=-10, vmax=300)
     fig.legend()
     #print(newmatrix[:,0] -striplist[0].strip )
@@ -205,11 +206,11 @@ def testLinreg(testitems):
 
 # %%
 def Main():
-    start_time = DT.datetime(2023,4,23,00,0,0)
-    stop_time = DT.datetime(2023,5,1,00,0,0)
+    start_time = DT.datetime(2023,5,1,00,0,0)
+    stop_time = DT.datetime(2023,5,8,00,0,0)
     numdays = stop_time-start_time
-    filedate = 'apr4W'
-    items = pd.read_pickle(r'MatsData\23to30aprIR1')
+    filedate = 'may1W'
+    items = pd.read_pickle(r'MatsData\1to7mayIR1')
     #save_TPMLT(items,filedate)
     aurorastrips = get_strips(items,numdays,filedate) 
     get_aurora_max(aurorastrips,filedate)
