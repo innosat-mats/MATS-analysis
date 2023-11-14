@@ -1,0 +1,65 @@
+%% Replace time vector in struct with matlab datetime list
+clear all
+load('Weekdata\may1WpeaksSH.mat')
+
+datechar = datetime(may1WpeaksSH.time,'Format','dd/MM HH:mm:ss');  %dd/MM
+may1WpeaksSH.time = datechar' ;
+save('Weekdata\may1WpeaksSH.mat', "may1WpeaksSH")
+
+
+%% Remove certain indices
+clear all
+clc
+idx = [37] ; %indices to remove
+
+load("Weekdata\Aprilstrips\apr3WpeaksNH.mat")
+struct = apr3WpeaksNH ;
+
+keys = fieldnames(struct) ;
+for i = 1:length(keys)
+    key = keys{i};
+    field = getfield(struct,key) ;
+    field(idx) = [] ;
+    struct = setfield(struct,key,field) ;
+    
+end
+apr3WpeaksNH = struct ;
+save('Weekdata\Aprilstrips\apr3WpeaksNH.mat', "apr3WpeaksNH")
+
+
+%% Combine peak files for a month
+clc
+clear all
+addpath("Weekdata/Aprilstrips/") ;
+load("apr1WpeaksNH.mat");
+load("apr1WpeaksSH.mat") ;
+load("apr2WpeaksNH.mat") ;
+load("apr2WpeaksSH.mat") ;
+load("apr3WpeaksNH.mat") ;
+load("apr3WpeaksSH.mat") ;
+load("apr4WpeaksNH.mat");
+load("apr4WpeaksSH.mat") ;
+
+NH1 = apr1WpeaksNH;
+NH2 = apr2WpeaksNH;
+NH3 = apr3WpeaksNH;
+NH4 = apr4WpeaksNH;
+
+SH1 = apr1WpeaksSH;
+SH2 = apr2WpeaksSH;
+SH3 = apr3WpeaksSH;
+SH4 = apr4WpeaksSH;
+
+keys = fieldnames(NH4) ;
+newSH = struct() ;
+newNH = struct() ;
+for j = 1:length(keys)
+    field = keys{j} ;
+    newSH.(field) = [SH1.(field), SH2.(field) , SH3.(field) , SH4.(field)] ;
+    newNH.(field) = [NH1.(field), NH2.(field) , NH3.(field) , NH4.(field)] ;
+
+end
+aprpeaksSH = newSH ;
+aprpeaksNH = newNH ;
+save('Weekdata\aprpeaksSH.mat', "aprpeaksSH")
+save('Weekdata\aprpeaksNH.mat', "aprpeaksNH")

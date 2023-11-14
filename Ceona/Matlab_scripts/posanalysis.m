@@ -1,0 +1,67 @@
+%Plot positions of strips, latitude, longitude and altitude vs time.
+
+close all
+clear all
+addpath("Weekdata\Aprilstrips\")
+load("apr3WpeaksNH.mat")
+figure(1)
+strips = apr3WpeaksNH ;
+dateTimes = strips.time; 
+
+% Select a subset of date strings to display as x-axis ticks
+numTicks = 7;  % Number of ticks to display
+selectedIndices = round(linspace(1, length(dateTimes), numTicks));
+
+% Altitude plot
+ax1 = subplot(3,1,1) ;
+p1 = plot(strips.alt,'.') ;
+p1.DataTipTemplate.DataTipRows(1) = dataTipTextRow("Altitude",strips.alt);
+p1.DataTipTemplate.DataTipRows(2) = dataTipTextRow("Time",strips.time);
+
+title('1 week April, peak points')
+grid on
+ylabel('Altitude (km)')
+
+ax1.XTick = selectedIndices;
+ax1.XTickLabel= datestr(dateTimes(selectedIndices),'dd/mm, HH:MM');
+xtickangle(ax1, 45);
+
+% Latitude plot
+ax2 = subplot(3,1,2) ;
+p2 = plot(strips.lat, '.') ;
+p2.DataTipTemplate.DataTipRows(1) = dataTipTextRow("Latitude",strips.lat);
+p2.DataTipTemplate.DataTipRows(2) = dataTipTextRow("Time",strips.time);
+grid on
+
+ylabel('Latitude (degrees)')
+ylim([40,90])
+% Set the x-axis ticks to be the selected date strings
+ax2.XTick = selectedIndices;
+ax2.XTickLabel= datestr(dateTimes(selectedIndices), 'dd/mm, HH:MM');
+xtickangle(ax2, 45);
+
+% % Longitude plot
+% ax3 = subplot(3,1,3) ;
+% plot(strips.maxlon, '.')
+% grid on
+% ylabel('Longitude (degrees)')
+% ylim([-150,200])
+% % Set the x-axis ticks to be the selected date strings
+% ax3.XTick = selectedIndices;
+% ax3.XTickLabel= datestr(dateTimes(selectedIndices), 'dd/mm, HH:MM');
+% xtickangle(ax3, 45);
+
+%Kp plot
+ax3 = subplot(3,1,3) ;
+p3 = plot(strips.kp, '.') ;
+grid on
+ylabel('Kp index')
+% Set the x-axis ticks to be the selected date strings
+ax3.XTick = selectedIndices;
+ax3.XTickLabel= datestr(dateTimes(selectedIndices), 'dd/mm, HH:MM');
+xtickangle(ax3, 45);
+p3.DataTipTemplate.DataTipRows(1) = dataTipTextRow("Kp",strips.kp);
+p3.DataTipTemplate.DataTipRows(2) = dataTipTextRow("Time",strips.time);
+
+linkaxes([ax1 ax2 ax3],'x');  % Link x-axes of the two subplots
+
