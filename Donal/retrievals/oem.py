@@ -38,7 +38,7 @@ def oem_basic_sparse(y, K, xa, Seinv, Sainv, maxiter):
     xhat = xhat + xa[:,0]                           
     return xhat
 
-def oem_basic_sparse_2(y, K, xa, Seinv, Sainv, maxiter):
+def     oem_basic_sparse_2(y, K, xa, Seinv, Sainv, maxiter):
     
     S = K.T @ Seinv @ K + Sainv
     KSe = K.T @ Seinv
