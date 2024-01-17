@@ -322,7 +322,7 @@ def get_aurora_max(aurorastrips,filedate):
         nextstrip = aurorastrips[i+1]
         deltat = nextstrip.time-strip.time
         
-        if deltat < timedelta(minutes=4): #Belongs to same cluster
+        if deltat < timedelta(minutes=4) and i != len(aurorastrips)-2: #Belongs to same cluster
             continue
         else:
             #New cluster, check the peak for the previous cluster
@@ -374,10 +374,9 @@ def save_strips(strips,filename,structname):
         Mlat.append(strip.Maglat)
         Mlon.append(strip.Maglon)
         MagLT.append(strip.MagLT)
-    pandastrips = pd.DataFrame({'row': maxrow ,'alt': maxalt, 'maxlat': maxlat, 'maxlon': maxlon, 'maxI': intensities, 'lat' : latitudes ,'time' : times, 'MLT' : MagLT, 'Mlat' : Mlat, 'Mlon' : Mlon})  
-    pandastrips.to_pickle(structname)
+    pandastrips = pd.DataFrame({'row': maxrow ,'alt': maxalt, 'maxlat': maxlat, 'maxlon': maxlon, 'maxI': intensities, 'lat' : latitudes ,'time' : times, 'MLT' : MagLT, 'Mlat' : Mlat, 'Mlon' : Mlon})
+    pandastrips.to_pickle(structname)  
     scipy.io.savemat(filename, {structname: pandastrips.to_dict('list')})
-
     return
 
 # %%

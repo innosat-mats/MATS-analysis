@@ -211,16 +211,16 @@ def overview_points(items, channel, allrows, filename, numdays):
  # %% To run the code above
 def Main():
     # Determine the main time span and settings for multiple plots
-    start_time = DT.datetime(2023,4,23,00,00,0)
-    stop_time = DT.datetime(2023,5,1,00,00,0)
+    start_time = DT.datetime(2023,4,1,00,00,0)
+    stop_time = DT.datetime(2023,4,8,00,00,0)
     channel = 'IR1'
-    filename = "apr4W_IR1.pdf"
+    filename = "apr1W_IR1.pdf"
     numdays = stop_time-start_time #number of days
-    items = pd.read_pickle(r'MatsData\23to30aprIR1')
+    items = pd.read_pickle(r'MatsData\1to7aprIR1')
     #orbit_pdf(items, channel, strip_dir, filename, numdays)
     
     #Run this to read in all the strips, and to get the row parameter for each strip.
-    allstrips = pd.read_pickle(r'MatsData\apr4Wallstrips')
+    allstrips = pd.read_pickle(r'MatsData\apr1Wallstrips')
     allrows = get_stripRow(allstrips)
     overview_points(items,channel,allrows,filename,numdays)
     return
