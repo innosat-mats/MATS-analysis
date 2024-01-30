@@ -48,8 +48,8 @@ wait $pid
 '''
 
 # start and stop of the monitoring
-start_time='2023:08:06_0:0:0'
-stop_time='2023:08:07_0:0:0'
+start_time='2023:12:21_0:0:0'
+stop_time='2023:12:24_0:0:0'
 mode=all
 # output folder for images
 outdir=${MATS_dir}'MATS-Data/Monitoring/event_analysis/03_25_03_29/'

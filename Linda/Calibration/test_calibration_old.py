@@ -9,20 +9,23 @@ from mats_utils.plotting.plotCCD import orbit_plot, simple_plot, plot_image
 import matplotlib.pyplot as plt
 from mats_utils.plotting.plotCCD import all_channels_plot
 from mats_utils.plotting.animate import generate_gif
-import sys
+from mats_utils import sys
 sys.path.append('/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda')
 from lindas_own_functions import rename_CCDitem_entries
 
 def calibrate(CCDitem, instrument):
     (
-        image_lsb,
-        image_bias_sub,
-        image_desmeared,
-        image_dark_sub,
-        image_calib_nonflipped,
-        mage_calib_flipped,
-        image_calibrated,
+        image_lsb, 
+        image_se_corrected, 
+        image_hot_pixel_corrected, 
+        image_bias_sub, 
+        image_desmeared, 
+        image_dark_sub, 
+        image_calib_nonflipped, 
+        image_calib_flipped, 
+        image_calibrated, 
         errors
+
     ) = L1_calibrate(CCDitem, instrument)
     return image_calibrated
 #%%
@@ -37,14 +40,14 @@ instrument=Instrument(calibration_file)
 start_time=DT.datetime(2023,2,12,1,0,0)
 stop_time=DT.datetime(2023,2,12,1,14,0)
 
-df=read_MATS_data(start_time, stop_time)
+df=read_MATS_data(start_time, stop_time,  level='1a',version='0.6')
 
 
 
 #%%
 print(df.columns.tolist())
 #CCDitems = dataframe_to_ccd_items(df)
-CCDitems=df
+CCDitems=df[:10]
 
 #%%
 
