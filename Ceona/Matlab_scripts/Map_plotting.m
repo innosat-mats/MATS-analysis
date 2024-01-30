@@ -21,47 +21,47 @@ geobasemap satellite
 
 figure(2)
 plot(feb3Wpeaks.kp,abs(feb3Wpeaks.Mlat), '.')
-%% Polar plots with Magnetic local time and magnetic latitude coordinates.
+%% Create polar plots with magnetic local time and magnetic latitude coordinates.
 clear workspace
 clc
 clf
 %Files to plot the peak points
-addpath("Weekdata\Aprilstrips\")
-load("apr3WpeaksNH.mat");
-load("apr3WpeaksSH.mat") ;
+addpath("Weekdata\Maystrips\")
+load("may1WpeaksNH.mat");
+load("may1WpeaksSH.mat") ;
 
 %Files with all strips to use for TP path
-load("apr3WallstripsNH.mat")
-load("apr3WallstripsSH.mat")
+load("may1WallstripsNH.mat")
+load("may1WallstripsSH.mat")
 
 %set files for path
-stripsNH = apr3WallstripsNH ;
-stripsSH = apr3WallstripsSH;
+stripsNH = may1WallstripsNH ;
+stripsSH = may1WallstripsSH;
 
 %set files for peaks
-peaksNH = apr3WpeaksNH ;
-peaksSH = apr3WpeaksSH ;
+peaksNH = may1WpeaksNH ;
+peaksSH = may1WpeaksSH ;
 
-type = 1 ;  %1 means only peaks, 2 both peaks and satellite path
-MLTplotfunc(1,stripsNH,stripsSH,peaksNH,peaksSH)
+type = 2 ;  %1 means only peaks, 2 both peaks and satellite path
+MLTplotfunc(type,stripsNH,stripsSH,peaksNH,peaksSH)
 
 %% Polar MLT plots for a whole month
 clear workspace
 clc
 clf
 %Files to plot the peak points
-addpath("Weekdata\Aprilstrips\")
-load("aprpeaksNH.mat");
-load("aprpeaksSH.mat") ;
+addpath("Monthdata\")
+load("marpeaksNH.mat");
+load("marpeaksSH.mat") ;
 
-%set files for peaks
-peaksNH = aprpeaksNH ;
-peaksSH = aprpeaksSH ;
+%set files for the peaks you want to plot
+peaksNH = marpeaksNH ;
+peaksSH = marpeaksSH ;
 
-%set files for path
-stripsNH = aprpeaksNH ;
-stripsSH = aprpeaksSH;
+%set files for the path you want to plot
+stripsNH = marpeaksNH ;
+stripsSH = marpeaksSH;
 
-type = 1 ;  %1 means only peaks, 2 both peaks and satellite path
+type = 1 ;  %1 means only peaks are plotted, 2 both peaks and satellite path
 MLTplotfunc(1,stripsNH,stripsSH,peaksNH,peaksSH)
 

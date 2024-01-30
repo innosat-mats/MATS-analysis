@@ -1,16 +1,16 @@
 function fig = MLTplotfunc(type,stripsNH,stripsSH,peaksNH,peaksSH)
     fig = figure ; 
     if type == 1
-        sgtitle('MLT plot of peak points, April','fontweight','bold',fontsize=16)
+        sgtitle({'\bf MLT plot of peak points correlated with Kp-level';'\rm Period: May 1st to 7th'},fontsize=16)
     
         %%%% North Hemisphere polar plot
         subplot(1,2,1);
        
         %plot settings
         p1 = polarscatter(peaksNH.MLT*(pi/12),peaksNH.Mlat,[],peaksNH.kp,'filled');
-        set(gca,"CLim",[1 6])  
+        set(gca,"CLim",[0 9])  %Altitude limit = 99-110,  kplimit = 1-6
         cb = colorbar ;
-        cb.Label.String = 'Kp-index' ;
+        cb.Label.String = 'Kp-index' ; %'Altitude (km)';
         ax1 = gca;
         % MLT (theta settings)
         ax1.ThetaDir = 'counterclockwise' ;
@@ -30,14 +30,14 @@ function fig = MLTplotfunc(type,stripsNH,stripsSH,peaksNH,peaksSH)
         p1.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow("Kp",peaksNH.kp);
         p1.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow("Time",peaksNH.time);
        
-        subtitle('North Hemisphere','FontWeight','bold',FontSize=12);
+        subtitle('Northern Hemisphere','FontWeight','bold',FontSize=12);
         
         %%%% South Hemisphere polar plot
         subplot(1,2,2) ;
         p2 = polarscatter(peaksSH.MLT*(pi/12),peaksSH.Mlat,[],peaksSH.kp,'filled');
-        set(gca,"CLim",[1 6])  
+        set(gca,"CLim",[0 9])  
         cb = colorbar ;
-        cb.Label.String = 'Kp-index' ;
+        cb.Label.String = 'Kp-index' ; %'Altitude (km)';
 
         ax2 = gca;
         ax2.ThetaDir = 'counterclockwise' ;
@@ -56,23 +56,26 @@ function fig = MLTplotfunc(type,stripsNH,stripsSH,peaksNH,peaksSH)
         p2.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow("Kp",peaksSH.kp);
         p2.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow("Time",peaksSH.time);
     
-        subtitle('South Hemisphere','FontWeight','bold',FontSize=12);
+        subtitle('Southern Hemisphere','FontWeight','bold',FontSize=12);
 
     end
 
     if type == 2
-        sgtitle('Peak points and path')
+        sgtitle({'\bf Peak points correlated with Kp-level and TP-path';'\rm Period: May 1st to 7th'},fontsize=16)
         
         %%%% North Hemisphere polar plot
         subplot(1,2,1);
         
         %plot settings
-        s1 = polarplot(stripsNH.MLT *(pi/12),stripsNH.Mlat,'.',MarkerSize=0.05) ; 
+        s1 = polarscatter(stripsNH.MLT*(pi/12),stripsNH.Mlat,0.8,'filled','black','MarkerFaceAlpha',.4);
         hold on
         p1 = polarscatter(peaksNH.MLT*(pi/12),peaksNH.Mlat,[],peaksNH.kp,'filled');
-        set(gca,"CLim",[1 6])  
-        colorbar
+        
+        set(gca,"CLim",[0 9])  
+        cb = colorbar ;
+        cb.Label.String = 'Kp-index' ;
         ax1 = gca;
+
         % MLT (theta settings)
         ax1.ThetaDir = 'counterclockwise' ;
         ax1.ThetaZeroLocation = 'bottom' ;
@@ -95,17 +98,20 @@ function fig = MLTplotfunc(type,stripsNH,stripsSH,peaksNH,peaksSH)
         s1.DataTipTemplate.DataTipRows(1) = dataTipTextRow("MLT",stripsNH.MLT);
         s1.DataTipTemplate.DataTipRows(2) = dataTipTextRow("MLat",stripsNH.Mlat);
         
-        subtitle('North Hemisphere');
+        subtitle('Northern Hemisphere','FontWeight','bold',FontSize=12);
         
         %%%% South Hemisphere polar plot
         subplot(1,2,2) ;
         
-        s2 = polarplot(stripsSH.MLT*(pi/12),stripsSH.Mlat,'.',MarkerSize=0.05) ;
+        s2 = polarscatter(stripsSH.MLT*(pi/12),stripsSH.Mlat,0.8,'filled','black','MarkerFaceAlpha',.4);
         hold on
         p2 = polarscatter(peaksSH.MLT*(pi/12),peaksSH.Mlat,[],peaksSH.kp,'filled');
-        set(gca,"CLim",[1 6])  
-        colorbar
+        
+        set(gca,"CLim",[0 9])  
+        cb = colorbar ;    
+        cb.Label.String = 'Kp-index' ;
         ax2 = gca;
+
         ax2.ThetaDir = 'counterclockwise' ;
         ax2.ThetaZeroLocation = 'bottom' ;
         ax2.ThetaTick = [0,45,90,135,180,225,270,315,360];
@@ -126,6 +132,6 @@ function fig = MLTplotfunc(type,stripsNH,stripsSH,peaksNH,peaksSH)
         s2.DataTipTemplate.DataTipRows(1) = dataTipTextRow("MLT",stripsSH.MLT);
         s2.DataTipTemplate.DataTipRows(2) = dataTipTextRow("MLat",stripsSH.Mlat);
         
-        subtitle('South Hemisphere');
+        subtitle('Southern Hemisphere','FontWeight','bold',FontSize=12);
     end
 end
