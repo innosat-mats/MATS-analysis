@@ -10,47 +10,40 @@ from Keogram import get_stripRow
 from orbitoverview import overview_points
 from gradientOverview import overview_grad
 
-start_time = DT.datetime(2023,3,22,0,0,0)
-stop_time = DT.datetime(2023,4,1,0,0,0)
+start_time = DT.datetime(2023,5,3,0,0,0)
+stop_time = DT.datetime(2023,5,3,10,0,0)
 channel = 'IR1'
-numdays = stop_time-start_time #number of days
-#%%
+numdays = stop_time-start_time
+#%% Read in data for Southern hemisphere, using certain filter
 dfSH = read_MATS_data(start_time,stop_time,filter={"TPlat":[-90,-45],'NROW': [0,400]},version='0.5',level='1b')
 dfSH = dfSH[dfSH['channel'] == channel]
-#%%
-#dfSH.to_pickle('26to27apr')
-#%%
+
+#%% Read in data for Northern hemisphere, using certain filter
 dfNH = read_MATS_data(start_time,stop_time,filter={"TPlat":[45,90],'NROW': [0,400]},version='0.5',level='1b')
 dfNH = dfNH[dfNH['channel'] == channel]
-#dfNH.to_pickle('20feborb2')
 
-#%%
+
+#%% Concatenate the two hemispheres, and sort the CCD on time, saves in pickle
 items = pd.concat([dfNH,dfSH], ignore_index=True)
 sortitems = items.sort_values(['EXPDate'])
-sortitems.to_pickle('22to31marIR1')
+sortitems.to_pickle('26to27aprIR1')
 
-# %%
-ccd = pd.read_pickle(r'MatsData\15to16febIR1')
-
-#%% Plot a chosen image
+#%% Saves a spcific image into matlab matrix
 def saveSpecIm(ccditem):
     ccdimage = ccditem['ImageCalibrated']
     #saves the matrix to matlab-file
+    plt.pcolormesh(ccdimage,rasterized = True, vmin=0, vmax=480)
     scipy.io.savemat('aurorapic2',{'ccdimage': ccdimage, 'label':'intensity'}) #saves to matlabfile
     return
 
-# %%
-image = ccd.iloc[400].ImageCalibrated
-plt.pcolormesh(image,rasterized = True, vmin=0, vmax=480)
-
 # %% Main file to run scripts
 def Main():
-    start_time = DT.datetime(2023,4,26,0,0,0)
-    stop_time = DT.datetime(2023,4,28,0,0,0)
+    start_time = DT.datetime(2023,2,8,0,0,0)
+    stop_time = DT.datetime(2023,2,15,0,0,0)
     numdays = stop_time-start_time #number of days
-    filedate = 'apr4W'
+    filedate = 'feb2W'
 
-    items = pd.read_pickle(r'MatsData\23to30aprIR1')
+    items = pd.read_pickle(r'MatsData\8to14febIR1')
 
     #returns aurorastrips and saves the other strips in pickles.
     aurorastrips = get_strips(items,numdays,filedate)  
@@ -64,3 +57,4 @@ def Main():
     #overview_points(items,channel,allrows,filename,numdays)
 
     return
+# %%
