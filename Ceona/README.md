@@ -43,7 +43,7 @@ Python wrapper AACGMV2
 Other needed repositories are: MATS-L1-processing and MATS-utility-functions, can be found on github "innosat-Mats".
 
 --- How to Use the Project ---
-Use the Runfile.py to read in MATS data with chosen filters and to run the wanted functions.
+Use the Runfile.py to read in raw MATS data with chosen filters, preferably to save as a pickle, and to run the wanted functions from the other scripts.
 
 --- Include Credits ---
 MISU - Stockholm University
