@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from mats_utils.rawdata.read_data import read_MATS_data
 from mats_utils.geolocation.coordinates import col_heights, satpos
 from mats_l1_processing.pointing import pix_deg
-import matplotlib.pylab as plt
+#import matplotlib.pylab as plt
 from scipy.spatial.transform import Rotation as R
 from scipy.interpolate import CubicSpline
 from skyfield import api as sfapi
@@ -16,14 +16,14 @@ import xarray as xr
 from numpy.linalg import inv
 
 # %%
-dftop = pd.read_pickle('/Users/donal/projekt/SIW/verdec')
+#dftop = pd.read_pickle('/Users/donal/projekt/SIW/verdec')
 #%%
-#starttime=datetime(2023,3,29,21,0)
-#stoptime=datetime(2023,3,29,22,35)
-#dftop=read_MATS_data(starttime,stoptime,level="1b",version="0.4")
+starttime=datetime(2023,2,17,0,50)
+stoptime=datetime(2023,2,17,1,20)
+dftop=read_MATS_data(starttime,stoptime,level="1b",version="0.6")
 #%%
 # df=df[df['channel']!='NADIR']
-df = dftop[dftop['channel'] == 'IR2'].dropna().reset_index()#[0:10]
+df = dftop[dftop['channel'] == 'IR1'].dropna().reset_index()#[0:10]
 # %%
 #select part of orbit
 offset = 10
@@ -32,7 +32,6 @@ df = df.loc[offset:offset+num_profiles]
 df = df.reset_index(drop=True)
 # %%
 
-
 def prepare_profile(ch,hotpiximage):
     image = image = np.stack(ch.ImageCalibrated)#-hotpiximage
     col = int(ch['NCOL']/2)
@@ -40,7 +39,6 @@ def prepare_profile(ch,hotpiximage):
     heights = np.array(cs(range(ch['NROW'])))
     profile = np.array(image[:, col-2:col+2].mean(axis=1)*1e15)
     return heights, profile
-
 
 
 # %%
@@ -54,10 +52,14 @@ s_140=1700e3
 steps=100 #m steps
 s_steps = np.arange(s_140,s_140 + 2e6,steps)
 ts = sfapi.load.timescale()
-if df.channel[0] == 'IR1': hotpiximage=np.load ('ir1mean.npy')
-elif df.channel[0] == 'IR2': hotpiximage=np.load ('/Users/donal/projekt/SIW/ir2mean.npy')
-elif df.channel[0] == 'IR3': hotpiximage=np.load ('ir3mean.npy')
-elif df.channel[0] == 'IR4': hotpiximage=np.load ('ir4mean.npy')
+
+# No need for hotpiximage
+#if df.channel[0] == 'IR1': hotpiximage=np.load ('ir1mean.npy')
+#elif df.channel[0] == 'IR2': hotpiximage=np.load ('/Users/donal/projekt/SIW/ir2mean.npy')
+#elif df.channel[0] == 'IR3': hotpiximage=np.load ('ir3mean.npy')
+#elif df.channel[0] == 'IR4': hotpiximage=np.load ('ir4mean.npy')
+hotpiximage=None
+
 for i in range(len(df)):
     # for i in range(100):
     print(i)
