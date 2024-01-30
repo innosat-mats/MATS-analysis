@@ -48,7 +48,7 @@ def IntensityEvent(aurorastrips):
     return orbit_peak
 
 def KeogramAltitudes(items,channel):
-    """altitudes for all strips and keogram for it, above row 160"""
+    """Function to get altitudes for all strips and keogram for it, above row 160"""
     centercol = 22
     dates = []
     airglowlim = 160
@@ -272,11 +272,10 @@ def set_aurora_spec(strip,ccd,row):
     TPgeo = col_pos(ccd,centercol)
     [lat,lon,altitude] = TPgeo[row,:]
     mlat, mlon, mlt = get_aacgm_coord(lat, lon, altitude, strip.time, method='ALLOWTRACE')
-    
     strip.maxrow = row
-    strip.maxlat = lat
-    strip.maxlon = lon
-    strip.maxalt = altitude
+    strip.maxlat = lat #peak point
+    strip.maxlon = lon #peak point
+    strip.maxalt = altitude #peak point
     strip.MagLT = mlt
     strip.Maglat = mlat
     strip.Maglon = mlon
@@ -349,7 +348,8 @@ def get_aurora_max(aurorastrips,filedate):
     return
 
 def save_strips(strips,filename,structname):
-    "Creates a panda object of the strip and saves it to matfile"
+    "Creates a panda object of the strip list and saves it to matfile"
+    fullIMG = []
     maxalt = []
     maxrow = []
     maxlat = []
@@ -363,6 +363,7 @@ def save_strips(strips,filename,structname):
     MagLT = []
 
     for strip in strips:
+        fullIMG.append(strip.image)
         timestamp = strip.time
         maxrow.append(strip.maxrow)
         maxalt.append(strip.maxalt)
@@ -374,7 +375,7 @@ def save_strips(strips,filename,structname):
         Mlat.append(strip.Maglat)
         Mlon.append(strip.Maglon)
         MagLT.append(strip.MagLT)
-    pandastrips = pd.DataFrame({'row': maxrow ,'alt': maxalt, 'maxlat': maxlat, 'maxlon': maxlon, 'maxI': intensities, 'lat' : latitudes ,'time' : times, 'MLT' : MagLT, 'Mlat' : Mlat, 'Mlon' : Mlon})
+    pandastrips = pd.DataFrame({'image':fullIMG,'row': maxrow ,'alt': maxalt, 'maxlat': maxlat, 'maxlon': maxlon, 'maxI': intensities, 'lat' : latitudes ,'time' : times, 'MLT' : MagLT, 'Mlat' : Mlat, 'Mlon' : Mlon})
     pandastrips.to_pickle(structname)  
     scipy.io.savemat(filename, {structname: pandastrips.to_dict('list')})
     return
