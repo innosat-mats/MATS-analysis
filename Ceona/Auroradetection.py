@@ -206,11 +206,11 @@ def testLinreg():
 
 # %%
 def Main():
-    start_time = DT.datetime(2023,5,1,00,0,0)
-    stop_time = DT.datetime(2023,5,8,00,0,0)
+    start_time = DT.datetime(2023,4,26,00,0,0)
+    stop_time = DT.datetime(2023,4,28,00,0,0)
     numdays = stop_time-start_time
-    filedate = 'may1W'
-    items = pd.read_pickle(r'MatsData\1to7mayIR1')
+    filedate = 'aprtest'
+    items = pd.read_pickle(r'MatsData\26to27aprIR1')
     #save_TPMLT(items,filedate)
     aurorastrips = get_strips(items,numdays,filedate) 
     get_aurora_max(aurorastrips,filedate)
