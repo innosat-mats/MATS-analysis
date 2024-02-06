@@ -20,6 +20,7 @@ from database_generation import flatfield as flatfield
 from mats_utils.plotting.plotCCD import simple_plot, plot_image, orbit_plot
 from mats_l1_processing.L1_calibrate import L1_calibrate
 
+
 from mats_l1_processing.L1_calibration_functions import (
     get_true_image,
     desmear_true_image,
@@ -36,7 +37,7 @@ from mats_l1_processing.L1_calibration_functions import (
 #%%
 
 # data folder
-data_folder = '/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output'
+data_folder = '/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/'
 starttime=DT.datetime(2023,5,7,1,0,0)
 endtime=DT.datetime(2023,5,7,2,0,0)
 
@@ -46,12 +47,18 @@ df=read_MATS_data(starttime, endtime,filter_UV2, level='1a',version='0.6')
 print(len(df))
 
 # %%
+import os
+
+# Create the directory
+directory = os.path.join(data_folder, 'uv2flickering')
+os.makedirs(directory, exist_ok=True)
+
 for index, CCD in df[:2].iterrows():
-    plot_image(CCD, outpath=data_folder)
+    plot_image(CCD, outpath=data_folder+'uv2flickering')
     #CCD['ImageCalibrated']
 
 
-CCDitems=df[:min(500,len(df))]
+CCDitems=df[:min(300,len(df))]
 
 #%%
 # Calibrate the data
@@ -112,14 +119,13 @@ def wrap_artifact_correction(CCDitem):
   
 #%%
 CCDitems=rename_CCDitem_entries(CCDitems)
-CCDitems['ImageCalibrated']=CCDitems.apply(lambda CCDitem: calibrate(CCDitem,instrument ),axis=1)
+#CCDitems['ImageCalibrated']=CCDitems.apply(lambda CCDitem: calibrate(CCDitem,instrument ),axis=1)
 
-CCDitems["CCDunit"] =CCDitems.apply(lambda CCDitem: instrument.get_CCD(CCDitem["channel"]),axis=1)  
-
-#Calibration step by step
-CCDitems["image_bias_sub"]=CCDitems.apply(lambda CCDitem: wrap_get_true_image(CCDitem) ,axis=1)
 
 #%%
+# Calibrate the data step by step
+CCDitems["CCDunit"] =CCDitems.apply(lambda CCDitem: instrument.get_CCD(CCDitem["channel"]),axis=1)  
+CCDitems["image_bias_sub"]=CCDitems.apply(lambda CCDitem: wrap_get_true_image(CCDitem) ,axis=1)
 CCDitems["image_linear"]=CCDitems.apply(lambda CCDitem : wrap_get_linearized_image(CCDitem) ,axis=1)
 CCDitems["image_desmeared"]=CCDitems.apply(lambda CCDitem: wrap_desmear_true_image(CCDitem) ,axis=1)   
 CCDitems["image_dark_sub"]=CCDitems.apply(lambda CCDitem: wrap_subtract_dark(CCDitem) ,axis=1)
