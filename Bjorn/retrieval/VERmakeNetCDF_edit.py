@@ -7,16 +7,23 @@ from mats_utils.geolocation.coordinates import col_heights, satpos
 from mats_l1_processing.pointing import pix_deg
 #import matplotlib.pylab as plt
 from scipy.spatial.transform import Rotation as R
-from scipy.interpolate import CubicSpline
+from scipy.interpolate import CubicSpline,interp1d
 from skyfield import api as sfapi
 from skyfield.framelib import itrs
 from skyfield.positionlib import Geocentric, ICRF
 from skyfield.units import Distance
 import xarray as xr
 from numpy.linalg import inv
+from fast_histogram import histogramdd
+from bisect import bisect_left
 
 # %%
 #dftop = pd.read_pickle('/Users/donal/projekt/SIW/verdec')
+splined2dlogfactor=np.load("splined2dlogfactorsIR1.npy",allow_pickle=True).item()
+tanz, splinedfactor=np.load("splinedlogfactorsIR1.npy",allow_pickle=True)
+
+
+
 #%%
 starttime=datetime(2023,2,17,0,50)
 stoptime=datetime(2023,2,17,1,20)
@@ -71,6 +78,8 @@ for i in range(len(df)):
     t = ts.from_datetime(d)
     localR = np.linalg.norm(sfapi.wgs84.latlon(df.TPlat[i], df.TPlon[i], elevation_m=0).at(t).position.m)
     q = df['afsAttitudeState'][i]
+    
+
     quat = R.from_quat(np.roll(q, -1))
     ypixels = np.linspace(0, df['NROW'][i], 5)
     x, yv = pix_deg(df.iloc[i], int(df['NCOL'][i]/2), ypixels)
@@ -85,7 +94,20 @@ for i in range(len(df)):
         ecivec=cs_eci(irow)
         pos=np.expand_dims(ecipos[-1], axis=0).T+s_steps*np.expand_dims(ecivec, axis=0).T
         point_height=np.linalg.norm(pos,axis=0)-localR
-        counts,bins=np.histogram(point_height/1000,np.hstack((retrival_heights,retrival_heights[-1]+1)))
+        
+        ### add weight here?
+        # splinedlogfactor
+        minarg=point_height[:].argmin()
+        target_tangent=zs[irow]/1000
+        distances=(s_steps-s_steps[minarg])/1000 #to km for intepolation
+        lowertan=bisect_left(tanz,target_tangent)-1
+        uppertan=lowertan+1
+        lowerfactor=splinedfactor[lowertan](distances)
+        upperfactor=splinedfactor[uppertan](distances)
+        newfactor=interp1d([tanz[lowertan],tanz[uppertan]],np.array([lowerfactor,upperfactor]).T)
+        weight=np.exp(newfactor(target_tangent))
+
+        counts,bins=np.histogram(point_height/1000,np.hstack((retrival_heights,retrival_heights[-1]+1)),weights=weight)
         k[irow,:]=counts*steps
         ecivecs.append(ecivec)
     ks.append(k)
@@ -110,5 +132,5 @@ inputdata = xr.Dataset({
     'k': (['time','z','z_r'],ks),
 })
 # %%
-inputdata.to_netcdf('IR2Mar29vertest_1d.nc')
+inputdata.to_netcdf('IR1Feb17vertest_abs_1d.nc')
 # %%
