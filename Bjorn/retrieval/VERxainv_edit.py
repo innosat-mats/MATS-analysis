@@ -28,7 +28,7 @@ from oem_functions import linear_oem
 # ir2=xr.load_dataset('/Users/donal/projekt/SIW/IR2Decvertest.nc')
 # ir3=xr.load_dataset('/Users/donal/projekt/SIW/IR3Decvertest.nc')
 # ir4=xr.load_dataset('/Users/donal/projekt/SIW/IR4Decvertest.nc')
-ir1=xr.load_dataset('/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/IR1Feb17vertest_1d.nc')
+ir1=xr.load_dataset('/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/IR1Feb17vertest_abs_1d.nc')
 #ir2=xr.load_dataset('/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/IR2Feb17vertest_1d.nc')
 #ir3=xr.load_dataset('/Users/donal/projekt/SIW/IR3Mar29vertest.nc')
 #ir4=xr.load_dataset('/Users/donal/projekt/SIW/IR4Mar29vertest.nc')
@@ -154,7 +154,8 @@ plt.title('A-band intensity (full band) photons cm-3 s-1')
 plt.savefig('Aband_intenstiy_fullband.png',format='png')
 # %%
 plt.figure(figsize=(12,6))
-plt.pcolormesh(ir1band.where((ir1band.z_r > 70) & (ir1band.z_r < 100)).ver[30:230].T/1e9*3.57/0.60,vmin=250,vmax=1500)
+m=plt.pcolormesh(ir1band.where((ir1band.z_r > 70) & (ir1band.z_r < 100)).ver[30:230].T/1e9*3.57/0.60,vmin=250,vmax=1500)
+plt.colorbar(m)
 #(result_1d.ver[30:50]/1e9*3.57/0.60).plot.line(y='z_r',add_legend=False);
 plt.title('A-band intensity (full band) photons cm-3 s-1')
 # %%
