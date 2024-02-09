@@ -1,28 +1,18 @@
 # Author: Linda Megner
 # Created: October 26, 2023
-# Script to investigate the flickering in UV2
+
 
 #%%
 from mats_utils.rawdata.read_data import read_MATS_data
-from database_generation.experimental_utils import plot_CCDimage
-from database_generation.flatfield import read_flatfield
 from mats_l1_processing.instrument import Instrument
 import datetime as DT
 from mats_utils.rawdata.calibration import  calibrate_dataframe
-from mats_l1_processing.L1_calibration_functions import calculate_flatfield, bin_image_with_BC, meanbin_image_with_BC
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
 import sys
 sys.path.append('/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda')
-from lindas_own_functions import rename_CCDitem_entries
 from database_generation import flatfield as flatfield
 from mats_utils.plotting.plotCCD import simple_plot, plot_image, orbit_plot
-from mats_l1_processing.L1_calibrate import L1_calibrate
 from mats_l1_processing.read_parquet_functions import dataframe_to_ccd_items, CCDitems_to_dataframe
 import pickle
-from mats_utils.plotting.animate import generate_gif
-import os
 
 
 from mats_l1_processing.L1_calibration_functions import (
@@ -36,9 +26,73 @@ from mats_l1_processing.L1_calibration_functions import (
     flip_image,
     handle_bad_columns,
     artifact_correction,
+    correct_hotpixels,
+    correct_single_events
 )
+ 
+
+def wrap_get_CCD(CCDitem, instrument):
+    CCDunit=instrument.get_CCD(CCDitem["channel"])
+    return CCDunit  
+def wrap_correct_single_events(CCDitem):
+    image_se_corrected, error_flags_se  = correct_single_events(CCDitem,CCDitem['IMAGE'])
+    return image_se_corrected
+def wrap_correct_hotpixels(CCDitem):
+    image_hot_pixel_corrected, error_flags_hp  = correct_hotpixels(CCDitem,CCDitem["image_se_corrected"])
+    return image_hot_pixel_corrected
+def wrap_get_true_image(CCDitem):
+    image_bias_sub, error=get_true_image(CCDitem, CCDitem["image_hot_pixel_corrected"])
+    return image_bias_sub
+def wrap_get_linearized_image(CCDitem):    
+    image_linear, error = get_linearized_image(CCDitem, CCDitem["image_bias_sub"], force_table=True)
+    return image_linear
+def wrap_desmear_true_image(CCDitem):
+    image_desmeared, error=desmear_true_image(CCDitem, CCDitem["image_linear"])
+    return image_desmeared
+def wrap_subtract_dark(CCDitem):
+    image_dark_sub, error=subtract_dark(CCDitem, CCDitem["image_desmeared"])
+    return image_dark_sub
+def wrap_flatfield_calibration(CCDitem):
+    image_flatfielded, error=flatfield_calibration(CCDitem, CCDitem["image_dark_sub"])
+    return image_flatfielded
+def wrap_flip_image(CCDitem):
+    image_flipped=flip_image(CCDitem, CCDitem["image_flatfielded"])
+    return image_flipped
+
+
+
+# Calibrate the images so that all steps are saved
+def calibration_in_steps(CCDitem, instrument):
+    CCDitem["CCDunit"] = wrap_get_CCD(CCDitem, instrument)
+    CCDitem["image_lsb"] = CCDitem['IMAGE']
+    CCDitem["image_se_corrected"] = wrap_correct_single_events(CCDitem)
+    CCDitem["image_hot_pixel_corrected"] = wrap_correct_hotpixels(CCDitem)
+    CCDitem["image_bias_sub"] = wrap_get_true_image(CCDitem)
+    CCDitem["image_linear"] = wrap_get_linearized_image(CCDitem)
+    CCDitem["image_desmeared"] = wrap_desmear_true_image(CCDitem)
+    CCDitem["image_dark_sub"] = wrap_subtract_dark(CCDitem)
+    CCDitem["image_flatfielded"] = wrap_flatfield_calibration(CCDitem)
+    CCDitem["image_flipped"] = wrap_flip_image(CCDitem)
+            #ccd["ImageCalibrated"] = image_calibrated
+            #ccd["CalibrationErrors"] = errors
+    return CCDitem
+
+
+def calibration_of_df_in_steps(df, instrument):
+    CCDitems = dataframe_to_ccd_items(df)
+    for CCDitem in CCDitems:
+        CCDitem = calibration_in_steps(CCDitem, instrument)
+    df_with_calib_steps=CCDitems_to_dataframe(CCDitems)
+    return df_with_calib_steps
+
+
+
+
 
 #%%
+
+
+
 
 # data folder
 data_folder = '/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/'
@@ -51,67 +105,24 @@ df=read_MATS_data(starttime, endtime,filter_UV2, level='1a',version='0.6')
 print(len(df))
 print(df.columns)
 
-
-#pickle.dump(CCDitems, open('testdata/.pkl', 'wb'))
+pickle.dump(df, open('testdata/df_in_orbit_NLCuv2.pkl', 'wb'))
 
 #%%
-# Setup calibration
+
+with open('testdata/df_in_orbit_NLCuv2.pkl', 'rb') as f:
+    df = pickle.load(f)
+
+
 calibration_file='/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/calibration_data_linda.toml'
 instrument=Instrument(calibration_file)
 
-def wrap_get_CCD(CCDitem, instrument):
-    CCDunit=instrument.get_CCD(CCDitem["channel"])
-    return CCDunit  
-
-def wrap_get_true_image(CCDitem):
-    image_bias_sub, error=get_true_image(CCDitem)
-    return image_bias_sub
-def wrap_get_linearized_image(CCDitem):    
-    image_linear, error = get_linearized_image(CCDitem, CCDitem["image_bias_sub"], force_table=True)
-    return image_linear
-def wrap_desmear_true_image(CCDitem):
-    image_desmeared, error=desmear_true_image(CCDitem, CCDitem["image_linear"])
-    return image_desmeared
-def wrap_subtract_dark(CCDitem):
-    image_dark_sub, error=subtract_dark(CCDitem, CCDitem["image_desmeared"])
-    return image_dark_sub
-def wrap_flatfield_calibration(CCDitem):
-    image_calib_nonflipped, error=flatfield_calibration(CCDitem, CCDitem["image_dark_sub"])
-    return image_calib_nonflipped
-def wrap_flip_image(CCDitem):
-    image_calib_flipped=flip_image(CCDitem, CCDitem["image_calib_nonflipped"])
-    return image_calib_flipped
-
-CCDitems = dataframe_to_ccd_items(df[:50])
-
 #%%
-# Calibrate the images
-def calibration_steps(CCDitem, instrument):
-    CCDitem["CCDunit"] = wrap_get_CCD(CCDitem, instrument)
-    CCDitem["image_bias_sub"] = wrap_get_true_image(CCDitem)
-    CCDitem["image_linear"] = wrap_get_linearized_image(CCDitem)
-    CCDitem["image_linear"] = np.flipud(CCDitem["image_linear"])
-    CCDitem["image_desmeared"] = wrap_desmear_true_image(CCDitem)
-    CCDitem["image_dark_sub"] = wrap_subtract_dark(CCDitem)
-    CCDitem["image_calib_nonflipped"] = wrap_flatfield_calibration(CCDitem)
-    CCDitem["ImageCalib"] = wrap_flip_image(CCDitem)
-    return CCDitem
 
+#df= calibration_of_df_in_steps(df[:5], instrument)
+df=calibrate_dataframe(df[:5], instrument,debug_outputs=True)
 
-
-for CCDitem in CCDitems:
-    CCDitem = calibration_steps(CCDitem, instrument) 
-
-#pickle.dump(CCDitems, open('output/CCDitemsCalib.pkl', 'wb'))
-
-
-# # Turn CCDitems back into a dataframe
-#df = pd.DataFrame(CCDitems)
-#reverse_rename_ccd_item_attributes(df)
-#%%
-df=CCDitems_to_dataframe(CCDitems)
-
-
-
+for index, CCD in df.iterrows():
+    plot_image(CCD, save=False, image_field='image_flatfielded')
+    
 
 # %%
