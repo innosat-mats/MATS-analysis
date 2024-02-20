@@ -13,13 +13,14 @@ class CenterStrip:
     def __init__(self, CCDobject):
         self.image = CCDobject['ImageCalibrated']   #for L1b otherwise 'IMAGE'
         self.strip = []
-        self.latitude = CCDobject.TPlat
+        self.latitude = CCDobject.TPlat  
         self.time =  pd.to_datetime(CCDobject['EXPDate'])
-        self.maxrow = 0
-        self.maxalt = 0
-        self.maxlat = 0
-        self.maxlon = 0
-        self.maxI = 0
+        self.maxrow = 0 #row of max intensity point
+        self.maxalt = 0 #altitude of max intensity point
+        self.maxlat = 0 #geodetic latitude of max intensity point
+        self.maxlon = 0 #geodetic longitude of max intensity point
+        self.maxI = 0 #full image integrated intensities
+        #magnetic aacgm coordinates of the max intensity point
         self.MagLT = 0
         self.Maglat = 0
         self.Maglon = 0
