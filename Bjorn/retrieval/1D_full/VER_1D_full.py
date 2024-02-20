@@ -126,8 +126,8 @@ def xainvert(ch,retrival_heights):
 #%% 
 # load images
 channel='IR1'
-starttime=datetime(2023,2,17,1,50)
-stoptime=datetime(2023,2,17,2,20)
+starttime=datetime(2023,2,17,0,50)
+stoptime=datetime(2023,2,17,1,20)
 
 dftop=read_MATS_data(starttime,stoptime,level="1b",version="0.6")
 df = dftop[dftop['channel'] == channel].dropna().reset_index()#[0:10]
