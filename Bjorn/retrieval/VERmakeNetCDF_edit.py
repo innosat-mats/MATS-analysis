@@ -16,17 +16,24 @@ import xarray as xr
 from numpy.linalg import inv
 from fast_histogram import histogramdd
 from bisect import bisect_left
+import matplotlib.pyplot as plt
 
 # %%
 #dftop = pd.read_pickle('/Users/donal/projekt/SIW/verdec')
 splined2dlogfactor=np.load("splined2dlogfactorsIR1.npy",allow_pickle=True).item()
-tanz, splinedfactor=np.load("splinedlogfactorsIR1.npy",allow_pickle=True)
+tanz, splinedfactor=np.load("splinedlogfactorsIR1_feb.npy",allow_pickle=True)
 
 
 
 #%%
 starttime=datetime(2023,2,17,0,50)
 stoptime=datetime(2023,2,17,1,20)
+#starttime=datetime(2023,3,29,21,0)
+#stoptime=datetime(2023,3,29,21,35)
+#starttime=datetime(2023,3,18,20,30)
+#stoptime=datetime(2023,3,18,21,20)
+
+
 dftop=read_MATS_data(starttime,stoptime,level="1b",version="0.6")
 #%%
 # df=df[df['channel']!='NADIR']
@@ -55,11 +62,12 @@ ecipos = []
 ecivecs = []
 ks=[]
 retrival_heights= np.arange(60,111,1)
+#retrival_heights= np.arange(70,100,1)
 s_140=1700e3
 steps=100 #m steps
 s_steps = np.arange(s_140,s_140 + 2e6,steps)
 ts = sfapi.load.timescale()
-
+#plt.figure()
 # No need for hotpiximage
 #if df.channel[0] == 'IR1': hotpiximage=np.load ('ir1mean.npy')
 #elif df.channel[0] == 'IR2': hotpiximage=np.load ('/Users/donal/projekt/SIW/ir2mean.npy')
@@ -67,10 +75,17 @@ ts = sfapi.load.timescale()
 #elif df.channel[0] == 'IR4': hotpiximage=np.load ('ir4mean.npy')
 hotpiximage=None
 
+#plt.figure()
+
+# %%
 for i in range(len(df)):
     # for i in range(100):
     print(i)
     zs, p = prepare_profile(df.iloc[i],hotpiximage)
+    if df.iloc[i]['channel'] == 'IR1':
+        zs = zs[5:-5]
+        p = p[5:-5]
+        #nrows = len(zs) ### EDIT df['NROW'][i]
     profiles.append(p)
     heights.append(zs)
     ecipos.append(df['afsGnssStateJ2000'][i][0:3])
@@ -97,7 +112,7 @@ for i in range(len(df)):
         
         ### add weight here?
         # splinedlogfactor
-        minarg=point_height[:].argmin()
+        minarg=point_height[:].argmin() # pos of lowest tan height
         target_tangent=zs[irow]/1000
         distances=(s_steps-s_steps[minarg])/1000 #to km for intepolation
         lowertan=bisect_left(tanz,target_tangent)-1
@@ -107,10 +122,19 @@ for i in range(len(df)):
         newfactor=interp1d([tanz[lowertan],tanz[uppertan]],np.array([lowerfactor,upperfactor]).T)
         weight=np.exp(newfactor(target_tangent))
 
+        if irow < 20:
+            plt.plot(weight)
+
         counts,bins=np.histogram(point_height/1000,np.hstack((retrival_heights,retrival_heights[-1]+1)),weights=weight)
+        
+            
+
+        #counts,bins=np.histogram(point_height/1000,np.hstack((retrival_heights,retrival_heights[-1]+1)))
         k[irow,:]=counts*steps
         ecivecs.append(ecivec)
     ks.append(k)
+plt.title('dec')
+#plt.savefig('dec_abs.png',format='png')
 ecivecs= np.reshape(ecivecs,(len(df),-1,3))
 #%%    
 z= np.array(heights).mean(axis=0)

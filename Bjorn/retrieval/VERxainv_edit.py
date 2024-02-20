@@ -28,6 +28,7 @@ from oem_functions import linear_oem
 # ir2=xr.load_dataset('/Users/donal/projekt/SIW/IR2Decvertest.nc')
 # ir3=xr.load_dataset('/Users/donal/projekt/SIW/IR3Decvertest.nc')
 # ir4=xr.load_dataset('/Users/donal/projekt/SIW/IR4Decvertest.nc')
+ir1_noabs=xr.load_dataset('/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/IR1Feb17vertest_1d.nc')
 ir1=xr.load_dataset('/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/IR1Feb17vertest_abs_1d.nc')
 #ir2=xr.load_dataset('/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/IR2Feb17vertest_1d.nc')
 #ir3=xr.load_dataset('/Users/donal/projekt/SIW/IR3Mar29vertest.nc')
@@ -74,7 +75,7 @@ for n in range(len(ch.time)):
     #k=make_k(ch,n,retrival_heights)
     k=ch.k[n].values
     xa=np.ones_like(retrival_heights)
-    Sa=np.diag(xa) * np.max(profile)
+    Sa=np.diag(xa) * np.max(profile) / 10**15
     xa=0*xa
     
     x0, A, Ss, Sm = linear_oem(k, Se, Sa, profile, xa)
@@ -83,12 +84,12 @@ for n in range(len(ch.time)):
     error2_retrieval.append(np.diag(Sm))
     error2_smoothing.append(np.diag(Ss))
 
-"""
-#### MEAN VER AS A-PRIORI
 
+#### MEAN VER AS A-PRIORI
+"""
 xa = np.mean(ver, axis=0)
-xa[-10:] = 1
-xa[0:50] = 1
+#xa[-10:] = 1
+xa[0:10] = 1
 
 ch=ir1
 mr = []
@@ -115,6 +116,7 @@ for n in range(len(ch.time)):
     error2_retrieval.append(np.diag(Sm))
     error2_smoothing.append(np.diag(Ss))
 """
+
 # %%
 result_1d = xr.Dataset().update({
         'time': (['time'], ch.time.values),
@@ -149,12 +151,12 @@ ir1.attrs["title"]="IR1"
 plt.figure(figsize=(12,6))
 (ir1.profile[30:230]/1e9*3.57/0.60).plot(y='z',vmin=0)
 plt.figure(figsize=(12,6))
-(ir1band.ver[30:230]/1e9*3.57/0.60).plot(y='z_r',robust=True,vmin=0)
+(ir1band.ver[30:230:1,10:45]).plot.pcolormesh(y='z_r',vmin=0)
 plt.title('A-band intensity (full band) photons cm-3 s-1')
-plt.savefig('Aband_intenstiy_fullband.png',format='png')
+#plt.savefig('Aband_intenstiy_fullband_feb17.png',format='png')
 # %%
 plt.figure(figsize=(12,6))
-m=plt.pcolormesh(ir1band.where((ir1band.z_r > 70) & (ir1band.z_r < 100)).ver[30:230].T/1e9*3.57/0.60,vmin=250,vmax=1500)
+m=plt.pcolormesh(ir1band.ver[0:].T/1e9*3.57/0.60,vmin=0,vmax=4500)
 plt.colorbar(m)
 #(result_1d.ver[30:50]/1e9*3.57/0.60).plot.line(y='z_r',add_legend=False);
 plt.title('A-band intensity (full band) photons cm-3 s-1')
