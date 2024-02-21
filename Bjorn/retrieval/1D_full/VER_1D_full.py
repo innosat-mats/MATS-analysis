@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from mats_utils.rawdata.read_data import read_MATS_data
 from mats_utils.geolocation.coordinates import col_heights, satpos
 from mats_l1_processing.pointing import pix_deg
+from mats_l2_processing.inverse_model import Sa_inv_tikhonov
 #import matplotlib.pylab as plt
 from scipy.spatial.transform import Rotation as R
 from scipy.interpolate import CubicSpline,interp1d
@@ -18,10 +19,34 @@ from fast_histogram import histogramdd
 from bisect import bisect_left
 import matplotlib.pyplot as plt
 import sys
-sys.path.append('/home/waves/projects/MATS/MATS-analysis/Donal/retrievals')
-from oem_functions import linear_oem
+import scipy.sparse as sparse
+
 
 # %% 
+
+def linear_oem(K, Se, Sa_inv, y, xa):
+    # Adapted from Donal (uses Sa_inv instead)
+    if len(y.shape) == 1:
+        y = y.reshape(len(y),1)
+    if len(xa.shape) == 1:
+        xa = xa.reshape(len(xa),1)
+        
+    #if len(y)<len(xa): # m form
+    #    G = Sa.dot(K.T).dot(np.linalg.inv(K.dot(Sa).dot(K.T) + Se))
+        
+    #else: # n form
+    Se_inv = np.linalg.inv(Se)
+    Sa_inv = Sa_inv.toarray()
+    #Sa_inv = np.linalg.inv(Sa)
+    G = np.linalg.inv(K.T.dot(Se_inv).dot(K) + Sa_inv).dot(K.T).dot(Se_inv)
+#        G= np.linalg.solve(K.T.dot(Se_inv).dot(K) + Sa_inv, (K.T).dot(Se_inv))
+    
+    x_hat = xa + G.dot(y - K.dot(xa)) 
+    A = G.dot(K)
+    #Ss = (A - np.identity(len(xa))).dot(Sa).dot((A - np.identity(len(xa))).T) # smoothing error
+    Sm = G.dot(Se).dot(G.T) #retrieval noise 
+    
+    return x_hat.squeeze()
 
 def prepare_profile(ch):
     # TBD comment
@@ -98,13 +123,10 @@ def generate_ks(df,retrival_heights, s_steps, splinedfactor):
 
     return ks, profiles, ecipos, ecivecs, heights
 
-def xainvert(ch,retrival_heights):
+def xainvert(ch,retrival_heights, weight_0, weight_1):
     # TBD comment
     # invert using oem
 
-    mr = []
-    error2_retrieval = []
-    error2_smoothing = []
     ver = []
 
     for n in range(len(ch.time)): 
@@ -112,16 +134,18 @@ def xainvert(ch,retrival_heights):
         Se=np.diag(profile)
         k=ch.k[n].values
         xa=np.ones_like(retrival_heights)
-        Sa=np.diag(xa) * np.max(profile) / (1.3*10**11)
+        Sa_inv,_=Sa_inv_tikhonov(np.array([retrival_heights]), weight_0, [weight_1], volume_factors=False, store_terms=False)
+        #Sa=np.diag(xa) * np.max(profile) / (1.3*10**11)
+
         xa=0*xa
         
-        x0, A, Ss, Sm = linear_oem(k, Se, Sa, profile, xa)
+        x0 = linear_oem(k, Se, Sa_inv, profile, xa)
         ver.append(x0)
-        mr.append(A.sum(axis=1)) #sum over rows 
-        error2_retrieval.append(np.diag(Sm))
-        error2_smoothing.append(np.diag(Ss))
+        #mr.append(A.sum(axis=1)) #sum over rows 
+        #error2_retrieval.append(np.diag(Sm))
+        #error2_smoothing.append(np.diag(Ss))
 
-    return ver, mr, error2_retrieval, error2_smoothing
+    return ver
 
 #%% 
 # load images
@@ -178,23 +202,29 @@ ch.to_netcdf('IR1Feb17vertest_abs_1d.nc')
 ch=xr.load_dataset('IR1Feb17vertest_abs_1d.nc')
 
 # invert
-ver, mr, error2_retrieval, error2_smoothing = xainvert(ch,retrival_heights)
+weight_0 = 0
+weight_1 = 0.7e-3
+ver = xainvert(ch,retrival_heights, weight_0, weight_1)
+
 
 result_1d = xr.Dataset().update({
         'time': (['time'], ch.time.values),
         'z_r': (['z_r',], ch.z_r.values, {'units': 'km'}),
         'ver': (['time','z_r'], ver, {'long name': 'VER', 'units': 'photons cm-3 s-1'}),
-        'mr': (['time','z_r'], mr),
-        'error2_retrieval': (['time','z_r'], error2_retrieval),
-        'error2_smoothing': (['time','z_r'], error2_smoothing),
-        #'limb_fit': (['time','pixel'], limb_fit),
         'latitude': (['time',], ch.TPlat.values),
         'longitude': (['time',], ch.TPlon.values),
         'channel': (['time',], ch.channel.values),
         })
 
+        
 ir1band=result_1d
 
+plt.figure(figsize=(12,3))
+(ch.profile[30:230]/1e9*3.57/0.60).plot(y='z',vmin=0)
+plt.figure(figsize=(12,2))
+(ir1band.ver[30:230:1,5:-5]).plot.pcolormesh(y='z_r')
+plt.title('A-band intensity (full band) photons cm-3 s-1')
+#plt.savefig('Aband_intenstiy_fullband_feb17.png',format='png')
 
 # %%
 import matplotlib.pyplot as plt
@@ -206,12 +236,12 @@ ch.attrs["title"]="IR1"
 plt.figure(figsize=(12,3))
 (ch.profile[30:230]/1e9*3.57/0.60).plot(y='z',vmin=0)
 plt.figure(figsize=(12,3))
-(ir1band.ver[30:230:1,:]).plot.pcolormesh(y='z_r',vmin=4.1*10**11,vmax=10*12)
+(ir1band.ver[30:230:1,:]).plot.pcolormesh(y='z_r')
 plt.title('A-band intensity (full band) photons cm-3 s-1')
 #plt.savefig('Aband_intenstiy_fullband_feb17.png',format='png')
 # %%
 plt.figure(figsize=(12,2))
-m=plt.pcolormesh(ir1band.latitude[30:230],ir1band.z_r,ir1band.ver[30:230:1,:].T,vmin=0.3*10**11,vmax=2*10**11)
+m=plt.pcolormesh(ir1band.latitude[30:230],ir1band.z_r,ir1band.ver[30:230:1,:].T,vmin=1e11,vmax=5e11)
 #m=plt.pcolormesh(np.log(ir1band.ver[30:230:1,:].T),vmin=25.5, vmax=27)
 
 plt.colorbar(m)
