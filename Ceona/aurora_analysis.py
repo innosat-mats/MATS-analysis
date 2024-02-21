@@ -17,9 +17,11 @@ from aacgmv2 import get_aacgm_coord
 #Shepherd, S. G. (2014), Altitude‐adjusted corrected geomagnetic coordinates: Definition and functional approximations, 
 #Journal of Geophysical Research: Space Physics, 119, 7501–7521, doi:10.1002/2014JA020264.
 # https://aacgmv2.readthedocs.io/en/latest/usage.html#convert-geographic-magnetic-coordinates
-# %% Other functions and old aurora finder
+
+
+# %% Other extra functions and old aurora finder
 def IntensityEvent(aurorastrips):
-    "Adds all aurora images together from from each orbit. Saves in list"
+    "OLD FUNCTION : Adds all aurora image intensity integrations from an orbit. Saves the sums in list"
     airglowlim = 160
     orbit_peak = []
     start_time = aurorastrips[0].time
@@ -285,7 +287,7 @@ def set_aurora_spec(strip,ccd,row):
     return
 
 def IntensityPeak(aurorastrip):
-    "Integrates the intensity of a strips original image"
+    "Integrates the intensity of a strips full image"
     collow = 14
     coltop = 30
     
@@ -326,10 +328,9 @@ def get_aurora_max(aurorastrips,filedate):
         else:
             #New cluster, check the peak for the previous cluster
             event = allaltitudes[n:i+1]
-            print(n,i,len(event)) 
             if len(event) < 4:
                 continue
-            
+            #finds the point of aurora cluster with highest altitude
             peak = max(aurorastrips[n:i+1],key=lambda x: x.maxalt)
             #ind = np.argmax(event)
             #pixelI = aurorastrips[n+ind].strip
@@ -349,15 +350,15 @@ def get_aurora_max(aurorastrips,filedate):
 
 def save_strips(strips,filename,structname):
     "Creates a panda object of the strip list and saves it to matfile"
-    fullIMG = []
-    maxalt = []
-    maxrow = []
-    maxlat = []
-    maxlon = []
+    fullIMG = [] #newly added, has not been re-run with all data
+    maxalt = [] #altitude of max intensity point
+    maxrow = [] #row of max intensity point
+    maxlat = [] #geodetic latitude of max intensity point
+    maxlon = [] #geodetic longitude of max intensity point
     times = []
-    latitudes = []
-    intensities = []
-    #magnetic aacgm coordinates
+    latitudes = []   #tangent point latitudes
+    intensities = []  #full image integrated intensities
+    #magnetic aacgm coordinates of the max intensity point
     Mlat = []
     Mlon = []
     MagLT = []

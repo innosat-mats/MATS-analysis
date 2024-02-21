@@ -46,18 +46,20 @@ def gradientmatrix(items,airglowlim, auroralim):
 #Because all the strips are needed for the polynomial regression of each hemisphere keogram matrix 
 #to get the gradient removed matrix
 def get_strips(items, numdays,filedate):
-    """Returns a list of all strips and list of only aurorastrips, using linear regression and set aurora conditions"""
+    """Uses linear regression and set aurora conditions
+    Returns: a list of all strips and list of only aurorastrips, 
+    Arguments: list of pandas dataframe images, number of days (int), name of file (string)  """
     Tperiod = timedelta(minutes=100)
-    airglowlim = 130
+    airglowlim = 130  #set row limit of the airglow about 90 km altitude
     n = 0
     allstripsNH = []
     allstripsSH = []
-    allstrips = []   #used for plotting red dots on onverview
+    allstrips = []   #used for plotting red dots on overviews
     aurorastripsNH = []
     aurorastripsSH = []
     aurorastrips = []
 
-    # loop that goes through number of days
+    # loop that goes through number of days 
     for day in range(1,numdays.days+1):
         #this for loop goes through the images starting from the end of previous day
         for i in range(n, len(items)-1):
@@ -68,7 +70,7 @@ def get_strips(items, numdays,filedate):
             deltat = items.iloc[i+1].EXPDate-items.iloc[i].EXPDate
             if deltat < Tperiod/6 and i < len(items)-2: 
                 continue
-            else:                          
+            else: # if next image is more than 100/6 min after, we have new hemisphere                        
                 #creates orbit from index n to i
                 if items.iloc[i].TPlat > 0: #north hemisphere
                     auroralim = 150
@@ -80,21 +82,23 @@ def get_strips(items, numdays,filedate):
                    
                     #gets the removed gradient matrix corresponding to that hemisphere
                     matrix, striplist = gradientmatrix(NH, airglowlim,auroralim)
+
                     for m, strip in enumerate(striplist):
                         #finds the row of the max intensity value of each strip, above airglow limit
                         row = np.argmax(strip.strip[auroralim:]) + auroralim
                         
+                        #Aurora conditions that need to be fulfilled: mean and top_max
                         #top_mean = np.sum(strip.strip[airglowlim+10:])/len(strip.strip[airglowlim+10:])
                         mean = np.sum(strip.strip[auroralim:])/len(strip.strip[auroralim:])
 
                         #gives the row of the maximum 10 rows above the limit to check that aurora is there as well
                         top_max = np.argmax(strip.strip[auroralim+10:]) + auroralim + 10        
-                        ccd = NH.iloc[m]
+                        ccd = NH.iloc[m] #retrieves the panda.dataframe object from list NH
                         if strip.strip.item(top_max) >= auroraintensity and mean > auroramean: #check so we have aurora above row.
-                            #sets the position coordinates of the max intensity point of strips with aurora
                             #print(strip.latitude, NH.iloc[m].TPlon, strip.time)  
                             #print('Row',row,'RowI',strip.strip.item(row),'Topmax',strip.strip.item(top_max),'Mean',top_mean,strip.time)
-                            set_aurora_spec(strip,ccd,row)
+                            set_aurora_spec(strip,ccd,row) #saves the parameters for aurora strip. E.g. intensity integration, MLT-coordinates
+
                             aurorastrips.append(strip)
                             aurorastripsNH.append(strip)
                         else:
@@ -104,15 +108,15 @@ def get_strips(items, numdays,filedate):
                         allstrips.append(strip)
 
                 elif items.iloc[i].TPlat < 0: #south hemisphere
-                    auroralim = 120    #150 for pol-reg, 120 for normal keogram
-                    auroramean = 30     #15 for pol-reg, 30 for normal keogram
+                    auroralim = 120    #Use 150 for pol-reg, 120 for normal keogram
+                    auroramean = 30     #Use 15 for pol-reg, 30 for normal keogram
                     auroraintensity = 40   #18 used for pol-reg, 40 for normal
                     SH = items.iloc[n:i+1]
                     if len(SH) == 0 :
                         continue
                     #gets the removed gradient matrix corresponding to that hemisphere
-                    #matrix, striplist = gradientmatrix(SH,airglowlim,auroralim)
-                    matrix, striplist = makeStripMatrix(SH)   #Used for april week 2-4 and may, when background is more linear
+                    matrix, striplist = gradientmatrix(SH,airglowlim,auroralim)
+                    #matrix, striplist = makeStripMatrix(SH)   #Used for april week 2-4 and may, when background is more linear
 
                     for m, strip in enumerate(striplist):
 
@@ -135,7 +139,7 @@ def get_strips(items, numdays,filedate):
                                 aurorastrips.append(strip)
                                 aurorastripsSH.append(strip)
                         else:
-                            #if not aurora set magnetic coordinates of TP
+                            #if not aurora set magnetic coordinates and row of TP
                             set_strip_spec(strip,ccd)
 
                         allstripsSH.append(strip)
