@@ -55,10 +55,10 @@ def prepare_profile(ch):
     col = int(ch['NCOL']/2)
     cs = col_heights(ch, col, 10, spline=True)
     heights = np.array(cs(range(ch['NROW'])))
-    profile = np.array(image[:, col-2:col+2].mean(axis=1)*1e15)
+    profile = np.array(image[:, col-2:col+2].mean(axis=1)*1e12)
     return heights, profile
 
-def generate_ks(df,retrival_heights, s_steps, splinedfactor):
+def generate_ks(df,retrival_heights, s_steps, splinedfactor,abs):
     # TBD comment
     # calculates ks from mean profile
     ts = sfapi.load.timescale()
@@ -102,18 +102,22 @@ def generate_ks(df,retrival_heights, s_steps, splinedfactor):
             point_height=np.linalg.norm(pos,axis=0)-localR
             
             # absorption weight
-            minarg=point_height[:].argmin() # pos of lowest tan height
-            target_tangent=zs[irow]/1000
-            distances=(s_steps-s_steps[minarg])/1000 #to km for intepolation
-            lowertan=bisect_left(tanz,target_tangent)-1
-            uppertan=lowertan+1
-            lowerfactor=splinedfactor[lowertan](distances)
-            upperfactor=splinedfactor[uppertan](distances)
-            newfactor=interp1d([tanz[lowertan],tanz[uppertan]],np.array([lowerfactor,upperfactor]).T)
-            weight=np.exp(newfactor(target_tangent))
+            if abs:
+                minarg=point_height[:].argmin() # pos of lowest tan height
+                target_tangent=zs[irow]/1000
+                distances=(s_steps-s_steps[minarg])/1000 #to km for intepolation
+                lowertan=bisect_left(tanz,target_tangent)-1
+                uppertan=lowertan+1
+                lowerfactor=splinedfactor[lowertan](distances)
+                upperfactor=splinedfactor[uppertan](distances)
+                newfactor=interp1d([tanz[lowertan],tanz[uppertan]],np.array([lowerfactor,upperfactor]).T)
+                weight=np.exp(newfactor(target_tangent))
 
-            # calculate k
-            counts,bins=np.histogram(point_height/1000,np.hstack((retrival_heights,retrival_heights[-1]+1)),weights=weight)
+                # calculate k
+                counts,bins=np.histogram(point_height/1000,np.hstack((retrival_heights,retrival_heights[-1]+1)),weights=weight)
+
+            else:
+                counts,bins=np.histogram(point_height/1000,np.hstack((retrival_heights,retrival_heights[-1]+1)))
 
             k[irow,:]=counts*steps
             ecivecs.append(ecivec)
@@ -150,13 +154,14 @@ def xainvert(ch,retrival_heights, weight_0, weight_1):
 #%% 
 # load images
 channel='IR1'
-starttime=datetime(2023,2,17,0,50)
-stoptime=datetime(2023,2,17,1,20)
+starttime=datetime(2023,2,17,2,10)
+stoptime=datetime(2023,2,17,2,50)
 
 dftop=read_MATS_data(starttime,stoptime,level="1b",version="0.6")
 df = dftop[dftop['channel'] == channel].dropna().reset_index()#[0:10]
 
 # absorption weights (TBD: call generation of these)
+abs=True
 tanz, splinedfactor=np.load(f"splinedlogfactors{channel}_feb.npy",allow_pickle=True)
 
 # select part of orbit
@@ -174,7 +179,8 @@ s_steps = np.arange(s_140,s_140 + 2e6,steps)
 
 #%% Generate ks // save netcdf
 ks, profiles, ecipos, ecivecs, heights = generate_ks(df,retrival_heights,
-                                                     s_steps, splinedfactor)
+                                                     s_steps, splinedfactor,
+                                                     abs=True)
 z=np.array(heights).mean(axis=0)
 
 ch = xr.Dataset({
@@ -196,49 +202,56 @@ ch = xr.Dataset({
 })
 
 # save the results
-ch.to_netcdf('IR1Feb17vertest_abs_1d.nc')
+ch.to_netcdf('IR1Feb17vertest_abs_1d_2.nc')
 
 # %% load
-ch=xr.load_dataset('IR1Feb17vertest_abs_1d.nc')
+files=['IR1Feb17vertest_abs_1d.nc',
+       'IR1Feb17vertest_abs_1d_2.nc']
+for file in files:
+    ch=xr.load_dataset(file)
+    #ch=xr.load_dataset('IR1Feb17vertest_abs_1d.nc')
 
-# invert
-weight_0 = 0
-weight_1 = 0.7e-3
-ver = xainvert(ch,retrival_heights, weight_0, weight_1)
+    # invert OK
+    weight_0 = 1e-3
+    weight_1 = 0.25e-3
+    # invert working
+    weight_0 = 4e-2
+    weight_1 = 0.5e-2
+
+    ver = xainvert(ch,retrival_heights, weight_0, weight_1)
 
 
-result_1d = xr.Dataset().update({
-        'time': (['time'], ch.time.values),
-        'z_r': (['z_r',], ch.z_r.values, {'units': 'km'}),
-        'ver': (['time','z_r'], ver, {'long name': 'VER', 'units': 'photons cm-3 s-1'}),
-        'latitude': (['time',], ch.TPlat.values),
-        'longitude': (['time',], ch.TPlon.values),
-        'channel': (['time',], ch.channel.values),
-        })
+    result_1d = xr.Dataset().update({
+            'time': (['time'], ch.time.values),
+            'z_r': (['z_r',], ch.z_r.values, {'units': 'km'}),
+            'ver': (['time','z_r'], ver, {'long name': 'VER', 'units': 'photons cm-3 s-1'}),
+            'latitude': (['time',], ch.TPlat.values),
+            'longitude': (['time',], ch.TPlon.values),
+            'channel': (['time',], ch.channel.values),
+            })
 
-        
-ir1band=result_1d
+            
+    ir1band=result_1d
 
-plt.figure(figsize=(12,3))
-(ch.profile[30:230]/1e9*3.57/0.60).plot(y='z',vmin=0)
-plt.figure(figsize=(12,2))
-(ir1band.ver[30:230:1,5:-5]).plot.pcolormesh(y='z_r')
-plt.title('A-band intensity (full band) photons cm-3 s-1')
-#plt.savefig('Aband_intenstiy_fullband_feb17.png',format='png')
-
+    #plt.figure(figsize=(12,2))
+    #(ch.profile[30:230]/1e9*3.57).plot(y='z',vmin=0)
+    plt.figure(figsize=(12,2))
+    #(ir1band.ver[30:230:1,5:-5]/1e9*3.57).plot.pcolormesh(y='z_r')
+    (ir1band.ver[30:230:1,:]/1e6*3.57).plot.pcolormesh(y='z_r')
+    plt.title('A-band intensity (full band) photons cm-3 s-1')
+    plt.tight_layout()
+    plt.savefig('VER.png',format='png')
+    #plt.savefig('Aband_intenstiy_fullband_feb17.png',format='png')
+    plt.figure(figsize=(12,2))
+    ch.profile.where(ch.TPsza <98,drop=True).plot(y='z',vmin=0)
+    plt.tight_layout()
+    plt.savefig('LOS.png',format='png')
 # %%
 import matplotlib.pyplot as plt
 plt.figure(figsize=(12,3))
 ch.profile.where(ch.TPsza <98,drop=True).plot(y='z',vmin=0)
 # %%
 ch.attrs["title"]="IR1"
-# %%
-plt.figure(figsize=(12,3))
-(ch.profile[30:230]/1e9*3.57/0.60).plot(y='z',vmin=0)
-plt.figure(figsize=(12,3))
-(ir1band.ver[30:230:1,:]).plot.pcolormesh(y='z_r')
-plt.title('A-band intensity (full band) photons cm-3 s-1')
-#plt.savefig('Aband_intenstiy_fullband_feb17.png',format='png')
 # %%
 plt.figure(figsize=(12,2))
 m=plt.pcolormesh(ir1band.latitude[30:230],ir1band.z_r,ir1band.ver[30:230:1,:].T,vmin=1e11,vmax=5e11)
