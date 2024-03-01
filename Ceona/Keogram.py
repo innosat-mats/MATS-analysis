@@ -19,7 +19,7 @@ class CenterStrip:
         self.maxalt = 0 #altitude of max intensity point
         self.maxlat = 0 #geodetic latitude of max intensity point
         self.maxlon = 0 #geodetic longitude of max intensity point
-        self.maxI = 0 #full image integrated intensities
+        self.totI = 0 #full image integrated intensities
         #magnetic aacgm coordinates of the max intensity point
         self.MagLT = 0
         self.Maglat = 0
@@ -37,15 +37,16 @@ class CenterStrip:
         self.strip = self.image[int(center),:]
         return  np.transpose(self.strip)
 
-def makeStripMatrix(IR_list, strip_dir ='v'):
-    "Creates the keogram matrix and corresponding list of strips, from specific channel and list of CCD-items"
+def makeStripMatrix(item_list, strip_dir ='v'):
+    """Returns: Keogram matrix and corresponding list of strips
+    Argument: List of images (type pandas.dataframe)"""
     strips_matrix = []  #matrix of concatenated strips
     strips_list = []
     #creates a matrix from vertical strips
     if strip_dir == 'v':
         #iterates through the CCDobjects (each panda row) and creates a strip
-        for index, row in IR_list.iterrows():
-            new_strip = CenterStrip(row) #creates strip object
+        for index, item in item_list.iterrows():
+            new_strip = CenterStrip(item) #creates strip object
             new_strip.makeVerticalStrip()
             strips_matrix.append(new_strip.strip)
             strips_list.append(new_strip)
@@ -54,8 +55,8 @@ def makeStripMatrix(IR_list, strip_dir ='v'):
     #creates a matrix from horizontal strips
     if strip_dir== 'h':
         #iterates through the CCDobjects (each panda row) and creates a strip
-        for index, row in IR_list.iterrows():
-            new_strip = CenterStrip(row)  #creates strip object
+        for index, item in item_list.iterrows():
+            new_strip = CenterStrip(item)  #creates strip object
             new_strip.makeHorizontalStrip()
             strips_matrix.append(new_strip.strip)
             strips_list.append(new_strip)
