@@ -46,7 +46,7 @@ def gradientmatrix(items,airglowlim, auroralim):
 #Because all the strips are needed for the polynomial regression of each hemisphere keogram matrix 
 #to get the gradient removed matrix
 def get_strips(items, numdays,filedate):
-    """Uses linear regression and set aurora conditions
+    """Uses polynomial regression and set aurora conditions
     Returns: a list of all strips and list of only aurorastrips, 
     Arguments: list of pandas dataframe images, number of days (int), name of file (string)  """
     Tperiod = timedelta(minutes=100)
@@ -158,13 +158,12 @@ def get_strips(items, numdays,filedate):
 
     return aurorastrips
 # %%
-def testLinreg():
-    testitems = pd.read_pickle(r'C:\Users\ceona\Documents\GitHub\MATS-analysis\MATS-analysis\Ceona\MatsData\26aprorb3')
+def testLinreg(items, filename):
     """polynomial regression test for short interval (only one orbit), to check keogram as well
     """
     airglowlim = 130
     auroralim = 150
-    matrix, striplist = makeStripMatrix(testitems)
+    matrix, striplist = makeStripMatrix(items)
     newmatrix = matrix.copy()
     fig, axs = plt.subplots(2,1)
 
@@ -177,32 +176,32 @@ def testLinreg():
             valid_indices = np.where(y < 400)[0]
             y_filtered = y[valid_indices]
             x_filt = np.arange(0,len(y_filtered))
-            model = np.poly1d(np.polyfit(x_filt, y_filtered, 1))
+            model = np.poly1d(np.polyfit(x_filt, y_filtered, 3))
         else:
             valid_indices = np.where(y < 600)[0]
             y_filtered = y[valid_indices]
             x_filt = np.arange(0,len(y_filtered))
-            model = np.poly1d(np.polyfit(x_filt, y_filtered, 1))
+            model = np.poly1d(np.polyfit(x_filt, y_filtered, 3))
         y_reg = model(x) #new y_points
         
         newmatrix[rowindex,:] = y-y_reg
-        if rowindex == airglowlim or rowindex == auroralim+20: 
+        if rowindex == airglowlim or rowindex == auroralim or rowindex == auroralim +20: 
             axs[0].plot(y, label = f"Row {rowindex}")
             axs[0].plot(y_reg, label = f"y_reg, Row {rowindex}")
             axs[0].plot(y-y_reg, label = f"Row {rowindex} Diff")
-            axs[0].set_ylim(-30,400)
-            #scipy.io.savemat('y.mat',{'y': y, 'label':'I'}) #saves to matlabfile
-            #scipy.io.savemat('y_reg.mat',{'y_reg': y_reg, 'label':'I'}) #saves to matlabfile
+            axs[0].set_ylim(-50,400)
+            scipy.io.savemat(filename +f"Row{rowindex}" +'.mat',{f"Row{rowindex}": y}) #saves to matlabfile
+            scipy.io.savemat(filename + f"regRow{rowindex}" + '.mat',{f"regRow{rowindex}": y_reg}) #saves to matlabfile
 
     #Update the strips from the new matrix
     for col, strip in enumerate(striplist):
         strip.strip = newmatrix[:,col]
     
-    #scipy.io.savemat('keogramgrad.mat',{'keogramgrad': newmatrix, 'label':'pixel'}) #saves to matlabfile
-    #scipy.io.savemat('keogram.mat',{'keogram': matrix, 'label':'pixel'}) #saves to matlabfile
-    save_strips(striplist,'test' +'allstrips.mat', 'test' +'allstrips')
+    scipy.io.savemat(filename +'keograd.mat',{'keograd': newmatrix, 'label':'pixel'}) #saves to matlabfile
+    scipy.io.savemat(filename + 'keogram.mat',{'keogram': matrix, 'label':'pixel'}) #saves to matlabfile
+    save_strips(striplist, filename +'allstrips.mat', filename +'allstrips')
     
-    axs[1].pcolormesh(newmatrix,vmin=-10, vmax=300)
+    axs[1].pcolormesh(matrix,vmin=-10, vmax=300)
     fig.legend()
     #print(newmatrix[:,0] -striplist[0].strip )
     plt.show()
