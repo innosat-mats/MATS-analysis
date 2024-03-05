@@ -192,7 +192,7 @@ def xainvert(ch,retrival_heights, weight_0, weight_1, weight_2, xa=None):
 # load images
 channel='IR1'
 starttime=datetime(2023,2,17,0,0)
-stoptime=datetime(2023, 2,17,23,30)
+stoptime=datetime(2023, 2,17,4,30)
 
 #looks great
 #starttime=datetime(2023,3,17,8,45)
@@ -201,9 +201,9 @@ stoptime=datetime(2023, 2,17,23,30)
 # dayglow stuff
 ascending=True
 # dayglow (ALL SZA)
-dmin,dmax = 0, 130
-
-dftop=read_MATS_data(starttime,stoptime,level="1b",version="0.6", filter={'TPsza': [dmin, dmax], 'TPlat': [-10, 10]})
+dmin,dmax = 0, 95
+tplat0, tplat1 = -70, 70
+dftop=read_MATS_data(starttime,stoptime,level="1b",version="0.6", filter={'TPsza': [dmin, dmax], 'TPlat': [tplat0, tplat1]})
 
 if ascending:
     midday=DT.time(12, 0, 0)
@@ -221,6 +221,7 @@ tanz, splinedfactor=np.load(f"splinedlogfactors{channel}_feb_new.npy",allow_pick
 # select part of orbit
 offset = 10
 num_profiles = len(df)-30 #use 50 profiles for inversion
+print(num_profiles)
 #num_profiles = 1000
 df = df.loc[offset:offset+num_profiles]
 df = df.reset_index(drop=True)
@@ -232,7 +233,7 @@ ir4 = ir4.reset_index(drop=True)
 
 # %% retrieval settings
 retrival_heights= np.arange(60,100,1)
-retrival_heights= np.arange(65,105,1)
+retrival_heights= np.arange(60,105,1)
 s_140=1700e3
 steps=100 #m steps
 s_steps = np.arange(s_140,s_140 + 2e6,steps)
@@ -264,23 +265,26 @@ ch = xr.Dataset({
 })
 
 # save the results
-ch.to_netcdf(f'{channel}Feb17vertest_abs_1d.nc')
+ch.to_netcdf(f'{channel}Feb17vertest_1d_from60.nc')
 
 # %% load
-files=[f'{channel}Feb17vertest_abs_1d.nc']
+files=[f'{channel}Feb17vertest_1d_from60.nc']
 
 for file in files:
     ch=xr.load_dataset(file)
     #ch=xr.load_dataset('IR1Feb17vertest_abs_1d.nc')
 
-    #ch=ch.where(ch.TPsza < 90)
     #ch=ch.where(ch.)
     # xa = 0
     weight_0 = 0
     weight_1 = 0
     # normal xa (works well)
     weight_0 = 1e-3
-    weight_1 = 3e-3
+    weight_1 = 6e-3
+
+    # normal xa (try to get midlats)
+    #weight_0 = 0
+    #weight_1 = 9*1e-1
 
     #weight_0=0
     #weight_1=0
@@ -301,11 +305,13 @@ for file in files:
             'channel': (['time',], ch.channel.values),
             })
 
-            
     ir1band=result_1d
+    ir1band=ir1band.where((ir1band.latitude < 65) & (ir1band.latitude > -65))
+    ir1band=ir1band.where((ir1band.latitude < -15) & (ir1band.latitude > -50))
+    
     
     plt.figure(figsize=(4,4))
-    (ir1band.ver[30:-30:1,:]/1e6).plot.line(y='z_r',add_legend=False,xlim=([0,1e5]))
+    (ir1band.ver[30:-30:1,:]/1e6*4*np.pi).plot.line(y='z_r',add_legend=False,xlim=([0,2e5]))
     if xa is not None:
         plt.plot(xa/1e6,retrival_heights, linestyle='--', color='black')
     plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
@@ -314,19 +320,19 @@ for file in files:
     plt.tight_layout()
     plt.savefig(f'{channel}VERprofiles_sub.png',format='png')
 
-    plt.figure(figsize=(12,3))
-    (ir1band.ver[30:-30:1,:]/1e6).plot.pcolormesh(y='z_r',vmin=0,vmax=1e4,ylim=([60,110]))
+    plt.figure(figsize=(12,4))
+    (ir1band.ver[30:-30:1,:]/1e6*4*np.pi).plot.pcolormesh(y='z_r',vmin=0,vmax=2e5,ylim=([60,110]))
     plt.title('A-band intensity (full band) photons cm-3 s-1')
     plt.tight_layout()
     plt.savefig(f'{channel}.png',format='png')
 
-    plt.figure(figsize=(12,3))
-    (ch.profile[30:-30:1,:].where(ch.TPsza <98,drop=True)).plot(y='z',vmin=0,ylim=([60e3,110e3]))
+    plt.figure(figsize=(12,4))
+    ch.profile[:,:].plot.pcolormesh(y='z',vmin=0,ylim=([60e3,110e3]))
     plt.tight_layout()
     plt.savefig(f'{channel}LOS_sub.png',format='png')
 
     plt.figure(figsize=(4,4))
-    for i in range(30,600,2):
+    for i in range(30,1000,5):
         plt.plot((ch.k.isel(time=i)@result_1d.ver.isel(time=i)),ch.z/1e3,color='red',alpha=0.25)
         plt.plot(ch.profile.isel(time=i),ch.z/1e3,color='blue',alpha=0.25)
     plt.title('LOS')
@@ -337,7 +343,7 @@ for file in files:
 # %%
 import matplotlib.pyplot as plt
 plt.figure(figsize=(4,4))
-(ir1band.ver[30:-30:1,:]/1e6).mean(dim='time').plot(y='z_r')
+(ir1band.ver[:,:]/1e6*4*np.pi).mean(dim='time').plot(y='z_r')
 plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
 plt.title('mean profile; feb version 0.6')
 plt.tight_layout()
