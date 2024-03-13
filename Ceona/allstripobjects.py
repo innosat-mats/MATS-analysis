@@ -12,7 +12,7 @@ items = pd.read_pickle('15to21febIR1')
 
 # %%
 def all_strips(items):
-    "returns all strips, saves as panda object list"
+    "OLD function, not used much. Returns all strips, saves as panda object list"
     airglowlim = 160
     auroramean = 50
     strips = []

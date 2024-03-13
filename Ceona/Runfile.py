@@ -10,8 +10,8 @@ from Keogram import get_stripRow
 from orbitoverview import overview_points
 from gradientOverview import overview_grad
 
-start_time = DT.datetime(2023,5,3,0,0,0)
-stop_time = DT.datetime(2023,5,3,10,0,0)
+start_time = DT.datetime(2023,2,15,18,57,0)
+stop_time = DT.datetime(2023,2,15,19,5,0)
 channel = 'IR1'
 numdays = stop_time-start_time
 #%% Read in data for Southern hemisphere, using certain filter
