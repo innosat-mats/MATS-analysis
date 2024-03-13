@@ -1,7 +1,7 @@
 function fig = MLTplotfunc(type,stripsNH,stripsSH,peaksNH,peaksSH)
-    fig = figure ; 
+    %fig = figure ; 
     if type == 1
-        sgtitle({'\bf MLT plot of peak points correlated with Kp-level';'\rm Period: May 1st to 7th'},fontsize=16)
+        sgtitle({'\bf MLT plot of peak points correlated with Kp-level';'\rm Period: April'},fontsize=16)
     
         %%%% North Hemisphere polar plot
         subplot(1,2,1);

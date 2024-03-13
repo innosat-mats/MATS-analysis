@@ -51,16 +51,16 @@ clc
 clf
 %Files to plot the peak points
 addpath("Monthdata\")
-load("marpeaksNH.mat");
-load("marpeaksSH.mat") ;
+load("aprpeaksNH.mat");
+load("aprpeaksSH.mat") ;
 
 %set files for the peaks you want to plot
-peaksNH = marpeaksNH ;
-peaksSH = marpeaksSH ;
+peaksNH = aprpeaksNH ;
+peaksSH = aprpeaksSH ;
 
 %set files for the path you want to plot
-stripsNH = marpeaksNH ;
-stripsSH = marpeaksSH;
+stripsNH = aprpeaksNH ;
+stripsSH = aprpeaksSH;
 
 type = 1 ;  %1 means only peaks are plotted, 2 both peaks and satellite path
 MLTplotfunc(1,stripsNH,stripsSH,peaksNH,peaksSH)
