@@ -27,8 +27,8 @@ show_plots=False # shows interactive matplotlib plots (might be buggy)
 # start and stop of the monitoring
 #start_time=$(date -d "$date -"$(date +'%w')" days - 6 days" +'%Y:%m:%d_00:00:00') #For Linux and Windows users
 #stop_time=$(date -d "$date -"$(date +'%w')" days + 1 days" +'%Y:%m:%d_00:00:00') #For Linux and Windows users
-start_time='2023:12:01_0:0:0'
-stop_time='2023:12:06_0:0:0'
+start_time='2023:12:08_0:0:0'
+stop_time='2023:12:12_0:0:0'
 
 # output folder for images
 outdir=${MATS_dir}'MATS-Data/Monitoring/setdate_'${start_time}
