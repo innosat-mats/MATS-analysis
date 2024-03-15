@@ -3,6 +3,8 @@ from mats_utils.rawdata.read_data import read_MATS_data
 import pandas as pd
 import datetime as DT
 from mats_utils.plotting.plotCCD import simple_plot, plot_image, orbit_plot
+from mats_utils.plotting.animate import generate_gif
+
 
 # data folder
 data_folder = '/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/'
@@ -29,5 +31,9 @@ simple_plot(df,data_folder)
 
 #%% testing orbit_plot changes
 
-orbit_plot(df,data_folder+'test2/',nbins=7.9)
+orbit_plot(df,data_folder+'test2/',nbins=7)
+
+# %%
+#/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/test2
+generate_gif('/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/test2/CCDSEL5/', data_folder+'orbit.gif')
 # %%

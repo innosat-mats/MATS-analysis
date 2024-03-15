@@ -53,8 +53,6 @@ for i, channel in enumerate(CCDlist):
     plot_CCDimage(aflatfield, fig, ax[i], clim=[0.8, 1.2], title='fullframe '+channel)
 
 
-#%%
-
 
 # %%
 

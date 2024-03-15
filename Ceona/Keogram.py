@@ -13,13 +13,14 @@ class CenterStrip:
     def __init__(self, CCDobject):
         self.image = CCDobject['ImageCalibrated']   #for L1b otherwise 'IMAGE'
         self.strip = []
-        self.latitude = CCDobject.TPlat
+        self.latitude = CCDobject.TPlat  
         self.time =  pd.to_datetime(CCDobject['EXPDate'])
-        self.maxrow = 0
-        self.maxalt = 0
-        self.maxlat = 0
-        self.maxlon = 0
-        self.maxI = 0
+        self.maxrow = 0 #row of max intensity point
+        self.maxalt = 0 #altitude of max intensity point
+        self.maxlat = 0 #geodetic latitude of max intensity point
+        self.maxlon = 0 #geodetic longitude of max intensity point
+        self.totI = 0 #full image integrated intensities
+        #magnetic aacgm coordinates of the max intensity point
         self.MagLT = 0
         self.Maglat = 0
         self.Maglon = 0
@@ -36,15 +37,16 @@ class CenterStrip:
         self.strip = self.image[int(center),:]
         return  np.transpose(self.strip)
 
-def makeStripMatrix(IR_list, strip_dir ='v'):
-    "Creates the keogram matrix and corresponding list of strips, from specific channel and list of CCD-items"
+def makeStripMatrix(item_list, strip_dir ='v'):
+    """Returns: Keogram matrix and corresponding list of strips
+    Argument: List of images (type pandas.dataframe)"""
     strips_matrix = []  #matrix of concatenated strips
     strips_list = []
     #creates a matrix from vertical strips
     if strip_dir == 'v':
         #iterates through the CCDobjects (each panda row) and creates a strip
-        for index, row in IR_list.iterrows():
-            new_strip = CenterStrip(row) #creates strip object
+        for index, item in item_list.iterrows():
+            new_strip = CenterStrip(item) #creates strip object
             new_strip.makeVerticalStrip()
             strips_matrix.append(new_strip.strip)
             strips_list.append(new_strip)
@@ -53,8 +55,8 @@ def makeStripMatrix(IR_list, strip_dir ='v'):
     #creates a matrix from horizontal strips
     if strip_dir== 'h':
         #iterates through the CCDobjects (each panda row) and creates a strip
-        for index, row in IR_list.iterrows():
-            new_strip = CenterStrip(row)  #creates strip object
+        for index, item in item_list.iterrows():
+            new_strip = CenterStrip(item)  #creates strip object
             new_strip.makeHorizontalStrip()
             strips_matrix.append(new_strip.strip)
             strips_list.append(new_strip)
@@ -79,60 +81,4 @@ def get_stripRow(strips):
     "Get all row values from given list of strip objects (Centerstrip class)"
     allrows = strips['row']
     return allrows
-
-"""Old function for testing and plotting keograms for several channels
-def plotKeogram(df, channels, strip_dir):
-    #Given a list of ccds. Returns and saves (matlabfile) 2 plots, one from keogram-matrix and one with the TPlatitudes
-    if len(channels)==1 :
-        IR_list = df[df['channel'] == channels[0]]
-        fig,axs = plt.subplots(nrows=2, ncols=1,sharex='all')
-        latitudes = getTPLatitudes(IR_list)
-        dates = getSatDates(IR_list)
-        times_strings = [dt.strftime("%d/%m %H:%M") for dt in dates]
-        matrix = makeStripMatrix(df,channels[0],strip_dir)
-        #axs[0].imshow(matrix, origin = 'lower')
-        axs[0].pcolormesh(dates,range(matrix.shape[0]),matrix)
-        axs[0].set_title(f"28 Feb Channel {channels[0]}")
-        axs[0].set_xlim(dates[0],dates[-1])
-        axs[0].set_xticks(dates[::int(len(dates)/10)])
-        axs[0].set_xticklabels(times_strings[::int(len(times_strings)/10)], rotation = 30)
-               
-        axs[1].set_xlabel('Time')
-        axs[1].set_ylabel('Latitude')
-        axs[1].plot(dates,latitudes,'.')
-        #axs[1].set_xlim(dates[0],dates[-1])
-        axs[1].grid(linestyle='-')
-        axs[1].set_xticks(dates[::int(len(dates)/10)])
-        axs[1].set_xticklabels(times_strings[::int(len(times_strings)/10)], rotation = 30) 
-               
-    else:
-        fig,axs = plt.subplots(nrows=len(channels)+1, ncols=1)
-        IR1_list = df[df['channel'] == channels[0]]
-        # gets the latitudes from objects only for the first channel.
-        latitudes = getTPLatitudes(IR1_list)
-        dates = getSatDates(IR1_list)
-        times_strings = [dt.strftime("%d/%m %H:%M") for dt in dates] 
-
-        axs[len(channels)].set_xlabel('Time')
-        axs[len(channels)].set_ylabel('Latitude')
-        axs[len(channels)].plot(dates,latitudes,'.')
-        axs[len(channels)].set_xlim(dates[0],dates[-1])
-        axs[len(channels)].set_xticks(dates[::int(len(dates)/10)])
-        axs[len(channels)].set_xticklabels(times_strings[::int(len(times_strings)/10)], rotation = 30) 
-
-        for i in range(len(channels)):
-            IR_objects =  df[df['channel'] == channels[i]]
-            latitudes = getTPLatitudes(IR_objects)
-            dates = getSatDates(IR_objects)
-            matrix = makeStripMatrix(df,channels[i],strip_dir)  
-            axs[i].pcolormesh(dates,range(matrix.shape[0]),matrix, vmax=1500)
-            axs[i].set_title(f"Channel {channels[i]}")
-       
-    #plt.tight_layout()
-    #plt.gcf().autofmt_xdate()
-    scipy.io.savemat('keogram_mat',{'keogram_mat': matrix, 'label':'values'}) #saves to matlabfile
-    scipy.io.savemat('lat28feb',{'lat28feb': latitudes, 'label':'altitudes'}) #saves to matlabfile
-    scipy.io.savemat('time28feb',{'time28feb': times_strings, 'label':'times'}) #saves to matlabfile
-    plt.show()
-"""
 # %%

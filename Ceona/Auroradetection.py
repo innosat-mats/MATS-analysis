@@ -23,6 +23,7 @@ def gradientmatrix(items,airglowlim, auroralim):
         #Polynomial regression model
         if rowindex >= auroralim:
             #weird intense spikes above auroralim, like the moon pass, will be ignored in the fit
+            #for April week use y < 400.
             valid_indices = np.where(y < 400)[0]
             y_filt = y[valid_indices]
             x_filt = np.arange(0,len(y_filt))
@@ -45,19 +46,20 @@ def gradientmatrix(items,airglowlim, auroralim):
 #Because all the strips are needed for the polynomial regression of each hemisphere keogram matrix 
 #to get the gradient removed matrix
 def get_strips(items, numdays,filedate):
-    """Returns a list of all strips and list of only aurorastrips, using linear regression and set aurora conditions"""
+    """Uses polynomial regression and set aurora conditions
+    Returns: a list of all strips and list of only aurorastrips, 
+    Arguments: list of pandas dataframe images, number of days (int), name of file (string)  """
     Tperiod = timedelta(minutes=100)
-    airglowlim = 130
-
+    airglowlim = 130  #set row limit of the airglow about 90 km altitude
     n = 0
     allstripsNH = []
     allstripsSH = []
-    allstrips = []   #used for plotting red dots on onverview
+    allstrips = []   #used for plotting red dots on overviews
     aurorastripsNH = []
     aurorastripsSH = []
     aurorastrips = []
 
-    # loop that goes through number of days
+    # loop that goes through number of days 
     for day in range(1,numdays.days+1):
         #this for loop goes through the images starting from the end of previous day
         for i in range(n, len(items)-1):
@@ -68,33 +70,35 @@ def get_strips(items, numdays,filedate):
             deltat = items.iloc[i+1].EXPDate-items.iloc[i].EXPDate
             if deltat < Tperiod/6 and i < len(items)-2: 
                 continue
-            else:                          
-                #creates orbit from index n to i+1
+            else: # if next image is more than 100/6 min after, we have new hemisphere                        
+                #creates orbit from index n to i
                 if items.iloc[i].TPlat > 0: #north hemisphere
-                    auroralim = 150    #150 used for pol-reg
-                    auroramean = 15     #15 for pol-reg
-                    auroraintensity = 18   #18 used for pol-reg
-                    NH = items.iloc[n:i+1]
+                    auroralim = 150
+                    auroramean = 15
+                    auroraintensity = 18
+                    NH = items.iloc[n:i+1]  #needs the plus 1 for iloc function
                     if len(NH) == 0 :
                         continue
                    
                     #gets the removed gradient matrix corresponding to that hemisphere
                     matrix, striplist = gradientmatrix(NH, airglowlim,auroralim)
+
                     for m, strip in enumerate(striplist):
-                        #finds the row of the max intensity value of each strip, above airglow limit
+                        #finds the row of the max intensity value of each strip, above airglow limit and aurora limit
                         row = np.argmax(strip.strip[auroralim:]) + auroralim
                         
+                        #Aurora conditions that need to be fulfilled: mean and top_max
                         #top_mean = np.sum(strip.strip[airglowlim+10:])/len(strip.strip[airglowlim+10:])
                         mean = np.sum(strip.strip[auroralim:])/len(strip.strip[auroralim:])
 
                         #gives the row of the maximum 10 rows above the limit to check that aurora is there as well
                         top_max = np.argmax(strip.strip[auroralim+10:]) + auroralim + 10        
-                        ccd = NH.iloc[m]
+                        ccd = NH.iloc[m] #retrieves the panda.dataframe object from list NH
                         if strip.strip.item(top_max) >= auroraintensity and mean > auroramean: #check so we have aurora above row.
-                            #sets the position coordinates of the max intensity point of strips with aurora
                             #print(strip.latitude, NH.iloc[m].TPlon, strip.time)  
                             #print('Row',row,'RowI',strip.strip.item(row),'Topmax',strip.strip.item(top_max),'Mean',top_mean,strip.time)
-                            set_aurora_spec(strip,ccd,row)
+                            set_aurora_spec(strip,ccd,row) #saves the parameters for aurora strip. E.g. intensity integration, MLT-coordinates
+
                             aurorastrips.append(strip)
                             aurorastripsNH.append(strip)
                         else:
@@ -104,15 +108,15 @@ def get_strips(items, numdays,filedate):
                         allstrips.append(strip)
 
                 elif items.iloc[i].TPlat < 0: #south hemisphere
-                    auroralim = 120    #150 used for pol-reg
-                    auroramean = 30     #15 for pol-reg  , 30 for normal keogram
+                    auroralim = 120    #Use 150 for pol-reg, 120 for normal keogram
+                    auroramean = 30     #Use 15 for pol-reg, 30 for normal keogram
                     auroraintensity = 40   #18 used for pol-reg, 40 for normal
                     SH = items.iloc[n:i+1]
                     if len(SH) == 0 :
                         continue
                     #gets the removed gradient matrix corresponding to that hemisphere
-                    #matrix, striplist = gradientmatrix(SH,airglowlim,auroralim)
-                    matrix, striplist = makeStripMatrix(SH)   #Used for april3W and 4W, when background is linear
+                    matrix, striplist = gradientmatrix(SH,airglowlim,auroralim)
+                    #matrix, striplist = makeStripMatrix(SH)   #Used for april week 2-4 and may, when background is more linear
 
                     for m, strip in enumerate(striplist):
 
@@ -121,7 +125,7 @@ def get_strips(items, numdays,filedate):
                         #top_mean = np.sum(strip.strip[airglowlim+10:])/len(strip.strip[airglowlim+10:])
                         mean = np.sum(strip.strip[auroralim:])/len(strip.strip[auroralim:])
 
-                        #gives the row of the maximum 10 rows above the limit to check that aurora is there as well
+                        #gives the row of the maximum, 10 rows above the limit to check that aurora is there as well
                         top_max = np.argmax(strip.strip[auroralim+10:]) + auroralim + 10   
                         ccd = SH.iloc[m]
                         #to avoid strips from SAA
@@ -135,7 +139,7 @@ def get_strips(items, numdays,filedate):
                                 aurorastrips.append(strip)
                                 aurorastripsSH.append(strip)
                         else:
-                            #if not aurora set magnetic coordinates of TP
+                            #if not aurora set magnetic coordinates and row of TP
                             set_strip_spec(strip,ccd)
 
                         allstripsSH.append(strip)
@@ -154,13 +158,12 @@ def get_strips(items, numdays,filedate):
 
     return aurorastrips
 # %%
-testitems = pd.read_pickle(r'C:\Users\ceona\Documents\GitHub\MATS-analysis\MATS-analysis\Ceona\26aprorb3')
-def testLinreg(testitems):
+def singleKeogramTest(items, filename):
     """polynomial regression test for short interval (only one orbit), to check keogram as well
     """
-    airglowlim = 120
+    airglowlim = 130
     auroralim = 150
-    matrix, striplist = makeStripMatrix(testitems)
+    matrix, striplist = makeStripMatrix(items)
     newmatrix = matrix.copy()
     fig, axs = plt.subplots(2,1)
 
@@ -170,34 +173,35 @@ def testLinreg(testitems):
         #Polynomial regression model
         if rowindex >= auroralim:
             #weird intense spikes above auroralim, like the moon pass, will be ignored in the fit
-            valid_indices = np.where(y < 300)[0]
+            valid_indices = np.where(y < 400)[0]
             y_filtered = y[valid_indices]
             x_filt = np.arange(0,len(y_filtered))
-            model = np.poly1d(np.polyfit(x_filt, y_filtered, 1))
+            model = np.poly1d(np.polyfit(x_filt, y_filtered, 3))
         else:
             valid_indices = np.where(y < 600)[0]
             y_filtered = y[valid_indices]
             x_filt = np.arange(0,len(y_filtered))
-            model = np.poly1d(np.polyfit(x_filt, y_filtered, 1))
+            model = np.poly1d(np.polyfit(x_filt, y_filtered, 3))
         y_reg = model(x) #new y_points
         
         newmatrix[rowindex,:] = y-y_reg
-        if rowindex == airglowlim or rowindex == auroralim+20: 
+        if rowindex == airglowlim or rowindex == auroralim or rowindex == auroralim +20: 
             axs[0].plot(y, label = f"Row {rowindex}")
             axs[0].plot(y_reg, label = f"y_reg, Row {rowindex}")
             axs[0].plot(y-y_reg, label = f"Row {rowindex} Diff")
-            axs[0].set_ylim(-30,400)
-            scipy.io.savemat('y.mat',{'y': y, 'label':'I'}) #saves to matlabfile
-            scipy.io.savemat('y_reg.mat',{'y_reg': y_reg, 'label':'I'}) #saves to matlabfile
+            axs[0].set_ylim(-50,400)
+            scipy.io.savemat(filename +f"Row{rowindex}" +'.mat',{f"Row{rowindex}": y}) #saves to matlabfile
+            scipy.io.savemat(filename + f"regRow{rowindex}" + '.mat',{f"regRow{rowindex}": y_reg}) #saves to matlabfile
 
     #Update the strips from the new matrix
     for col, strip in enumerate(striplist):
         strip.strip = newmatrix[:,col]
     
-    scipy.io.savemat('keogramgrad.mat',{'keogramgrad': newmatrix, 'label':'pixel'}) #saves to matlabfile
-    scipy.io.savemat('keogram.mat',{'keogram': matrix, 'label':'pixel'}) #saves to matlabfile
-
-    axs[1].pcolormesh(newmatrix,vmin=-10, vmax=300)
+    scipy.io.savemat(filename +'keograd.mat',{'keograd': newmatrix, 'label':'pixel'}) #saves to matlabfile
+    scipy.io.savemat(filename + 'keogram.mat',{'keogram': matrix, 'label':'pixel'}) #saves to matlabfile
+    save_strips(striplist, filename +'allstrips.mat', filename +'allstrips')
+    
+    axs[1].pcolormesh(matrix,vmin=-10, vmax=300)
     fig.legend()
     #print(newmatrix[:,0] -striplist[0].strip )
     plt.show()
@@ -205,11 +209,11 @@ def testLinreg(testitems):
 
 # %%
 def Main():
-    start_time = DT.datetime(2023,4,23,00,0,0)
-    stop_time = DT.datetime(2023,5,1,00,0,0)
+    start_time = DT.datetime(2023,4,26,00,0,0)
+    stop_time = DT.datetime(2023,4,28,00,0,0)
     numdays = stop_time-start_time
-    filedate = 'apr4W'
-    items = pd.read_pickle(r'MatsData\23to30aprIR1')
+    filedate = 'aprtest'
+    items = pd.read_pickle(r'MatsData\26to27aprIR1')
     #save_TPMLT(items,filedate)
     aurorastrips = get_strips(items,numdays,filedate) 
     get_aurora_max(aurorastrips,filedate)

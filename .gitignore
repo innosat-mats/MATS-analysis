@@ -1,3 +1,7 @@
+*.pickle
+*.pkl
+*.npy
+*.nc
 OleM/data/
 Louis/tutorial-satpy-half-day/
 Louis/archive/
@@ -33,4 +37,12 @@ Louis/monitoring/monitoring_Nickolay.sh
 Louis/monitoring/monitoring_routine_Nickolay.py
 Louis/artifact/miscelleanous.py
 Linda/Private/
+Linda/Junk/
 *__pycache__*
+Ceona/MatsData/
+Ceona/Stars/
+Ceona/Matlab_scripts/Weekdata/
+Ceona/Matlab_scripts/OneOrbit/
+Ceona/__pycache__/
+Ceona/Matlab_scripts/One day/
+Ceona/Matlab_scripts/Random plots/

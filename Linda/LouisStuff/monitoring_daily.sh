@@ -4,8 +4,9 @@
 
 # activate conda environment ?
 
+
 source /Users/lindamegner/miniconda3/etc/profile.d/conda.sh
-conda activate mats-analysis
+conda activate MatsAnalysis
 
 
 #### PARAMETERS ####

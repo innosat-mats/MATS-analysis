@@ -13,10 +13,9 @@ from Auroradetection import gradientmatrix
 # %%
 def overview_grad(items, channel, allrows, filename, numdays):
     "Create the overviews with added red dots for the aurora strips max points"
-    Tperiod = timedelta(minutes=100)
+    Tperiod = timedelta(minutes=100)   #one orbit = ca 90 min
     airglowlim = 130
     auroralim = 150
-    #one orbit = ca 90 min
     pdf = PdfPages(filename)
     n = 0
     
@@ -78,14 +77,15 @@ def overview_grad(items, channel, allrows, filename, numdays):
                     times_strings = [dt.strftime("%H:%M") for dt in dates]  #as strings
                     #gets the matrix corresponding to that hemisphere
                     #matrix, stripslist = gradientmatrix(SH,airglowlim,auroralim)
-                    matrix, stripslist = makeStripMatrix(SH)   #use for april 2-4 week
+                    matrix, stripslist = makeStripMatrix(SH)   #use for april 2-4 week and may
+                    
                     #plots the orbit found from n to current i
                     if channel == 'IR2':
                         axs[subplotNum,1].pcolormesh(dates,range(matrix.shape[0]),matrix, rasterized = True, vmin=-50, vmax=340) # rasterized makes a pixel image instead of vector graphic
                         axs[subplotNum,1].scatter(dates, allrows[n:i+1], marker='.', s = 5, color="red")
 
                     else:
-                        axs[subplotNum,1].pcolormesh(dates,range(matrix.shape[0]),matrix, rasterized = True, vmin=0, vmax=480) # for April week 2-4
+                        axs[subplotNum,1].pcolormesh(dates,range(matrix.shape[0]),matrix, rasterized = True, vmin=0, vmax=480) # for April week 2-4 and may
                         #axs[subplotNum,1].pcolormesh(dates,range(matrix.shape[0]),matrix, rasterized = True, vmin=-30, vmax=300) # rasterized makes a pixel image instead of vector graphic, less saving time
                         axs[subplotNum,1].scatter(dates,allrows[n:i+1], marker='.', s = 5, color="red")
                         
@@ -122,17 +122,17 @@ def overview_grad(items, channel, allrows, filename, numdays):
  # %% To run the code above
 def Main():
     # Determine the main time span and settings for multiple plots
-    start_time = DT.datetime(2023,4,23,00,00,0)
-    stop_time = DT.datetime(2023,5,1,00,00,0)
+    start_time = DT.datetime(2023,5,1,00,00,0)
+    stop_time = DT.datetime(2023,5,8,00,00,0)
     channel = 'IR1'
-    filename = "4wapr_IR1grad.pdf"
+    filename = "1wmay_IR1grad.pdf"
     numdays = stop_time-start_time #number of days
 
-    items = pd.read_pickle(r'MatsData\23to30aprIR1')
+    items = pd.read_pickle(r'MatsData\1to7mayIR1')
     #orbit_pdf(items, channel, strip_dir, filename, numdays)
     
     #Run this to read in all the strips, and to get the row parameter for each strip.
-    allstrips = pd.read_pickle(r'MatsData\apr4Wallstrips')
+    allstrips = pd.read_pickle(r'MatsData\may1Wallstrips')
     allrows = get_stripRow(allstrips)
     overview_grad(items,channel,allrows,filename,numdays)
     return

@@ -6,64 +6,25 @@ from mats_l1_processing.L1_calibrate import L1_calibrate
 from mats_l1_processing.instrument import Instrument
 from mats_l1_processing.read_parquet_functions import dataframe_to_ccd_items
 
-#%% 
-calibration_file ="/home/olemar/Projects/Universitetet/MATS/MATS-L1-processing/scripts/calibration_data.toml"    
-instrument = Instrument(calibration_file)
+# #%% 
+# calibration_file ="/home/olemar/Projects/Universitetet/MATS/MATS-L1-processing/scripts/calibration_data.toml"    
+# instrument = Instrument(calibration_file)
 
-#%% Select on explicit time
-start_time = DT.datetime(2023, 5, 8, 0, 0)
-stop_time = DT.datetime(2023, 5, 8, 23, 0)
+# #%% Select on explicit time
+# start_time = DT.datetime(2023, 5, 8, 0, 0)
+# stop_time = DT.datetime(2023, 5, 8, 23, 0)
 
-df = read_MATS_data(start_time,stop_time,version='0.5',level='1a')
-
-#CCDitems = dataframe_to_ccd_items(df)
+# df = read_MATS_data(start_time,stop_time,version='0.6',level='1a')
 
 #%%
-
-L1_calibrate(CCDitems[0],instrument)
-L1_calibrate(CCDitems[1],instrument)
-L1_calibrate(CCDitems[2],instrument)
-L1_calibrate(CCDitems[3],instrument)
-L1_calibrate(CCDitems[4],instrument)
-L1_calibrate(CCDitems[5],instrument)
-L1_calibrate(CCDitems[6],instrument)
-
-
+start_time=DT.datetime(2023,5,7,1,0,0)
+stop_time=DT.datetime(2023,5,7,2,0,0)
+filter_UV2={'CCDSEL': [6,6]}
+df=read_MATS_data(start_time, stop_time, filter_UV2, level='1b')
 
 #%%
-# for i in range(len(CCDitems)):
-#     image_lsb, image_bias_sub, image_desmeared, image_dark_sub, image_calib_nonflipped, image_calibrated, errors = L1_calibrate(CCDitems[i],instrument)
-# %%
-#for i in range(len(CCDitems)):
-I = 1
-image_lsb, image_bias_sub, image_desmeared, image_dark_sub, image_calib_nonflipped, image_calibrated, errors = L1_calibrate(CCDitems[I],instrument)
-
-# %%
-from matplotlib import pyplot as plt
-
-plt.imshow(image_lsb,origin='lower')
-plt.title('Channel ' + CCDitems[I]["channel"]+ " lsb")
-plt.colorbar()
-plt.show()
-
-plt.imshow(image_bias_sub,origin='lower')
-plt.title('Channel ' + CCDitems[I]["channel"] + " bias subtracted")
-plt.colorbar()
-plt.show()
-
-plt.imshow(image_desmeared,origin='lower')
-plt.title('Channel ' + CCDitems[I]["channel"]+ " desmeared")
-plt.colorbar()
-plt.show()
-
-plt.imshow(image_dark_sub,origin='lower')
-plt.title('Channel ' + CCDitems[I]["channel"]+ " dark subtracted")
-plt.colorbar()
-plt.show()
-
-plt.imshow(image_calibrated,origin='lower')
-plt.title('Channel ' + CCDitems[I]["channel"] + " flatfied and abs calibrated")
-plt.colorbar()
-plt.show()
-
+start_time=DT.datetime(2023,5,7,1,0,0)
+stop_time=DT.datetime(2023,5,7,2,0,0)
+filter_UV2={'CCDSEL': [6,6]}
+df=read_MATS_data(start_time, stop_time, filter_UV2, level='1a')
 # %%
