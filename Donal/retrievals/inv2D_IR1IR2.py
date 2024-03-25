@@ -111,8 +111,16 @@ plt.figure()
 plt.pcolor(np.array(ir1calcs).reshape(121, -1).T)
 plt.title("IR1calc")
 plt.colorbar()
-# %%
+plt.figure()
 ch["ir1profile"].plot(y="z")
+
+
+plt.figure()
+plt.pcolor(np.array(ir2calcs).reshape(121, -1).T)
+plt.title("IR2calc")
+plt.colorbar()
+plt.figure()
+ch["ir2profile"].plot(y="z")
 
 # %%
 plt.figure()

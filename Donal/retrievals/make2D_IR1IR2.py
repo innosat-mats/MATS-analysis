@@ -327,7 +327,7 @@ ir1grad = grad(ir1fun, argnums=3)
 
 # @jit
 def ir2fun(pos, path_step, o2s, atm):
-    #return total LOS intensity in the filter ph m-2 st-1 s-1
+    #return total LOS intensity in the filter ph m-2 sr-1 s-1
     VER, Temps = atm
     VER = jnp.array(VER)
     Temps = jnp.array(Temps)
@@ -412,7 +412,7 @@ for i, retlat in enumerate(ret_lats):
             kwargs={"fill_value": 0},
         ).values
         * 4
-        * np.pi 
+        * np.pi / 5 
         /1e6 #note to be removed when björn gives right data
     )
     # VER = 1e6*1e6*gauss(atm['z']-88,10)+1e5*1e6 *np.exp(-(atm['z']-60)/8)
@@ -568,10 +568,10 @@ for i in range(0, len(df)):
         # print('rowsum = ',k.sum())
         # ks[k_row,:] = k
         k_row = k_row + 1
-    with open("runningfile_2", "wb") as file:
-        pickle.dump(
-            (i, irow, ir1calcs, ir2calcs, ir1grads, ir2grads, profiles, ks), file
-        )
+with open("runningfile_2", "wb") as file:
+    pickle.dump(
+        (i, irow, ir1calcs, ir2calcs, ir1grads, ir2grads, profiles, ks), file
+    )
 
 
 # ecivecs= np.reshape(ecivecs,(len(df),-1,3))
