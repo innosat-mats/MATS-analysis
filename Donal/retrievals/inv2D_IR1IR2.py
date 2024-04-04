@@ -64,11 +64,11 @@ def cart2sph(pos=np.array([[]])):
 
 ch = xr.load_dataset(
     expanduser(
-        "~donal/projekt/SIW/MATS-analysis/Donal/retrievals/IR1IR2test_400-520.nc"
+        "~donal/projekt/SIW/MATS-analysis/Donal/retrievals/IR1IR2test.nc"
     )
 )
 filename = expanduser(
-    "~donal/projekt/SIW/MATS-analysis/Donal/retrievals/jacobianIR1IR2_400-520.pkl"
+    "~donal/projekt/SIW/MATS-analysis/Donal/retrievals/jacobianIR1IR2.pkl"
 )
 with open(filename, "rb") as file:
     [edges, k, ecef_to_local] = pickle.load(file)
@@ -77,14 +77,14 @@ msis = xr.load_dataset(
         "~donal/projekt/SIW/MATS-analysis/Donal/retrievals/Datafiles/msis_cmam_climatology_200.nc"
     )
 )
-with open("runningfile_2", "rb") as file:
+with open("runningfile_3", "rb") as file:
     [i, irow, ir1calcs, ir2calcs, ir1grads, ir2grads, profiles, ks] = pickle.load(file)
 with open("apriori", "rb") as file:
     [VERarray, Tarray, o2array] = pickle.load(file)
 # Tempory corrections due to bad apriori values     
-VERarray *= 4*np.pi * 4*np.pi /1e6  #  divided by 4pi instead of mutiplying and was in m-3 
-correction= 4*np.pi * 4*np.pi /1e6 * 1e4 # as above but also to change from cm-2 to m -2 
-gradcorr= 1e4
+VERarray *= 1 #4*np.pi * 4*np.pi /1e6  #  divided by 4pi instead of mutiplying and was in m-3 
+correction= 1 #4*np.pi * 4*np.pi /1e6 * 1e4 # as above but also to change from cm-2 to m -2 
+gradcorr= 1
 ir1calcs = [intens * correction for intens in ir1calcs]  
 ir2calcs = [intens * correction for intens in ir2calcs]  
 # 
@@ -136,8 +136,8 @@ plt.pcolor(newir1.reshape(len(ret_lats), -1).T)
 plt.title('Kintensity @ VERapriori')
 plt.colorbar()
 # %%
-y = np.hstack([ir1calcs, ir2calcs])
-y0 = np.hstack([ch.ir1profile.values.flatten(), ch.ir2profile.values.flatten()])
+y0 = np.hstack([ir1calcs, ir2calcs])
+y = np.hstack([ch.ir1profile.values.flatten(), ch.ir2profile.values.flatten()])
 x0 = np.hstack([VERarray.flatten(), Tarray.flatten()])
 x = x0.copy()  # First guess
 ks = sp.lil_array((len(y), 2 * len(ret_lats) * len(rs)))
@@ -151,12 +151,12 @@ ks = ks.tocsc()
 Sa_inv = sp.diags(
     np.hstack(
         [
-            np.ones([int(x.shape[0] / 2)]) * (1 / np.max(y)),
-            np.ones([int(x.shape[0] / 2)]) / 900,
+            np.ones([int(x.shape[0] / 2)]) * (10 / np.max(x0)),
+            np.ones([int(x.shape[0] / 2)]) / 100,
         ]
     )
 )
-Se_inv = sp.diags(np.ones([ks.shape[0]]), 0).astype("float32") * (1 / np.max(y))
+Se_inv = sp.diags(np.ones([ks.shape[0]]), 0).astype("float32") * (0.000000001 / np.max(y0))
 gamma = 0
 # %%
 # ktSei=ks.T @ Se_inv
@@ -166,11 +166,11 @@ gamma = 0
 # hopefully faster
 ktSei = ks.T @ Se_inv
 S = (1 + gamma) * Sa_inv + ktSei @ ks
-xr = sp.linalg.spsolve(S, (ktSei @ (y - y0) - Sa_inv @ (x - x0)))
-xnew = x + xr
+xi = sp.linalg.spsolve(S, (ktSei @ (y - y0) - Sa_inv @ (x - x0)))
+xnew = x + xi
 # %%
 plt.figure()
-plt.pcolor(xnew[:13431].reshape(111, 121), vmin=0, vmax=1e6)
+plt.pcolor(xnew[:13431].reshape(111, 121), vmin=0, vmax=1e5)
 plt.title('Retreived VER one iteration')
 plt.colorbar()
 plt.figure()
@@ -178,4 +178,96 @@ plt.pcolor(xnew[13431:].reshape(111, 121), vmin=120, vmax=400)
 plt.title('Retreived T one iteration')
 plt.colorbar()
 
+# %%
+def makezplots(x_hat,rs,retlats,zmin=50, zmax = 110,vmin=0,vmax=1e5,title="2D"):
+
+    plot_data=np.zeros([len(ret_lats),int((zmax-zmin))])
+    #plot_data=np.zeros([len(ret_lats),len(rs)])
+
+    for i,lat in enumerate(ret_lats):
+
+        xs=(rs-geoid_radius(lat))*1e-3
+        #print(i,lat,xs)
+        #print(x_hat_reshape1[:,i])
+        #print(np.interp(np.arange(zmin,zmax),xs,x_hat_reshape1[:,i]))
+        plot_data[i,:] = np.interp(np.arange(zmin,zmax),xs,x_hat[:,i])
+        #plot_data[i,:] = (rs-geoid_radius(lat))*1e-3
+
+    plt.figure()
+    plt.pcolor(lats[1:-1],np.arange(zmin,zmax),plot_data.T[:,1:-1],vmin=vmin,vmax=vmax)
+    plt.xlim([edges[2][1],edges[2][-2]])
+    plt.colorbar()
+    plt.xlabel('Angle Along Orbit (radians)')
+    plt.ylabel('Corrected Altitude (km)')
+    
+
+    plt.title(title)
+    plt.show()
+    
+def makezcontour(x_hat,rs,retlats,zmin=50, zmax = 110,levels=[],title="2D"):
+
+    plot_data=np.zeros([len(ret_lats),int((zmax-zmin))])
+    #plot_data=np.zeros([len(ret_lats),len(rs)])
+
+    for i,lat in enumerate(ret_lats):
+
+        xs=(rs-geoid_radius(lat))*1e-3
+        #print(i,lat,xs)
+        #print(x_hat_reshape1[:,i])
+        #print(np.interp(np.arange(zmin,zmax),xs,x_hat_reshape1[:,i]))
+        plot_data[i,:] = np.interp(np.arange(zmin,zmax),xs,x_hat[:,i])
+        #plot_data[i,:] = (rs-geoid_radius(lat))*1e-3
+
+    plt.figure()
+    plt.contourf(lats[1:-1],np.arange(zmin,zmax),plot_data.T[:,1:-1],levels=levels)
+    plt.xlim([edges[2][1],edges[2][-2]])
+    plt.colorbar()
+    plt.xlabel('Angle Along Orbit (radians)')
+    plt.ylabel('Corrected Altitude (km)')
+    
+
+    plt.title(title)
+    plt.show()
+    
+def makezcontourlats(x_hat,rs,ret_lats,zmin=50, zmax = 110,levels=[],title="2D"):
+
+    plot_data=np.zeros([len(ret_lats),int((zmax-zmin))])
+    #plot_data=np.zeros([len(ret_lats),len(rs)])
+
+    for i,lat in enumerate(ret_lats):
+
+        xs=(rs-geoid_radius(lat))*1e-3
+        #print(i,lat,xs)
+        #print(x_hat_reshape1[:,i])
+        #print(np.interp(np.arange(zmin,zmax),xs,x_hat_reshape1[:,i]))
+        plot_data[i,:] = np.interp(np.arange(zmin,zmax),xs,x_hat[:,i])
+        #plot_data[i,:] = (rs-geoid_radius(lat))*1e-3
+
+    plt.figure()
+    plt.contourf(ret_lats[1:-1],np.arange(zmin,zmax),plot_data.T[:,1:-1],levels=levels)
+    #plt.xlim([edges[2][1],edges[2][-2]])
+    plt.colorbar()
+    plt.xlabel('Angle Along Orbit (radians)')
+    plt.ylabel('Corrected Altitude (km)')
+    
+
+    plt.title(title)
+    plt.show()
+
+# %%
+makezplots(xnew[:13431].reshape(111, 121),rs,ret_lats,zmin=60,zmax=110)
+makezplots(xnew[13431:].reshape(111, 121),rs,ret_lats,zmin=60,zmax=110,vmin=100,vmax=300)
+# %%
+makezcontour(xnew[:13431].reshape(111, 121),rs,ret_lats,zmin=60,zmax=110,levels=np.linspace(0,1.2e5,13))
+makezcontour(xnew[13431:].reshape(111, 121),rs,ret_lats,zmin=60,zmax=110,levels=np.linspace(120,300,10))
+# %%
+makezcontourlats(xnew[:13431].reshape(111, 121),rs,ret_lats,zmin=60,zmax=110,levels=np.linspace(0,1.2e5,26))
+makezcontourlats(xnew[13431:].reshape(111, 121),rs,ret_lats,zmin=60,zmax=110,levels=np.linspace(120,300,10))
+# %%
+plt.figure()
+file = expanduser(
+    "~/projekt/SIW/MATS-analysis/Donal/retrievals/Datafiles/w1_march.nc")
+bjdata = xr.load_dataset(file)
+bjdata = bjdata.isel(time=slice(0, 200)).swap_dims({"time": "latitude"})
+(bjdata.ver[1:150]/1e6/5*4*np.pi).plot.contourf(y='z_r',x='latitude',levels=np.linspace(0,1.2e5,26))
 # %%

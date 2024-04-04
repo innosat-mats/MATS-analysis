@@ -32,41 +32,41 @@ msis = xr.load_dataset(
 )
 sigma = np.load(
     expanduser(
-        "~donal/projekt/SIW/MATS-analysis/Donal/retrievals/Datafiles/o2Abandsigma100-600.npy"
+        "~/projekt/SIW/MATS-analysis/Donal/retrievals/Datafiles/o2Abandsigma100-600.npy"
     )
 )
 emission = np.load(
     expanduser(
-        "~donal/projekt/SIW/MATS-analysis/Donal/retrievals/Datafiles/o2Abandemission100-600.npy"
+        "~/projekt/SIW/MATS-analysis/Donal/retrievals/Datafiles/o2Abandemission100-600.npy"
     )
 )
 # %%
-dftop = pd.read_pickle(expanduser("~donal/projekt/SIW/verdec"))
+#dftop = pd.read_pickle(expanduser("~donal/projekt/SIW/verdec"))
 # %%
 IR1 = np.loadtxt(
     expanduser(
-        "~donal/projekt/SIW/MATS-analysis/Donal/retrievals/Datafiles/F-N-IR1-ABandCenter_transmission_air_6degr.dat"
+        "~/projekt/SIW/MATS-analysis/Donal/retrievals/Datafiles/F-N-IR1-ABandCenter_transmission_air_6degr.dat"
     ),
     skiprows=1,
     unpack=True,
 )
 IR2 = np.loadtxt(
     expanduser(
-        "~donal/projekt/SIW/MATS-analysis/Donal/retrievals/Datafiles/F-N-IR2-ABandTotal_air_6degr.dat"
+        "~/projekt/SIW/MATS-analysis/Donal/retrievals/Datafiles/F-N-IR2-ABandTotal_air_6degr.dat"
     ),
     skiprows=1,
     unpack=True,
 )
 IR3 = np.loadtxt(
     expanduser(
-        "~donal/projekt/SIW/MATS-analysis/Donal/retrievals/Datafiles/F-N-IR3-BgShort_transmission_air_6degr.dat"
+        "~/projekt/SIW/MATS-analysis/Donal/retrievals/Datafiles/F-N-IR3-BgShort_transmission_air_6degr.dat"
     ),
     skiprows=1,
     unpack=True,
 )
 IR4 = np.loadtxt(
     expanduser(
-        "~donal/projekt/SIW/MATS-analysis/Donal/retrievals/Datafiles/F-N-IR4-BgLong_transmission_air_6degr.dat"
+        "~/projekt/SIW/MATS-analysis/Donal/retrievals/Datafiles/F-N-IR4-BgLong_transmission_air_6degr.dat"
     ),
     skiprows=1,
     unpack=True,
@@ -82,6 +82,11 @@ IR4[1, :] /= 100
 filter1 = np.interp(grid, 1e7 / IR1[0, -1::-1], IR1[1, -1::-1], left=0, right=0)
 filter2 = np.interp(grid, 1e7 / IR2[0, -1::-1], IR2[1, -1::-1], left=0, right=0)
 filters = np.vstack([filter1, filter2])
+
+lukas=np.load(expanduser('~/projekt/SIW/MATS-analysis/Donal/retrievals/rt_data_c.npz'))
+filters=lukas['filters']
+sigma=lukas['sigma']
+emission=lukas['emission']
 # %%
 # starttime=datetime(2023,3,31,21,0)
 # stoptime=datetime(2023,3,31,22,35)
@@ -91,7 +96,7 @@ filters = np.vstack([filter1, filter2])
 #     pickle.dump(dftop,handle)#%%
 # df=df[df['channel']!='NADIR']
 file = expanduser(
-    "~donal/projekt/SIW/MATS-analysis/Donal/retrievals/Datafiles/w1_march.nc"
+    "~/projekt/SIW/MATS-analysis/Donal/retrievals/Datafiles/w1_march.nc"
 )
 bjdata = xr.load_dataset(file)
 starttime = datetime.fromisoformat(np.datetime_as_string(bjdata.time[0], unit="s"))
@@ -302,7 +307,7 @@ def interppos(pos, inArray):
     # return((inArray[iz,0,ix]+inArray[iz+1,0,ix+1])/2)
 
 
-# @jit
+@jit
 def ir1fun(pos, path_step, o2s, atm):
     VER, Temps = atm
     VER = jnp.array(VER)
@@ -392,7 +397,7 @@ ret_lons = np.rad2deg(np.array(cart2sph(ret_ecef)).T[:, 1])
 Tarray = np.zeros([len(rs), len(lons) - 1, len(lats)])
 VERarray = np.zeros_like(Tarray)
 o2array = np.zeros_like(Tarray)
-bjdata = bjdata.isel(time=slice(0, 150)).swap_dims({"time": "latitude"})
+bjdata = bjdata.isel(time=slice(0, 200)).swap_dims({"time": "latitude"})
 for i, retlat in enumerate(ret_lats):
     localR = np.linalg.norm(
         sfapi.wgs84.latlon(retlat, ret_lons[i], elevation_m=0).at(t).position.m
@@ -405,10 +410,9 @@ for i, retlat in enumerate(ret_lats):
         msis.o2.sel(month=d.month).interp(lat=retlat, z=(rs - localR) / 1000) / 1e6
     )  # to cm-3
     VERarray[:, 0, i] = (
-        bjdata.ver.interp(
-            latitude=[retlat],
+        bjdata.ver.mean(axis=0).interp(
             z_r=(rs - localR) / 1000,
-            method="nearest",
+            method="linear",
             kwargs={"fill_value": 0},
         ).values
         * 4
@@ -568,7 +572,7 @@ for i in range(0, len(df)):
         # print('rowsum = ',k.sum())
         # ks[k_row,:] = k
         k_row = k_row + 1
-with open("runningfile_2", "wb") as file:
+with open("runningfile_3", "wb") as file:
     pickle.dump(
         (i, irow, ir1calcs, ir2calcs, ir1grads, ir2grads, profiles, ks), file
     )
@@ -612,13 +616,13 @@ inputdata = xr.Dataset(
     }
 )
 
-inputdata.to_netcdf("IR1IR2test_400-520.nc")
+inputdata.to_netcdf("IR1IR2test.nc")
 # %%
-filename = "jacobianIR1IR2_400-520.pkl"
+filename = "jacobianIR1IR2.pkl"
 with open(filename, "wb") as file:
     pickle.dump((edges, ks, ecef_to_local), file)
 # %%
-filename = "intensityIR1IR2_400-520.pkl"
+filename = "intensityIR1IR2.pkl"
 with open(filename, "wb") as file:
     pickle.dump((ir1calcs, ir2calcs), file)
 
