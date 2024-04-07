@@ -1,16 +1,18 @@
 function fig = MLTplotfunc(type,stripsNH,stripsSH,peaksNH,peaksSH)
-    %fig = figure ; 
+    % Arguments: type = 1 or 2, strips = matlab structure allstrips file
+    % peaks = matlab structure peak file
     if type == 1
-        sgtitle({'\bf MLT plot of peak points correlated with Kp-level';'\rm Period: April'},fontsize=16)
+        sgtitle({'\bf MLT plot of peak points correlated with intensity';'\rm Period: May month '},fontsize=16)
     
         %%%% North Hemisphere polar plot
         subplot(1,2,1);
        
         %plot settings
-        p1 = polarscatter(peaksNH.MLT*(pi/12),peaksNH.Mlat,[],peaksNH.kp,'filled');
-        set(gca,"CLim",[0 9])  %Altitude limit = 99-110,  kplimit = 1-6
+        p1 = polarscatter(peaksNH.MLT*(pi/12),peaksNH.Mlat,[],peaksNH.maxI,'filled');
+        set(gca,"CLim",[8*10^3 4*10^4])  %Altitude limit = 90-115,  kplimit = 0-9
         cb = colorbar ;
-        cb.Label.String = 'Kp-index' ; %'Altitude (km)';
+        colormap jet
+        cb.Label.String = 'Intensity 10^{13}/ (nm \cdot m^2 \cdot str \cdot s)' ;%'Altitude (km)'; %'Kp-index' ;
         ax1 = gca;
         % MLT (theta settings)
         ax1.ThetaDir = 'counterclockwise' ;
@@ -29,15 +31,16 @@ function fig = MLTplotfunc(type,stripsNH,stripsSH,peaksNH,peaksSH)
         p1.DataTipTemplate.DataTipRows(3) = dataTipTextRow("Altitude",peaksNH.alt);
         p1.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow("Kp",peaksNH.kp);
         p1.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow("Time",peaksNH.time);
-       
+        p1.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow("Intensity",peaksSH.maxI);
+        
         subtitle('Northern Hemisphere','FontWeight','bold',FontSize=12);
         
         %%%% South Hemisphere polar plot
         subplot(1,2,2) ;
-        p2 = polarscatter(peaksSH.MLT*(pi/12),peaksSH.Mlat,[],peaksSH.kp,'filled');
-        set(gca,"CLim",[0 9])  
+        p2 = polarscatter(peaksSH.MLT*(pi/12),peaksSH.Mlat,[],peaksSH.maxI,'filled');
+        set(gca,"CLim",[2*10^3 4*10^4])  %[0 9] , [2*10^3 4*10^4] , [90 115]
         cb = colorbar ;
-        cb.Label.String = 'Kp-index' ; %'Altitude (km)';
+        cb.Label.String = 'Intensity 10^{13}/ (nm \cdot m^2 \cdot str \cdot s)';%'Altitude (km)'; 'Kp-index' ;
 
         ax2 = gca;
         ax2.ThetaDir = 'counterclockwise' ;
@@ -55,13 +58,14 @@ function fig = MLTplotfunc(type,stripsNH,stripsSH,peaksNH,peaksSH)
         p2.DataTipTemplate.DataTipRows(3) = dataTipTextRow("Altitude",peaksSH.alt);
         p2.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow("Kp",peaksSH.kp);
         p2.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow("Time",peaksSH.time);
-    
+        p2.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow("Intensity",peaksSH.maxI);
+
         subtitle('Southern Hemisphere','FontWeight','bold',FontSize=12);
 
     end
 
     if type == 2
-        sgtitle({'\bf Peak points correlated with Kp-level and TP-path';'\rm Period: May 1st to 7th'},fontsize=16)
+        sgtitle({'\bf Peak points correlated with Kp-level and TP-path';'\rm Period: February'},fontsize=16)
         
         %%%% North Hemisphere polar plot
         subplot(1,2,1);

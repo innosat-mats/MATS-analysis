@@ -1,19 +1,34 @@
-%% Calculate mean values and max min
+%% Calculate mean values and max min for month data
 addpath("Monthdata\")
-load("aprpeaksSH.mat")
-load("aprpeaksNH.mat")
+load("febpeaksSH.mat")
+load("febpeaksNH.mat")
 
 %set files for peaks
-peaksNH = aprpeaksNH ;
-peaksSH = aprpeaksSH ;
+peaksNH = febpeaksNH ;
+peaksSH = febpeaksSH ;
 
 meanSH = mean(peaksSH.Mlat) ;
 meanNH = mean(peaksNH.Mlat) ;
-minNH = min(peaksNH.Mlat)  ;
-maxNH = max(peaksNH.Mlat) ;
-minSH = min(peaksSH.Mlat) ;
-maxSH = max(peaksSH.Mlat) ;
+minNH = min(peaksNH.maxI)  ;
+maxNH = max(peaksNH.maxI) ;
+minSH = min(peaksSH.maxI) ;
+maxSH = max(peaksSH.maxI) ;
 
+%% 
+addpath("Weekdata\Maystrips\")
+load("may1WpeaksSH.mat")
+load("may1WpeaksNH.mat")
+
+%set files for peaks
+peaksNH = may1WpeaksNH ;
+peaksSH = may1WpeaksSH ;
+
+meanSH = mean(peaksSH.) 
+meanNH = mean(peaksNH.MLT) 
+minNH = min(peaksNH.maxI)  ;
+maxNH = max(peaksNH.maxI) ;
+minSH = min(peaksSH.maxI) ;
+maxSH = max(peaksSH.maxI) ;
 
 %% Plots altitude vs time (uniform and non-uniform axis)
 close all

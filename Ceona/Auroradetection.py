@@ -132,12 +132,12 @@ def get_strips(items, numdays,filedate):
                         if SH.iloc[m].TPlat >= -60 and SH.iloc[m].TPlon >= 0 and SH.iloc[m].TPlon <= 40 or (SH.iloc[m].TPlat >= -60 and SH.iloc[m].TPlon >= 290):
                             set_strip_spec(strip,ccd)    
                         elif strip.strip.item(top_max) > auroraintensity and mean > auroramean:
-                                #print(strip.latitude, SH.iloc[m].TPlon, strip.time)
-                                print('Row',row,'RowI',strip.strip.item(row),'Topmax',strip.strip.item(top_max),'Mean',mean,strip.time)
-                                set_aurora_spec(strip,ccd,row)
-                                #sets the position coordinates of the max intensity point of strips with aurora
-                                aurorastrips.append(strip)
-                                aurorastripsSH.append(strip)
+                            #print(strip.latitude, SH.iloc[m].TPlon, strip.time)
+                            #print('Row',row,'RowI',strip.strip.item(row),'Topmax',strip.strip.item(top_max),'Mean',mean,strip.time)
+                            set_aurora_spec(strip,ccd,row)
+                            #sets the position coordinates of the max intensity point for strips with aurora
+                            aurorastrips.append(strip)
+                            aurorastripsSH.append(strip)
                         else:
                             #if not aurora set magnetic coordinates and row of TP
                             set_strip_spec(strip,ccd)

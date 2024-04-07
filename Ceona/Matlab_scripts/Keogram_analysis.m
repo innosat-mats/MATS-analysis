@@ -1,13 +1,15 @@
 
 %% Plot single image
-clims = [min(min(aurorapic)) max(max(aurorapic))];
+load("mar2_1915.mat")
+clims = [min(min(ccdimage)) max(max(ccdimage))];
 figure(1)
-imagesc(aurorapic,clims)
+imagesc(ccdimage,clims)
 ax1 = gca;
 ax1.YDir = 'normal' ;
-title('15 February Image 19:01:09 ')
+title('2 March Image 19:15:25 ')
 hold on
-xline(23, Color=[1 0 0], LineWidth=4)
+%add central column line
+%xline(23, Color=[1 0 0], LineWidth=4) 
 %% Plot a keogram and a corresponding position plot below (ex altitude)
 keogramgrad = keogram15feborb11
 clims = [min(min(keogramgrad)) max(max(keogramgrad))];

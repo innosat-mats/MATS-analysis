@@ -10,8 +10,8 @@ from Keogram import get_stripRow
 from orbitoverview import overview_points
 from gradientOverview import overview_grad
 
-start_time = DT.datetime(2023,2,15,18,57,0)
-stop_time = DT.datetime(2023,2,15,19,5,0)
+start_time = DT.datetime(2023,2,8,0,0,0)
+stop_time = DT.datetime(2023,2,14,0,0,0)
 channel = 'IR1'
 numdays = stop_time-start_time
 #%% Read in data for Southern hemisphere, using certain filter
@@ -20,26 +20,25 @@ dfSH = dfSH[dfSH['channel'] == channel]
 
 #%% Read in data for Northern hemisphere, using certain filter
 dfNH = read_MATS_data(start_time,stop_time,filter={"TPlat":[45,90],'NROW': [0,400]},version='0.5',level='1b')
-dfNH = dfNH[dfNH['channel'] == channel]
-
+#dfNH = dfNH[dfNH['channel'] == channel]
 
 #%% Concatenate the two hemispheres, and sort the CCD on time, saves in pickle
 items = pd.concat([dfNH,dfSH], ignore_index=True)
 sortitems = items.sort_values(['EXPDate'])
-sortitems.to_pickle('26to27aprIR1')
+sortitems.to_pickle('22feborb13')
 
 #%% Saves a spcific image into matlab matrix
 def saveSpecIm(ccditem):
     ccdimage = ccditem['ImageCalibrated']
     #saves the matrix to matlab-file
     plt.pcolormesh(ccdimage,rasterized = True, vmin=0, vmax=480)
-    scipy.io.savemat('aurorapic2',{'ccdimage': ccdimage, 'label':'intensity'}) #saves to matlabfile
+    scipy.io.savemat('mar2_1917.mat',{'ccdimage': ccdimage, 'label':'intensity'}) #saves to matlabfile
     return
 
 # %% Main file to run scripts
 def Main():
-    start_time = DT.datetime(2023,2,8,0,0,0)
-    stop_time = DT.datetime(2023,2,15,0,0,0)
+    start_time = DT.datetime(2023,3,9,0,0,0)
+    stop_time = DT.datetime(2023,3,9,0,0,0)
     numdays = stop_time-start_time #number of days
     filedate = 'feb2W'
 

@@ -22,7 +22,7 @@ from aacgmv2 import get_aacgm_coord
 def TPpos(ccditem):
     """Function giving the GPS TP in geodetic coordinates
     Arguments:
-        ccditem or dataframe with the 'afsTangentPointECI'
+        ccditem or dataframe that has the 'afsTangentPointECI' attribute
     Returns:
         TPlat: latitude of TP (degrees)
         TPlon: longitude of TP (degrees)
@@ -41,7 +41,8 @@ def TPpos(ccditem):
     return TPlat,TPlon,TPalt
 
 def save_TPMLT(items, filename):
-    """Saves the magnetic coordinates of TP separately"""
+    """Saves the magnetic coordinates of TP separately
+        """
     MLT = []
     Mlat = []
     for k, item in items.iterrows():
@@ -66,8 +67,14 @@ def set_strip_spec(strip,item):
 
 # %% Aurora analysis functions 
 def col_pos(ccditem, x, nheights=None, splineTPgeo=False):
-    """Returns the geodetic coordinates of a pixel, lat, lon and altitude
-    x is the column value"""
+    """Returns the geodetic coordinates of a pixel
+    Arguments:
+        dataframe (raw MATS-data), x = column index
+    Returns: TPgeo
+        TPgeo[iy,0] = lat.degrees
+        TPgeo[iy,1] = lon.degrees 
+        TPgeo[iy,2] = alt.km
+    """
     if nheights == None:
         nheights = ccditem['NROW']
     d = ccditem['EXPDate']
