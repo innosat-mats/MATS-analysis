@@ -22,7 +22,7 @@ from aacgmv2 import get_aacgm_coord
 def TPpos(ccditem):
     """Function giving the GPS TP in geodetic coordinates
     Arguments:
-        ccditem or dataframe with the 'afsTangentPointECI'
+        ccditem or dataframe that has the 'afsTangentPointECI' attribute
     Returns:
         TPlat: latitude of TP (degrees)
         TPlon: longitude of TP (degrees)
@@ -41,22 +41,23 @@ def TPpos(ccditem):
     return TPlat,TPlon,TPalt
 
 def save_TPMLT(items, filename):
-    """Saves the magnetic coordinates of TP separately"""
+    """Saves the magnetic coordinates of TP separately
+        """
     MLT = []
     Mlat = []
-    for k, ccd in items.iterrows():
-        TPlat,TPlon,TPalt = TPpos(ccd)
-        mlat, mlon, mlt = get_aacgm_coord(TPlat,TPlon,TPalt,ccd.EXPDate, method='ALLOWTRACE')
+    for k, item in items.iterrows():
+        TPlat,TPlon,TPalt = TPpos(item)
+        mlat, mlon, mlt = get_aacgm_coord(TPlat,TPlon,TPalt,item.EXPDate, method='ALLOWTRACE')
         MLT.append(mlt)
         Mlat.append(mlat)
     scipy.io.savemat(filename +'MLT.mat',{filename +'MLT': MLT, 'label':'MLT'}) #saves to matlabfile
     scipy.io.savemat(filename +'MLat.mat',{filename +'MLat': Mlat, 'label':'MLat'}) #saves to matlabfile
     return
 
-def set_strip_spec(strip,ccd):
+def set_strip_spec(strip,item):
     """Sets the properties of the non aurora strip objects"""
-    TPlat,TPlon,TPalt = TPpos(ccd)
-    mlat, mlon, mlt = get_aacgm_coord(TPlat,TPlon,TPalt,ccd.EXPDate, method='ALLOWTRACE')
+    TPlat,TPlon,TPalt = TPpos(item)
+    mlat, mlon, mlt = get_aacgm_coord(TPlat,TPlon,TPalt,item.EXPDate, method='ALLOWTRACE')
     strip.maxrow = 107  #tried different values, row 107 gave similar values using colpos as TPpos
     strip.maxalt = TPalt
     strip.MagLT = mlt
@@ -66,15 +67,23 @@ def set_strip_spec(strip,ccd):
 
 # %% Aurora analysis functions 
 def col_pos(ccditem, x, nheights=None, splineTPgeo=False):
-    """Returns the geodetic coordinates of a pixel, lat, lon and altitude
-    x is the column value"""
+    """Returns the geodetic coordinates of a pixel
+    Arguments:
+        dataframe (raw MATS-data), x = column index
+    Returns: TPgeo
+        TPgeo[iy,0] = lat.degrees
+        TPgeo[iy,1] = lon.degrees 
+        TPgeo[iy,2] = alt.km
+    """
     if nheights == None:
         nheights = ccditem['NROW']
     d = ccditem['EXPDate']
     ts = load.timescale()  #loads earth rotation data
     t = ts.from_datetime(d)
     #gets the cameras position and attitude data
-    ecipos = ccditem['afsGnssStateJ2000'][0:3] #uses the J2000 equinox epoch,for the global navigation satellite system
+    ecipos = ccditem['afsGnssStateJ2000'][0:3] 
+    #uses the J2000 equinox epoch, for the global navigation satellite system GNSS
+    # afs = Atomic Frequency Standards
     q = ccditem['afsAttitudeState']  #Written in Euler parameters
     quat = R.from_quat(np.roll(q, -1))  #the last element is put first
     qprime = R.from_quat(ccditem['qprime'])
@@ -103,10 +112,10 @@ def col_pos(ccditem, x, nheights=None, splineTPgeo=False):
     else:
         return TPgeo 
 
-def set_aurora_spec(strip,ccd,row):
+def set_aurora_spec(strip,item,row):
     "Sets the properties in the strip objects, including position and intensity"
     centercol = 22
-    TPgeo = col_pos(ccd,centercol)
+    TPgeo = col_pos(item,centercol)
     [lat,lon,altitude] = TPgeo[row,:]
     mlat, mlon, mlt = get_aacgm_coord(lat, lon, altitude, strip.time, method='ALLOWTRACE')
     strip.maxrow = row
@@ -161,7 +170,7 @@ def get_aurora_max(aurorastrips,filedate):
         if deltat < timedelta(minutes=4) and i != len(aurorastrips)-2: #Belongs to same cluster
             continue
         else:
-            #New cluster, check the peak for the previous cluster
+            #New full cluster, check the peak for that cluster
             event = allaltitudes[n:i+1]
             if len(event) < 4:
                 continue

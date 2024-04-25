@@ -1,6 +1,6 @@
-%plot kp-index for whole period
+%% plot kp-index for whole period
 % From https://kp.gfz-potsdam.de/en/data
-clear all
+clear
 [time, value, status] = getKpindex('2023-02-01', '2023-02-28', 'Kp') ;
 days = 28 ;
 
@@ -9,61 +9,43 @@ KPdata = reshape(value, 8, days);
 
 figure(1)
 bar(time,value)
-title('Plot of the Kp-index vs time')
-ylabel('Kp')
-xlabel('Time')
+sgtitle({'\bf Kp-index vs time';'\rm Period: February'},fontsize=15)
+ylabel('Kp', FontWeight='bold', FontSize=12)
+xlabel('Time', FontWeight='bold', FontSize=12)
 grid on
-%% Create kp_data matrix for a month 
 
-%Loads kp data from website
-[time, value, status] = getKpindex('2023-05-01', '2023-05-31', 'Kp') ;
-days = 31 ;
-% Reshape into matrix
-KPdata = reshape(value, 8, days);
-save('KPdataMay','KPdata')
-% Different rows  in the matrix correspond to the measured time: 
-% 1 = 00 , 2 = 03, 3 =06, 4 = 09, 5 = 12, 6 = 15, 7 = 18, 8 = 21
+%% Plot parameter coorelations
+clear
+close all
+addpath("Monthdata\")
+load("aprpeaks.mat")
 
-%% Function to create kp values corresponding to the peaks
-clear all
-clc
+strips = aprpeaks ;
 
-addpath("Weekdata\Maystrips\")
-load("may1WpeaksSH.mat")
-load("KPdataMay.mat")
+figure(1)
+plot(strips.kp,strips.maxI , '.')
+sgtitle({'\bf Intensity vs Kp-level';'\rm Period: April Northern Hemisphere'},fontsize=15)
+ylabel('Intensity 10^{13}/ (nm \cdot m^2 \cdot str \cdot s)',FontWeight='bold', FontSize=12) ;
+xlabel('Kp-level', FontWeight='bold', FontSize=12)
+grid on
 
-timedata = may1WpeaksSH.time ;
-kp = [] ;
+figure(2)
+plot(strips.kp,strips.alt , '.')
+sgtitle({'\bf Altitude vs Kp-level';'\rm Period: April Northern Hemisphere'},fontsize=15)
+ylabel('Altitude (km)', FontWeight='bold', FontSize=12)
+xlabel('Kp-level', FontWeight='bold', FontSize=12)
+grid on
 
-%loops through list of strips
-for i = 1:length(timedata)
-    day = timedata(i).Day ;
-    hour = timedata(i).Hour ;
-    if (hour >= 0) && (hour <= 3)
-        kp(end+1) = KPdata(1,day) ;
+figure(3)
+plot(strips.kp,strips.Mlat , '.')
+sgtitle({'\bf MLat vs Kp-level';'\rm Period: April Northern Hemisphere'},fontsize=15)
+ylabel('Geomagnetic latitude (degrees)', FontWeight='bold', FontSize=12)
+xlabel('Kp-level', FontWeight='bold', FontSize=12)
+grid on
 
-    elseif (hour > 3) && (hour <= 6)
-        kp(end+1) = KPdata(2,day) ;    
-
-    elseif (hour > 6) && (hour <= 9)
-        kp(end+1) = KPdata(3,day) ; 
-
-    elseif (hour > 9) && (hour <= 12)
-        kp(end+1) = KPdata(4,day) ;
-    
-    elseif (hour > 12) && (hour <= 15)
-        kp(end+1) = KPdata(5,day) ;
-
-    elseif (hour >= 15) && (hour <= 18)
-        kp(end+1) = KPdata(6,day) ;
-
-    elseif (hour > 18) && (hour <= 21)
-        kp(end+1) = KPdata(7,day) ;
-
-    elseif (hour > 21) && (hour < 24)
-        kp(end+1) = KPdata(8,day) ;
-    end
-end
-
-may1WpeaksSH.kp = kp ;
-save('Weekdata\may1WpeaksSH.mat', "may1WpeaksSH")
+figure(4)
+plot(strips.alt,strips.maxI , '.')
+sgtitle({'\bf Altitude vs Intensity';'\rm Period: April Northern Hemisphere'},fontsize=15)
+ylabel('Intensity 10^{13}/ (nm \cdot m^2 \cdot str \cdot s)', FontWeight='bold', FontSize=12)
+xlabel('Altitude (km)', FontWeight='bold', FontSize=12)
+grid on

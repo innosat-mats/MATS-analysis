@@ -1,9 +1,44 @@
+%% Calculate mean values and max min for month data
+addpath("Monthdata\")
+load("febpeaksSH.mat")
+load("febpeaksNH.mat")
+
+%set files for peaks
+peaksNH = febpeaksNH ;
+peaksSH = febpeaksSH ;
+
+meanSH = mean(peaksSH.Mlat) ;
+meanNH = mean(peaksNH.Mlat) ;
+minNH = min(peaksNH.maxI)  ;
+maxNH = max(peaksNH.maxI) ;
+minSH = min(peaksSH.maxI) ;
+maxSH = max(peaksSH.maxI) ;
+
+%% 
+addpath("Weekdata\Maystrips\")
+load("may1WpeaksSH.mat")
+load("may1WpeaksNH.mat")
+
+%set files for peaks
+peaksNH = may1WpeaksNH ;
+peaksSH = may1WpeaksSH ;
+
+meanSH = mean(peaksSH.) 
+meanNH = mean(peaksNH.MLT) 
+minNH = min(peaksNH.maxI)  ;
+maxNH = max(peaksNH.maxI) ;
+minSH = min(peaksSH.maxI) ;
+maxSH = max(peaksSH.maxI) ;
+
+%% Plots altitude vs time (uniform and non-uniform axis)
 close all
-%%% Plots altitude vs time
+addpath("Weekdata\Februarystrips\")
+load("feb3Wpeaks.mat")
+
 figure(1)
-dateStrings = feb3Waurorastrips.time; 
+dateStrings = feb3Wpeaks.time; 
 dateTimes = datetime(dateStrings, 'Format', 'dd/MM HH:mm:ss');
-plot(dateTimes,feb3Waurorastrips.alt,'.')
+plot(dateTimes,feb3Wpeaks.alt,'.')
 title('15 feb, limit, non-uniform time spacing of x-axis')
 ylabel('Altitude (km)')
 grid on
@@ -18,31 +53,10 @@ xticks(dateTimes(selectedIndices));
 xticklabels(datestr(dateTimes(selectedIndices), 'HH:MM:SS'));
 
 figure(2)
-plot(feb3Waurorastrips.alt,'.')
+plot(feb3Wpeaks.alt,'.')
 title('15 feb, limit, uniform spacing of x-axis')
 ylabel('Altitude (km)')
 grid on
 ylim([100,116]) ;
 xtickangle(45);
 
-%% Extra scripts and functions
-% This function splits strips to North and South hemisphere depending on TPlat 
-function [MLTNH,MlatNH,MLTSH,MlatSH] = splitHemisphere(Mlat, MLT)
-    L = length(Mlat) ;
-    MLTNH =  [] ;
-    MlatNH = [] ;
-    MLTSH =  [] ;
-    MlatSH = [] ;
-
-    for m = 1:L
-        if Mlat(m) > 0
-            MLTNH(end+1) = MLT(m) ;
-            MlatNH(end+1)= Mlat(m);
-        end
-    
-        if Mlat(m) < 0
-            MLTSH(end+1) = MLT(m) ;
-            MlatSH(end+1) = Mlat(m);
-        end
-    end  
-end

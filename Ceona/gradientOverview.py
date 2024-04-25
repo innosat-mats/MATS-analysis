@@ -13,10 +13,9 @@ from Auroradetection import gradientmatrix
 # %%
 def overview_grad(items, channel, allrows, filename, numdays):
     "Create the overviews with added red dots for the aurora strips max points"
-    Tperiod = timedelta(minutes=100)
+    Tperiod = timedelta(minutes=100)   #one orbit = ca 90 min
     airglowlim = 130
     auroralim = 150
-    #one orbit = ca 90 min
     pdf = PdfPages(filename)
     n = 0
     

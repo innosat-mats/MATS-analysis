@@ -10,9 +10,9 @@ import numpy as np
 from numba import jit
 from numba import prange
 #from pytictoc import TicToc
-import tables, warnings
+#import tables, warnings
 from scipy import sparse
-import h5py
+#import h5py
 
 def oem(y, Kin, xa, Seinvin, Sainvin, maxiter):
     K = Kin.todense()

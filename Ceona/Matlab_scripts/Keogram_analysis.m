@@ -1,8 +1,17 @@
-%Mean values
-mean(maxalt15feb)
-mean(maxlat15feb)
-mean(maxlon15feb)
+
+%% Plot single image
+load("mar2_1915.mat")
+clims = [min(min(ccdimage)) max(max(ccdimage))];
+figure(1)
+imagesc(ccdimage,clims)
+ax1 = gca;
+ax1.YDir = 'normal' ;
+title('2 March Image 19:15:25 ')
+hold on
+%add central column line
+%xline(23, Color=[1 0 0], LineWidth=4) 
 %% Plot a keogram and a corresponding position plot below (ex altitude)
+keogramgrad = keogram15feborb11
 clims = [min(min(keogramgrad)) max(max(keogramgrad))];
 figure(1)
 subplot(2,1,1) ;
@@ -25,54 +34,107 @@ linkaxes([ax1 gca], 'x');  % Link x-axes of the two subplots
 
 %%  Plotting the pixel values of different row of a keogram.
 close all 
-figure(1)
-image = keogram15feborb11 ;
-plot(image(140,:),'DisplayName','140')
+addpath('OneOrbit\')
+load('mar2orb10Row170.mat')
+load('mar2orb10Row150.mat')
+load('mar2orb10Row130.mat')
+load('mar2orb10regRow170.mat')
+load('mar2orb10regRow150.mat')
+load('mar2orb10regRow130.mat')
+load('mar2orb10keogram.mat')
+load('mar2orb10keograd.mat')
+image = keogram;
+
+[xData, yData] = prepareCurveData( [], Row130 );
+
+% Fit model to data.
+f = fit( xData, yData, 'poly1' );
+
+% Plot fit with data.
+figure(1);
+plot(f);
 hold on
-plot(image(141,:),'DisplayName','141')
+plot(image(130,:),'DisplayName','Row 130',Marker='.',LineStyle='none')
 hold on
-plot(image(150,:),'DisplayName','150')
+plot(image(140,:),'DisplayName','Row 140',Marker='.',LineStyle='none')
 hold on
-plot(image(151,:),'DisplayName','151')
+plot(image(150,:),'DisplayName','Row 150',Marker='.',LineStyle='none')
 hold on
-plot(image(152,:), 'DisplayName','152')
+plot(image(155,:), 'DisplayName','Row 155',Marker='.',LineStyle='none')
 hold on
-plot(image(153,:),'DisplayName','153')
+plot(image(160,:),'DisplayName','Row 160',Marker='.',LineStyle='none')
+xlim([0,230])
+ylabel('Pixel value',FontSize=13)
+xlabel('Column','FontSize',13)
+legend 
+grid on
+title('Multiple rows plotted and a linear regression of row 130')
+
+figure(2)
+plot(Row150-regRow150,'DisplayName','New row 150',Marker='.',LineStyle='none')
 hold on
-plot(image(154,:),'DisplayName','154')
+plot(Row150,'DisplayName','Row 150',Marker='.',LineStyle='none')
 hold on
-plot(image(155,:), 'DisplayName','155')
-hold on
-plot(image(160,:),'DisplayName','160')
-title('Plot showing Keogram rows')
+plot(regRow150, 'DisplayName','Regression')
+xlim([0,230])
+ylabel('Pixel value', FontSize=13)
+xlabel('Column', FontSize=13)
+grid on
+legend 
+title('Polynomial regression of row 150 and normalized curve')
 
 %% Plot keogram image and some of the polynomial regression rows
+close all
+addpath('OneOrbit\')
+load('mar2orb10Row170.mat')
+load('mar2orb10Row150.mat')
+load('mar2orb10Row130.mat')
+load('mar2orb10regRow170.mat')
+load('mar2orb10regRow150.mat')
+load('mar2orb10regRow130.mat')
+load('mar2orb10keogram.mat')
+load('mar2orb10keograd.mat')
+
 figure(1)
 subplot(2,1,1)
-clims = [min(min(keogramgrad)) max(max(keogramgrad))];
-imagesc(keogramgrad,clims)
+clims = [min(min(keograd)) max(max(keograd))];
+imagesc(keograd,clims)
 ax1 = gca;
 ax1.YDir = 'normal' ;
-title('Keogram 26 feb orbit 3')
+title('Keogram 2nd March orbit 10')
 
 subplot(2,1,2)
-plot(keogram(180,:),'DisplayName','Row 180-diff')
+%plot(Row150-regRow150,'DisplayName','Row 150-diff')
 hold on
-plot(y, 'DisplayName','Row 140')
+plot(Row150,'DisplayName','Row 150',Marker='.',LineStyle='none')
 hold on
-plot(y_reg, 'DisplayName','140-linearzied')
+plot(regRow150, 'DisplayName','Row 150-reg')
 hold on
-plot((y-y_reg), 'DisplayName','140-diff')
-plot(keogram(150,:),'DisplayName','150')
+plot(Row130,'DisplayName','Row 130',Marker='.',LineStyle='none')
 hold on
-plot(keogram(155,:), 'DisplayName','155')
+plot(regRow130,'DisplayName','Row 130reg')
 hold on
-plot(keogram(160,:),'DisplayName','160')
+%plot(Row130-regRow130, 'DisplayName','Row 130-diff')
+hold on
+%plot(Row170, 'DisplayName','170')
+hold on
+%plot(Row170-regRow170,'DisplayName','170-diff')
 
 title('Plot showing Keogram rows')
+ylabel('Pixel value')
+xlabel('Column')
+ylim([0,350])
+xlim([0,226])
 linkaxes([ax1 gca], 'x');  % Link x-axes of the two subplots
 grid on
 legend
+
+figure(2)
+clims = [min(min(keogram)) max(max(keogram))];
+imagesc(keogram,clims)
+ax1 = gca;
+ax1.YDir = 'normal' ;
+title('Keogram 2nd March orbit 10')
 %% Check means and maximum values of specific keogram columns
  
 col = keogram(151:end,106) ;

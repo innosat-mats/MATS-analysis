@@ -7,7 +7,7 @@ from mats_l1_processing.instrument import Instrument
 from mats_l1_processing.read_parquet_functions import dataframe_to_ccd_items
 
 #%% 
-calibration_file ="/home/olemar/Projects/Universitetet/MATS/MATS-L1-processing/tests/calibration_data_test.toml"    
+calibration_file ="/home/olemar/Projects/Universitetet/MATS/MATS-L1-processing/scripts/calibration_data.toml"    
 instrument = Instrument(calibration_file)
 
 #%% Select on explicit time

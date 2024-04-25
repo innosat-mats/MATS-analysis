@@ -23,9 +23,9 @@ def orbit_pdf(items, channel, filename, numdays):
         #the first subplot number
         orbnum = 1
         subplotNum = 0
-        orbcheck = False  #to check if previous orbit was the same as now
+        orbcheck = False  #to check if previous orbit was on the same hemisphere as now
 
-        #this for loop goes through the images starting from the end of previous orbit
+        #this for loop goes through the images starting from the end of previous day
         for i in range(n, len(items)-1):
             
             orbit_startdate = items.iloc[n].EXPDate

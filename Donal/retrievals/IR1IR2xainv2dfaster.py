@@ -53,8 +53,10 @@ def cart2sph(pos):
     return np.array([radius,longitude,latitude]).T
 
 
-ch=xr.load_dataset(expanduser('~donal/projekt/SIW/MATS-analysis/Donal/retrievals/IR1IR2test_500-620.nc'))
-filename = expanduser("~donal/projekt/SIW/MATS-analysis/Donal/retrievals/jacobianIR1IR2_500-620.pkl")
+ch=xr.load_dataset(expanduser('~donal/projekt/SIW/MATS-analysis/Donal/retrievals/IR1IR2test_400-520.nc'))
+with open("runningfile_2", "rb") as file:
+    [i,irow,ir1calcs,ir2calcs,profiles,ks] = pickle.load(file)
+filename = expanduser("~donal/projekt/SIW/MATS-analysis/Donal/retrievals/jacobianIR1IR2_400-520.pkl")
 with open(filename, "rb") as file:
     [edges, k, ecef_to_local] = pickle.load(file)
 msis=xr.load_dataset(expanduser('~donal/projekt/SIW/MATS-analysis/Donal/retrievals/Datafiles/msis_cmam_climatology_200.nc'))
@@ -69,25 +71,37 @@ limb_fit = []
 time_save = []
 #k=np.matrix(k)
 #k_reduced,empty_cols,filled_cols = remove_empty_columns(k)
-k_reduced=k.tocsc()
-y = ch.profile.values.reshape(-1)
+K=k.tocsc()
+y=np.hstack([ch.ir1profile.values,ch.ir1profile.values]).reshape(-1)
 
-rs=(edges[0][0:-1]+edges[0][1::])/2
-lons=(edges[1][0:-1]+edges[1][1::])/2
-lats=(edges[2][0:-1]+edges[2][1::])/2
+rs=edges[0]#(edges[0][0:-1]+edges[0][1::])/2
+lons=edges[1]#(edges[1][0:-1]+edges[1][1::])/2
+lats=edges[2]#(edges[2][0:-1]+edges[2][1::])/2
 ret_ecef=ecef_to_local.inv().apply(np.array([rs[0]*np.cos(lats),np.zeros(len(lats)),rs[0]*np.sin(lats)]).T)
-ret_lats=np.rad2deg(cart2sph(ret_ecef)[:,2])
-# %%
-xa=np.ones([len(rs),len(lats)]).astype('float32')
-for i,lat in enumerate(ret_lats):
-  xa[:,i]= ratiospl(msis.T.sel(month=12).interp(lat=lat,z=(rs-geoid_radius(lat))/1000))
-xa_norm=1 
-#xa_norm=2e10/stats.norm.pdf(geoid_radius(lat)+88000,geoid_radius(lat)+88000,2500)  
-#xa=np.ones([k_reduced.shape[1]])
-xa=xa_norm*xa.reshape(-1)
+ret_lats=np.rad2deg(np.array(cart2sph(ret_ecef)).T[:,2])
+ret_lons=np.rad2deg(np.array(cart2sph(ret_ecef)).T[:,1])
+Tarray=np.zeros([len(rs),len(lons)-1,len(lats)])
+VERarray=np.zeros_like(Tarray)
+o2array=np.zeros_like(Tarray)
+mid=int(ch.time.shape[0]/2)
+ts = sfapi.load.timescale()
+d=np.datetime64(ch.time[mid].values,'s').astype(datetime).replace(tzinfo=sfapi.utc)
+t = ts.from_datetime(d)
+for i,retlat in enumerate(ret_lats):
+    localR = np.linalg.norm(sfapi.wgs84.latlon(retlat, ret_lons[i], elevation_m=0).at(t).position.m)
+    #print(retlat,localR,np.max(rs-localR))
+    Tarray[:,0,i]=msis.T.sel(month=d.month).interp(lat=retlat,z=(rs-localR)/1000)
+    o2array[:,0,i]=msis.o2.sel(month=d.month).interp(lat=retlat,z=(rs-localR)/1000)/1e6 # to cm-3
+    VERarray[:,0,i]=2e3*1e6*stats.norm.pdf((rs-localR)/1000,88,4.5)+2e2*1e6 *np.exp(-((rs-localR)/1000-60)/20)
+    
+xa=np.hstack([VERarray[:,0,:],Tarray[:,0,:]])
+xa=xa.reshape(-1)
+Sa_inv=np.diag(np.ones([xa.shape[0]]),0).astype('float32') * (1/np.max(y)) /100
+Se_inv=np.diag(np.ones([K.shape[0]]),0).astype('float32') * (1/np.max(y))
+gamma=5
 
-Sa_inv=sp.diags(np.ones([xa.shape[0]]),0).astype('float32') * (1/np.max(y)) /100
-Se_inv=sp.diags(np.ones([k_reduced.shape[0]]),0).astype('float32') * (1/np.max(y))
+#Sa_inv=sp.diags(np.ones([xa.shape[0]]),0).astype('float32') * (1/np.max(y)) /100
+#Se_inv=sp.diags(np.ones([k_reduced.shape[0]]),0).astype('float32') * (1/np.max(y))
 # Sa=sp.diags(np.ones([xa.shape[0]]),0) * np.max(y) * 5e-10
 # Se=sp.diags(np.ones([k.shape[0]]),0) * np.max(y) 
 # print('start inverses')
@@ -104,7 +118,14 @@ Se_inv=sp.diags(np.ones([k_reduced.shape[0]]),0).astype('float32') * (1/np.max(y
 
 #%%
 start_time = time.time()
-x_hat = oem_basic_sparse_2(y, k_reduced, xa, Se_inv, Sa_inv, maxiter=1000)
+xnew=xa.copy()
+ycalc=np.hstack([np.asarray(ir1calcs).reshape(51,-1),np.asarray(ir2calcs).reshape(51,-1)]).reshape(-1)
+#x_hat = oem_basic_sparse_2(y, k_reduced, xa, Se_inv, Sa_inv, maxiter=1000)
+ktSei=K.T @ Se_inv
+S=np.linalg.inv((1+gamma)*Sa_inv + ktSei @ K)
+xr=S @ (ktSei@(y-ycalc) - Sa_inv@(x-xa))
+xnew=xnew+xr
+
 end_time = time.time()
 #np.save('xhat2_snabb_100-200.npy',x_hat)
 print(end_time-start_time,' sec')

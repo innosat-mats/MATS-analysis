@@ -84,7 +84,7 @@ def get_strips(items, numdays,filedate):
                     matrix, striplist = gradientmatrix(NH, airglowlim,auroralim)
 
                     for m, strip in enumerate(striplist):
-                        #finds the row of the max intensity value of each strip, above airglow limit
+                        #finds the row of the max intensity value of each strip, above airglow limit and aurora limit
                         row = np.argmax(strip.strip[auroralim:]) + auroralim
                         
                         #Aurora conditions that need to be fulfilled: mean and top_max
@@ -125,19 +125,19 @@ def get_strips(items, numdays,filedate):
                         #top_mean = np.sum(strip.strip[airglowlim+10:])/len(strip.strip[airglowlim+10:])
                         mean = np.sum(strip.strip[auroralim:])/len(strip.strip[auroralim:])
 
-                        #gives the row of the maximum 10 rows above the limit to check that aurora is there as well
+                        #gives the row of the maximum, 10 rows above the limit to check that aurora is there as well
                         top_max = np.argmax(strip.strip[auroralim+10:]) + auroralim + 10   
                         ccd = SH.iloc[m]
                         #to avoid strips from SAA
                         if SH.iloc[m].TPlat >= -60 and SH.iloc[m].TPlon >= 0 and SH.iloc[m].TPlon <= 40 or (SH.iloc[m].TPlat >= -60 and SH.iloc[m].TPlon >= 290):
                             set_strip_spec(strip,ccd)    
                         elif strip.strip.item(top_max) > auroraintensity and mean > auroramean:
-                                #print(strip.latitude, SH.iloc[m].TPlon, strip.time)
-                                print('Row',row,'RowI',strip.strip.item(row),'Topmax',strip.strip.item(top_max),'Mean',mean,strip.time)
-                                set_aurora_spec(strip,ccd,row)
-                                #sets the position coordinates of the max intensity point of strips with aurora
-                                aurorastrips.append(strip)
-                                aurorastripsSH.append(strip)
+                            #print(strip.latitude, SH.iloc[m].TPlon, strip.time)
+                            #print('Row',row,'RowI',strip.strip.item(row),'Topmax',strip.strip.item(top_max),'Mean',mean,strip.time)
+                            set_aurora_spec(strip,ccd,row)
+                            #sets the position coordinates of the max intensity point for strips with aurora
+                            aurorastrips.append(strip)
+                            aurorastripsSH.append(strip)
                         else:
                             #if not aurora set magnetic coordinates and row of TP
                             set_strip_spec(strip,ccd)
@@ -158,7 +158,7 @@ def get_strips(items, numdays,filedate):
 
     return aurorastrips
 # %%
-def testLinreg(items, filename):
+def singleKeogramTest(items, filename):
     """polynomial regression test for short interval (only one orbit), to check keogram as well
     """
     airglowlim = 130
