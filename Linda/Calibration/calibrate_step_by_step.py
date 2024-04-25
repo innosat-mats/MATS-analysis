@@ -12,7 +12,7 @@ from database_generation.experimental_utils import plot_CCDimage
 
 
 
-def make_calibration_plots(images,datechannel):
+def make_calibration_plots(images,datechannel, savefig=False):
 
     print(len(images))
     (image_lsb,
@@ -28,10 +28,14 @@ def make_calibration_plots(images,datechannel):
      errors,
     ) = images
 
+
     plot_calib_step(image_lsb,image_se_corrected,'SE_correction_' + datechannel,errors)
     plot_calib_step(image_se_corrected,image_hot_pixel_corrected,'hot-pixel_correction' + datechannel,errors)
     plot_calib_step(image_hot_pixel_corrected,image_bias_sub,'bias_subtraction' + datechannel,errors)
-    plot_calib_step(image_bias_sub,image_linear,'linearization' + datechannel,errors,divide=True)
+    plot_calib_step(image_bias_sub,image_linear,'linearization' + datechannel,errors,divide=True)#, clim3=[0.99,1.002])
+    change=image_linear/image_bias_sub
+    print('datechannel', datechannel)
+    print('mean change: ', change)
     plot_calib_step(image_linear,image_desmeared,'desmear' + datechannel,errors)
     plot_calib_step(image_desmeared,image_dark_sub,'dark_subtraction' + datechannel,errors)
     plot_calib_step(image_dark_sub,image_flatfielded,'flatfielding' + datechannel,errors,divide=True)
@@ -40,36 +44,46 @@ def make_calibration_plots(images,datechannel):
 
     return
 
-def plot_calib_step(step1,step2,title,error,divide=False, clim=None):
+def plot_calib_step(step1,step2,title,error,divide=False, clim1=None, clim2=None,clim3=None,fig=None, ax=None):
 
     error = np.zeros(np.shape(step1))
 
-    fig, axs = plt.subplots(1,3)
-    fig.suptitle(title, fontsize=16)
-    sc = axs[0].imshow(step1, vmin=np.mean(step1)-np.std(step1), vmax=np.mean(step1)+np.std(step1),origin='lower')
-    cbar = fig.colorbar(sc, ax=axs[0], orientation='vertical')
-    sc = axs[1].imshow(step2, vmin=np.mean(step2)-np.std(step2), vmax=np.mean(step2)+np.std(step2),origin='lower')
-    cbar = fig.colorbar(sc, ax=axs[1], orientation='vertical')
+    if fig is None:
+        fig, ax = plt.subplots(1,3)
+        fig.suptitle(title, fontsize=16)
+        ax0 = ax[0]
+        ax1 = ax[1]
+        ax2 = ax[2]
+    if clim1 is None:
+        clim1=[np.mean(step1)-np.std(step1), np.mean(step1)+np.std(step1)]
+    sc = ax0.imshow(step1, clim=clim1,origin='lower')
+    cbar = fig.colorbar(sc, ax=ax0, orientation='vertical')
+    if clim2 is None:
+        clim2=[np.mean(step2)-np.std(step2), np.mean(step2)+np.std(step2)]   
+    sc = ax1.imshow(step2, clim=clim2,origin='lower')
+    cbar = fig.colorbar(sc, ax=ax1, orientation='vertical')
     if divide:
         change=step2/step1
-        sc = axs[2].imshow(change,vmin=np.median(change)-np.std(change), vmax=np.median(change)+np.std(change),origin='lower')
+        if clim3 is None:
+            clim3=[np.mean(change)-np.std(change), np.mean(change)+np.std(change)]
+        sc = ax2.imshow(change,clim=clim3,origin='lower')
     else:
         change=step2-step1
-        sc = axs[2].imshow(change,origin='lower')
-    cbar = fig.colorbar(sc, ax=axs[2], orientation='vertical')
+        sc = ax2.imshow(change,origin='lower')
+    cbar = fig.colorbar(sc, ax=ax2, orientation='vertical')
     # axs[3].imshow(error,origin='lower')
     # cbar = fig.colorbar(sc, ax=axs[3], orientation='vertical')
 
 
     plt.tight_layout()
-    plt.savefig('output/'+ title +'.png')
+    plt.savefig('../output/'+ title +'.png')
     plt.show()
 
-    plot_CCDimage(change,title='change'+title, borders=True, nrsig=3)
+    #plot_CCDimage(change,title='change'+title, borders=True, nrsig=3)
 
-    print('mean change: ', np.mean(change))
-    print('max change: ', np.max(change))
-    print('min change: ', np.min(change))
+    #print('mean change: ', np.mean(change))
+    #print('max change: ', np.max(change))
+    #print('min change: ', np.min(change))
 
 
 
@@ -78,11 +92,14 @@ def plot_calib_step(step1,step2,title,error,divide=False, clim=None):
 
 
 
-# # #%% Select on explicit time
-# start_time = DT.datetime(2023, 5, 5, 20, 10)
-# stop_time = DT.datetime(2023, 5, 5, 20, 15)
-# df = read_MATS_data(start_time,stop_time,version='0.6',level='1a',dev=False)
-#CCDitems = dataframe_to_ccd_items(df)
+# #%% Select on explicit time
+start_time = DT.datetime(2023, 5, 5, 20, 10)
+stop_time = DT.datetime(2023, 5, 5, 20, 15)
+
+#start_time = DT.datetime(2023, 2, 12, 1, 10)
+#stop_time = DT.datetime(2023, 2, 12, 1, 15)
+df = read_MATS_data(start_time,stop_time,version='0.6',level='1a',dev=False)
+CCDitems = dataframe_to_ccd_items(df)
 
 
 # # # #%% Select on explicit time NLC
@@ -97,56 +114,58 @@ def plot_calib_step(step1,step2,title,error,divide=False, clim=None):
 # ir3=df[df.channel=='IR3']
 # ir4=df[df.channel=='IR4']
 
-# 
+
 # CCDitemsuv1 = dataframe_to_ccd_items(uv1)
 # CCDitemsuv2 = dataframe_to_ccd_items(uv2)
 
 # pickle.dump(CCDitemsuv1, open('testdata/CCD_items_in_orbit_NLCuv1.pkl', 'wb'))
 # pickle.dump(CCDitemsuv2, open('testdata/CCD_items_in_orbit_NLCuv2.pkl', 'wb'))
 
+# #%%
+# #with open('testdata/CCD_items_in_orbit_UVIR.pkl', 'rb') as f:
+# with open('testdata/CCD_items_in_orbit_NLCuv1.pkl', 'rb') as f:
+#     CCDitems = pickle.load(f)
 #%%
-#with open('testdata/CCD_items_in_orbit_UVIR.pkl', 'rb') as f:
-with open('testdata/CCD_items_in_orbit_NLCuv1.pkl', 'rb') as f:
-    CCDitems = pickle.load(f)
+instrument = Instrument('/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/calibration_data_MATSinstrument.toml')
 
-instrument = Instrument('/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/calibration_data_linda.toml')
 
 #%%
-#IR1
+#IR1§§§§§
 i = 5
 images = L1_calibrate(CCDitems[i], instrument,return_steps=True)
 datechannel = str(CCDitems[i]["TMHeaderTime"])[0:10] + '_' + CCDitems[i]["channel"]
-make_calibration_plots(images,datechannel)
+make_calibration_plots(images,datechannel, savefig=True)
 #%%
 #IR2
 i = 2
 images = L1_calibrate(CCDitems[i], instrument,return_steps=True)
 datechannel = str(CCDitems[i]["TMHeaderTime"])[0:10] + '_' + CCDitems[i]["channel"]
-make_calibration_plots(images,datechannel)
+make_calibration_plots(images,datechannel, savefig=True)
 
+#%%
 #IR3
 i = 1
 images = L1_calibrate(CCDitems[i], instrument,return_steps=True)
 datechannel = str(CCDitems[i]["TMHeaderTime"])[0:10] + '_' + CCDitems[i]["channel"]
-make_calibration_plots(images,datechannel)
-
+make_calibration_plots(images,datechannel, savefig=True)
+#%%
 #IR4
 i = 6
 images = L1_calibrate(CCDitems[i], instrument,return_steps=True)
 datechannel = str(CCDitems[i]["TMHeaderTime"])[0:10] + '_' + CCDitems[i]["channel"]
-make_calibration_plots(images,datechannel)
-
+make_calibration_plots(images,datechannel, savefig=True)
+#%%
 #UV1
 i = 3
 images = L1_calibrate(CCDitems[i], instrument,return_steps=True)
 datechannel = str(CCDitems[i]["TMHeaderTime"])[0:10] + '_' + CCDitems[i]["channel"]
-make_calibration_plots(images,datechannel)
+make_calibration_plots(images,datechannel, savefig=True)
 
 #UV2
 i = 4
 images = L1_calibrate(CCDitems[i], instrument,return_steps=True)
 datechannel = str(CCDitems[i]["TMHeaderTime"])[0:10] + '_' + CCDitems[i]["channel"]
-make_calibration_plots(images,datechannel)
+make_calibration_plots(images,datechannel, savefig=True)
 
 
 #%%
@@ -165,8 +184,9 @@ for i in range(0,7):
         errors,
     ) = images
     datechannel = str(CCDitems[i]["TMHeaderTime"])[0:10] + '_' + CCDitems[i]["channel"]
-    plot_calib_step(image_desmeared,image_dark_sub,'dark_subtraction' + datechannel,errors)
+    #plot_calib_step(image_desmeared,image_dark_sub,'dark_subtraction' + datechannel,errors)
     #plot_calib_step(image_dark_sub,image_flatfielded,'flatfielding' + datechannel,errors,divide=True)
+    plot_calib_step(image_se_corrected,image_hot_pixel_corrected,'hot-pixel_correction' + datechannel,errors)
 
 
 
