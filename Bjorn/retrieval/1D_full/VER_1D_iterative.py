@@ -1,3 +1,4 @@
+#%%
 import numpy as np
 import pandas as pd
 from datetime import datetime, timezone
@@ -22,7 +23,7 @@ import sys
 import scipy.sparse as sparse
 from scipy.stats import norm
 
-
+#%%
 def linear_oem(K, Se, Sa_inv, y, xa):
     # Adapted from Donal (uses Sa_inv instead)
     if len(y.shape) == 1:
@@ -69,7 +70,7 @@ def prepare_measurment(ch,ir3,ir4,subtract=True,endcut=-25):
 def prepare_profile(ch):
     # TBD comment
     # calculates mean profile and tan heights
-    image = image = np.stack(ch.ImageCalibrated)
+    image = image = np.stack(ch.ImageCalibrated)/ch.TEXPMS*1000
     col = int(ch['NCOL']/2)
     cs = col_heights(ch, col, 10, spline=True)
     heights = np.array(cs(range(ch['NROW'])))
@@ -185,173 +186,100 @@ def xainvert(ch,retrival_heights, weight_0, weight_1, weight_2, xa=None):
 
     return ver
 
-
+#%%
 # load images
-channel='IR1'
+channels=['IR1', 'IR2']
+l1b_version="0.5"
+oned_version="0.1"
+# dayglow stuff
+ascending=True
+# end day
+start_day=6
+end_day=7
+# dayglow (ALL SZA)
+dmin,dmax = 0, 95
+tplat0, tplat1 = -70, 70
 
-for day in range(13,15):
+for channel in channels:
+    for day in range(start_day,end_day):
 
-    print(f'-----------------------------------------')
-    print(f'DAY: {day}')
-    print(f'-----------------------------------------')
-    starttime=datetime(2023,2,day,0,0)
-    stoptime=datetime(2023,2,day,23,59)
-
-    # dayglow stuff
-    ascending=True
-    # dayglow (ALL SZA)
-    dmin,dmax = 0, 95
-    tplat0, tplat1 = -70, 70
-    l1b_version="0.5"
-    
-    try:
-
-        dftop=read_MATS_data(starttime,stoptime,level="1b",version=l1b_version, filter={'TPsza': [dmin, dmax], 'TPlat': [tplat0, tplat1]})
-
-        if ascending:
-            midday=DT.time(12, 0, 0)
-            dftop['TPlocaltime'] = pd.to_datetime(dftop['TPlocaltime'])
-            dftop = dftop[(dftop['TPlocaltime'].dt.time > midday)]
-
-        df = dftop[dftop['channel'] == channel].dropna().reset_index()#[0:10]
-        ir3 = dftop[dftop['channel'] == 'IR3'].dropna().reset_index()#[0:10]
-        ir4 = dftop[dftop['channel'] == 'IR4'].dropna().reset_index()#[0:10]
-
-        # absorption weights (TBD: call generation of these)
-        abs=True
-        tanz, splinedfactor=np.load(f"splinedlogfactors{channel}_feb_new.npy",allow_pickle=True)
-
-        # select part of orbit
-        offset = 10
-        num_profiles = len(df)-50 #use 50 profiles for inversion
-        print(num_profiles)
-        df = df.loc[offset:offset+num_profiles]
-        df = df.reset_index(drop=True)
-
-        ir3 = ir3.loc[offset:offset+num_profiles]
-        ir3 = ir3.reset_index(drop=True)
-        ir4 = ir4.loc[offset:offset+num_profiles]
-        ir4 = ir4.reset_index(drop=True)
-
-        # %% retrieval settings
-        retrival_heights= np.arange(60,100,1)
-        retrival_heights= np.arange(60,105,1)
-        s_140=1700e3
-        steps=100 #m steps
-        s_steps = np.arange(s_140,s_140 + 2e6,steps)
-        abs_bool=True
-
-        #%% Generate ks // save netcdf
-        ks, profiles, ecipos, ecivecs, heights = generate_ks(df,ir3,ir4,retrival_heights,
-                                                            s_steps, splinedfactor,
-                                                            abs=abs_bool,subtract=True,
-                                                            endcut=-25)
-        z=np.array(heights).mean(axis=0)
-
-        ch = xr.Dataset({
-            'time': (['time'], df.EXPDate),
-            'channel': (['time'], df.channel),
-            'satlat': (['time'], df.satlat, {'long_name': "MATS' Latitude", 'units': 'deg'}),
-            'satlon': (['time'], df.satlon),
-            'TPlat': (['time'], df.TPlat, {'long_name': "TP Latitude", 'units': 'deg'}),
-            'TPlon': (['time'], df.TPlon),
-            'TPsza': (['time'], df.TPsza),
-            'TPssa': (['time'], df.TPssa),
-            'z':  (['z'], z, {'long_name': 'Approx Altitude', 'units': 'm'}),
-            'ecipos': (['time', 'xyz'], ecipos),
-            'ecivec': (['time', 'z', 'xyz'], ecivecs),
-            'profile': (['time', 'z'], profiles, {'long_name': 'LOS  intensity', 'units': 'Photons m-2 nm-1 sr-1 s-1'}),
-            'heights': (['time', 'z'], heights),
-            'z_r': (['z_r'], retrival_heights),
-            'k': (['time','z','z_r'],ks),
-        })
-
-        # save the results
-        ch.to_netcdf(f'/media/waves/AVAGO/data/MATS/1D_inversions/v0/{channel}_Feb{day}_l1bv{l1b_version}.nc')
+        print(f'------------------------------------------------------------')
+        print(f'DAY: {day} -- CHANNEL: {channel} -- STARTING DAY {start_day} -- ENDING DAY {end_day}')
+        print(f'------------------------------------------------------------')
+        starttime=datetime(2023,3,day,0,0)
+        stoptime=datetime(2023,3,day,23,59)
+        #stoptime=datetime(2023,3,day,2,0) ########### NOT 24 !!!!!!
         
-    except KeyboardInterrupt:
-        sys.exit()  
-        
+        try:
 
-""" # %% load
-files=[f'{channel}Feb17vertest_1d_from60.nc']
+            dftop=read_MATS_data(starttime,stoptime,level="1b",version=l1b_version, filter={'TPsza': [dmin, dmax], 'TPlat': [tplat0, tplat1]})
 
-for file in files:
-    ch=xr.load_dataset(file)
-    #ch=xr.load_dataset('IR1Feb17vertest_abs_1d.nc')
+            if ascending:
+                midday=DT.time(12, 0, 0)
+                dftop['TPlocaltime'] = pd.to_datetime(dftop['TPlocaltime'])
+                dftop = dftop[(dftop['TPlocaltime'].dt.time > midday)]
 
-    #ch=ch.where(ch.)
-    # xa = 0
-    weight_0 = 0
-    weight_1 = 0
-    # normal xa (works well)
-    weight_0 = 1e-3
-    weight_1 = 6e-3
+            df = dftop[dftop['channel'] == channel].dropna().reset_index()#[0:10]
+            ir3 = dftop[dftop['channel'] == 'IR3'].dropna().reset_index()#[0:10]
+            ir4 = dftop[dftop['channel'] == 'IR4'].dropna().reset_index()#[0:10]
 
-    # normal xa (try to get midlats)
-    #weight_0 = 0
-    #weight_1 = 9*1e-1
+            # absorption weights (TBD: call generation of these)
+            abs=True #WRONG DATE  ---------------------------------------
+            tanz, splinedfactor=np.load(f"splinedlogfactors{channel}_sep1730_new.npy",allow_pickle=True)
 
-    #weight_0=0
-    #weight_1=0
-    
-    xa=1e11*(2e3*1e6/1e11+norm.pdf(retrival_heights,83,4))
-    
-    xa=None
-    ver = xainvert(ch,retrival_heights, weight_0, weight_1,xa)
+            # select part of orbit
+            offset = 10
+            num_profiles = len(df)-50 #use 50 profiles for inversion
+            print(num_profiles)
+            df = df.loc[offset:offset+num_profiles]
+            df = df.reset_index(drop=True)
 
+            ir3 = ir3.loc[offset:offset+num_profiles]
+            ir3 = ir3.reset_index(drop=True)
+            ir4 = ir4.loc[offset:offset+num_profiles]
+            ir4 = ir4.reset_index(drop=True)
 
-    result_1d = xr.Dataset().update({
-            'time': (['time'], ch.time.values),
-            'z_r': (['z_r',], ch.z_r.values, {'units': 'km'}),
-            'ver': (['time','z_r'], ver, {'long name': 'VER', 'units': 'photons cm-3 s-1'}),
-            'latitude': (['time',], ch.TPlat.values),
-            'longitude': (['time',], ch.TPlon.values),
-            'channel': (['time',], ch.channel.values),
+            # retrieval settings
+            retrival_heights= np.arange(60,100,1)
+            retrival_heights= np.arange(60,105,1)
+            s_140=1700e3
+            steps=100 #m steps
+            s_steps = np.arange(s_140,s_140 + 2e6,steps)
+            abs_bool=True
+
+            # Generate ks // save netcdf
+            ks, profiles, ecipos, ecivecs, heights = generate_ks(df,ir3,ir4,retrival_heights,
+                                                                s_steps, splinedfactor,
+                                                                abs=abs_bool,subtract=True,
+                                                                endcut=-25)
+            z=np.array(heights).mean(axis=0)
+
+            ch = xr.Dataset({
+                'time': (['time'], df.EXPDate),
+                'channel': (['time'], df.channel),
+                'satlat': (['time'], df.satlat, {'long_name': "MATS' Latitude", 'units': 'deg'}),
+                'satlon': (['time'], df.satlon),
+                'TPlat': (['time'], df.TPlat, {'long_name': "TP Latitude", 'units': 'deg'}),
+                'TPlon': (['time'], df.TPlon),
+                'TPsza': (['time'], df.TPsza),
+                'TPssa': (['time'], df.TPssa),
+                'z':  (['z'], z, {'long_name': 'Approx Altitude', 'units': 'm'}),
+                'ecipos': (['time', 'xyz'], ecipos),
+                'ecivec': (['time', 'z', 'xyz'], ecivecs),
+                'profile': (['time', 'z'], profiles, {'long_name': 'LOS  intensity', 'units': 'Photons m-2 nm-1 sr-1 s-1'}),
+                'heights': (['time', 'z'], heights),
+                'z_r': (['z_r'], retrival_heights),
+                'k': (['time','z','z_r'],ks),
             })
 
-    ir1band=result_1d
-    ir1band=ir1band.where((ir1band.latitude < 65) & (ir1band.latitude > -65))
-    ir1band=ir1band.where((ir1band.latitude < -15) & (ir1band.latitude > -50))
-    
-    
-    plt.figure(figsize=(4,4))
-    (ir1band.ver[30:-30:1,:]/1e6*4*np.pi).plot.line(y='z_r',add_legend=False,xlim=([0,2e5]))
-    if xa is not None:
-        plt.plot(xa/1e6,retrival_heights, linestyle='--', color='black')
-    plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
-    plt.title(f'({channel}) A-band (full band)')
-    plt.grid()
-    plt.tight_layout()
-    plt.savefig(f'{channel}VERprofiles_sub.png',format='png')
-
-    plt.figure(figsize=(12,4))
-    (ir1band.ver[30:-30:1,:]/1e6*4*np.pi).plot.pcolormesh(y='z_r',vmin=0,vmax=2e5,ylim=([60,110]))
-    plt.title('A-band intensity (full band) photons cm-3 s-1')
-    plt.tight_layout()
-    plt.savefig(f'{channel}.png',format='png')
-
-    plt.figure(figsize=(12,4))
-    ch.profile[:,:].plot.pcolormesh(y='z',vmin=0,ylim=([60e3,110e3]))
-    plt.tight_layout()
-    plt.savefig(f'{channel}LOS_sub.png',format='png')
-
-    plt.figure(figsize=(4,4))
-    for i in range(30,1000,5):
-        plt.plot((ch.k.isel(time=i)@result_1d.ver.isel(time=i)),ch.z/1e3,color='red',alpha=0.25)
-        plt.plot(ch.profile.isel(time=i),ch.z/1e3,color='blue',alpha=0.25)
-    plt.title('LOS')
-    plt.xlabel('ph/m2/sr/s')
-    plt.tight_layout()
-    plt.savefig(f'{channel}isitk.png',format='png')
+            # save the results
+            ch.to_netcdf(f'/media/waves/AVAGO/data/MATS/1D_inversions/v{oned_version}/IR_comparison/{channel}_Mar{day}_l1bv{l1b_version}_sepabs.nc')
+            
+        except KeyboardInterrupt:
+            sys.exit()  
+        
+        except Warning:
+            print('No data!') 
 
 
-import matplotlib.pyplot as plt
-plt.figure(figsize=(4,4))
-(ir1band.ver[:,:]/1e6*4*np.pi).mean(dim='time').plot(y='z_r')
-plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
-plt.title('mean profile; feb version 0.6')
-plt.tight_layout()
-plt.savefig(f'{channel}mean.png',format='png')
-
-"""
+# %%
