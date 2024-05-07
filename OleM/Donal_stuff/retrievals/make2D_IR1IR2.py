@@ -414,18 +414,20 @@ def get_geometry_for_image(df_row):
 #%%
 ## Run code ##
 
+# Load data
 ts = sfapi.load.timescale()
 ir1, ir2,_,_,_,_ = get_instrument_data()
 filters = jnp.array(get_filtercurves())
+msis, sigma,emission = get_background_data()
 
+# Generate grid
 radius,across_track,along_track,ret_lats,ret_lons,date,edges,tanheights,ecef_to_local = generate_grid(ir1)
 r_edges = jnp.array(edges[0])
 across_edges = jnp.array(edges[1])
 along_edges = jnp.array(edges[2])
 ecef_to_local_mat = jnp.array(ecef_to_local.as_matrix())
 
-msis, sigma,emission = get_background_data()
-
+# Generate atmosphere
 Tarray,o2array,VERarray = get_bg_atmosphere_on_grid(radius,across_track,along_track,ret_lats,ret_lons,date,msis)
 Tarray = jnp.array(Tarray)
 o2array = jnp.array(o2array)
@@ -435,20 +437,9 @@ VERarray = jnp.array(VERarray)
 i=2
 quat,qprime,x,yv,ypixels,eci_to_ecef,ecipos,localR = get_geometry_for_image(ir1.iloc[i])
 eci_to_ecef_mat = jnp.array(eci_to_ecef.as_matrix())
-
-
 #for one row(pixel)
 row = 90
 cs_eci_from_row,_ = get_ecivec_fast(quat,qprime,x,yv,ypixels)
 ecivec = jnp.array(cs_eci_from_row(row)) #LOS of row
-
 # calc jacobian
-start = time.time()
 ir1calc, [vergrad1,tgrad1] = value_and_grad(calc_intensity,argnums=10)(ecipos,ecivec,eci_to_ecef_mat,ecef_to_local_mat,r_edges,across_edges,along_edges,filters,localR,o2array,[VERarray,Tarray])
-end = time.time()
-print('time:' + str(end - start))
-
-start = time.time()
-ir1calc, [vergrad1,tgrad1] = value_and_grad(calc_intensity,argnums=10)(ecipos,ecivec,eci_to_ecef_mat,ecef_to_local_mat,r_edges,across_edges,along_edges,filters,localR,o2array,[VERarray,Tarray])
-end = time.time()
-print('time:' + str(end - start))
