@@ -45,7 +45,7 @@ def add_error_est_to_CCDitems(CCDitems, calibration_file):
         #this can also be done using L1_calibration_functions.absolute_calibration
         CCDitems[i]['FlatfieldError']=get_flatfield_error(CCDitems[i], calibration_data)/calib_denominator
 
-        CCDitems[i]['DarkCurrentError']=get_darkcurrent_error(CCDitems[i],CCDitems[i]['CCDunit'])
+        CCDitems[i]['DarkCurrentError']=get_darkcurrent_error(CCDitems[i])
         CCDitems[i]['TotSysError'] = np.sqrt(CCDitems[i]['FlatfieldError']**2+CCDitems[i]['DarkCurrentError']**2)
         
 
@@ -87,30 +87,54 @@ def mark_current_cropping(CCDitem, flatfield_scalefield, flatfield_binned):
     rectangle = plt.Rectangle((ncshift, nrshift), ncol, nrow, facecolor='none', ec='white')
     ax1[0].add_patch(rectangle)
 
-def get_darkcurrent_error(CCDitem, CCDunit):
+def get_darkcurrent_error(CCDitem):
     """
     Takes a CCDitem and returns the error estimate for the darkvcurrent.
 
     CCDitem: CCDitem for which to add error
     """
+    CCDunit=CCDitem['CCDunit']
+    T=CCDitem["temperature"]
 
-
-    darkcurrent2D, darkcurrent2Derr = CCDunit.darkcurrent2D(CCDitem["temperature"], CCDitem["GAIN Mode"], reporterror=True)
-
-    totdarkcurrent2Derr=darkcurrent2Derr* int(CCDitem["TEXPMS"])/ 1000.0
+    if CCDitem["GAIN Mode"] == 'High':
+        log_a_img_avr=CCDunit.log_a_img_avr_HSM
+        log_b_img_avr=CCDunit.log_b_img_avr_HSM
+        log_a_img_std=CCDunit.log_a_img_err_HSM
+        log_b_img_std=CCDunit.log_b_img_err_HSM
+    elif CCDitem["GAIN Mode"] == 'Low':
+        log_a_img_avr=CCDunit.log_a_img_avr_LSM
+        log_b_img_avr=CCDunit.log_b_img_avr_LSM 
+        log_a_img_std=CCDunit.log_a_img_err_LSM
+        log_b_img_std=CCDunit.log_b_img_err_LSM           
+    else:
+        raise Exception("Undefined mode")
     
 
-    totdarkcurrenterr = totdarkcurrent2Derr
+    rawdark=CCDunit.getrawdark(log_a_img_avr, log_b_img_avr, T)
+
+    #Add errors from log_a and log_b since they are correlated - this may be an overestimate - in fact they may be anticorrelated /LM 240513 
+    errorab=CCDunit.getrawdark(log_a_img_avr+log_a_img_std, log_b_img_avr+log_b_img_std, T)-rawdark
+    deltaT=3
+    errorT=CCDunit.getrawdark(log_a_img_avr, log_b_img_avr, T+deltaT)-rawdark
+    error=np.sqrt(errorT**2+errorab**2)
+
+
+    totdarkcurrent2Derr=error* int(CCDitem["TEXPMS"])/ 1000.0
+    
+
+
 
 
     dark_calc_err_image = (
         CCDunit.ampcorrection
-        * totdarkcurrenterr
+        * totdarkcurrent2Derr
         / CCDunit.alpha_avr(CCDitem["GAIN Mode"])
     )
 
     darkcurrent_err_binned = bin_abs_error(CCDitem, dark_calc_err_image)
     return darkcurrent_err_binned 
+
+
 
 def get_flatfield_error(CCDitem, calibration_data):
     """
