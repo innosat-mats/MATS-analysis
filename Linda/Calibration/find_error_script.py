@@ -14,7 +14,7 @@ from mats_l1_processing.L1_calibration_functions import meanbin_image_with_BC, b
 import datetime as DT
 import sys
 sys.path.append('/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda')
-from lindas_own_functions import plot_CCDimage_transp
+#from lindas_own_functions import plot_CCDimage_transp
 
 def add_error_est_to_dataframe(df, calibration_file):
     """
@@ -35,10 +35,19 @@ def add_error_est_to_CCDitems(CCDitems, calibration_file):
     """
     import toml
     calibration_data = toml.load(calibration_file)
+    instrument = Instrument('/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/calibration_data_MATSinstrument.toml')
+
+    
     
     for i in range(0,len(CCDitems)):
-        flatfielderror=get_flatfield_error(CCDitems[i], calibration_data)
-        CCDitems[i]['ErrorEstimate'] = flatfielderror
+        CCDitems[i]['CCDunit'] =instrument.get_CCD(CCDitems[i]['channel'])
+        calib_denominator=CCDitems[i]['CCDunit'].calib_denominator(CCDitems[i]['GAIN Mode'])
+        #this can also be done using L1_calibration_functions.absolute_calibration
+        CCDitems[i]['FlatfieldError']=get_flatfield_error(CCDitems[i], calibration_data)/calib_denominator
+
+        CCDitems[i]['DarkCurrentError']=get_darkcurrent_error(CCDitems[i],CCDitems[i]['CCDunit'])
+        CCDitems[i]['TotSysError'] = np.sqrt(CCDitems[i]['FlatfieldError']**2+CCDitems[i]['DarkCurrentError']**2)
+        
 
 def bin_abs_error(CCDitem, error_nonbinned):
     """
@@ -68,7 +77,7 @@ def bin_abs_error(CCDitem, error_nonbinned):
 def mark_current_cropping(CCDitem, flatfield_scalefield, flatfield_binned):
 
     fig1, ax1 = plt.subplots(2, 1)
-    plot_CCDimage(flatfield_scalefield,fig, ax1[0], title='Flatfield scalefield'+CCDitem['channel'])
+    plot_CCDimage(flatfield_scalefield,fig1, ax1[0], title='Flatfield scalefield'+CCDitem['channel'])
     plot_CCDimage(flatfield_binned,fig1, ax1[1], title='Flatfield binned'+CCDitem['channel'])
  
     ncshift=CCDitem['NCSKIP'] 
@@ -78,7 +87,30 @@ def mark_current_cropping(CCDitem, flatfield_scalefield, flatfield_binned):
     rectangle = plt.Rectangle((ncshift, nrshift), ncol, nrow, facecolor='none', ec='white')
     ax1[0].add_patch(rectangle)
 
+def get_darkcurrent_error(CCDitem, CCDunit):
+    """
+    Takes a CCDitem and returns the error estimate for the darkvcurrent.
 
+    CCDitem: CCDitem for which to add error
+    """
+
+
+    darkcurrent2D, darkcurrent2Derr = CCDunit.darkcurrent2D(CCDitem["temperature"], CCDitem["GAIN Mode"], reporterror=True)
+
+    totdarkcurrent2Derr=darkcurrent2Derr* int(CCDitem["TEXPMS"])/ 1000.0
+    
+
+    totdarkcurrenterr = totdarkcurrent2Derr
+
+
+    dark_calc_err_image = (
+        CCDunit.ampcorrection
+        * totdarkcurrenterr
+        / CCDunit.alpha_avr(CCDitem["GAIN Mode"])
+    )
+
+    darkcurrent_err_binned = bin_abs_error(CCDitem, dark_calc_err_image)
+    return darkcurrent_err_binned 
 
 def get_flatfield_error(CCDitem, calibration_data):
     """
@@ -128,14 +160,14 @@ def get_flatfield_error(CCDitem, calibration_data):
 
 
 
-#%%
-# # # #%% Select on explicit time
-# start_time = DT.datetime(2023, 5, 5, 20, 10)
-# stop_time = DT.datetime(2023, 5, 5, 20, 15)
-# df = read_MATS_data(start_time,stop_time,version='0.6',level='1b',dev=False)
+# #%%
+# # # # #%% Select on explicit time
+# start_time = DT.datetime(2023, 5, 11, 6, 10)
+# stop_time = DT.datetime(2023, 5, 11, 6, 15)
+# df = read_MATS_data(start_time,stop_time,version='0.7',level='1b',dev=False)
 
 # CCDitems = dataframe_to_ccd_items(df)
-# pickle.dump(CCDitems, open('testdata/CCD_items_in_orbit_l1b.pkl', 'wb'))
+# # pickle.dump(CCDitems, open('testdata/CCD_items_in_orbit_l1b.pkl', 'wb'))
 
 #%%
 #
@@ -149,9 +181,11 @@ add_error_est_to_CCDitems(CCDitems[:nccditems], calibration_file)
 #%%
 
 for i in range(0,nccditems):
-    fig, ax = plt.subplots(2, 1)
+    fig, ax = plt.subplots(4, 1)
     plot_CCDimage(CCDitems[i]['ImageCalibrated'],fig, ax[0], title=CCDitems[i]['channel']+' Original image')
-    plot_CCDimage(CCDitems[i]['ErrorEstimate'],fig, ax[1], title='Flatfield error estimate')
+    plot_CCDimage(CCDitems[i]['DarkCurrentError'],fig, ax[1], title='Dark current error estimate')
+    plot_CCDimage(CCDitems[i]['FlatfieldError'],fig, ax[2], title='Flatfield error estimate')
+    plot_CCDimage(CCDitems[i]['TotSysError'],fig, ax[3], title='Total systematic error estimate')
 
 #%%
 
