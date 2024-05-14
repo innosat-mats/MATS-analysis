@@ -16,6 +16,24 @@ import sys
 sys.path.append('/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda')
 #from lindas_own_functions import plot_CCDimage_transp
 
+def savefield(field,filename, plot=False, mat=False):
+    from database_generation.experimental_utils import plot_CCDimage
+    from pathlib import Path 
+    np.savetxt(filename, field)
+    np.save(filename, field)
+    Path("output").mkdir(parents=True, exist_ok=True)
+    np.savetxt('output/'+filename+'.csv', field)
+    np.save('output/'+filename+'.npy', field)
+    if mat:
+        from scipy.io import savemat
+        savemat('output/'+filename+'.mat', {'field': field})
+    if plot:
+        fig, ax=plt.subplots(1,1)
+        plot_CCDimage(field, fig=fig, axis=ax[0], title=filename)
+        fig.savefig("output/"+filename + ".jpg")
+    return
+
+
 def add_error_est_to_dataframe(df, calibration_file):
     """
     docstring
@@ -43,9 +61,9 @@ def add_error_est_to_CCDitems(CCDitems, calibration_file):
         CCDitems[i]['CCDunit'] =instrument.get_CCD(CCDitems[i]['channel'])
         calib_denominator=CCDitems[i]['CCDunit'].calib_denominator(CCDitems[i]['GAIN Mode'])
         #this can also be done using L1_calibration_functions.absolute_calibration
-        CCDitems[i]['FlatfieldError']=get_flatfield_error(CCDitems[i], calibration_data)/calib_denominator
+        CCDitems[i]['FlatfieldError']=get_flatfield_error(CCDitems[i], calibration_data) #in 10**12 photons/nm/m2/str/pixel/s
 
-        CCDitems[i]['DarkCurrentError']=get_darkcurrent_error(CCDitems[i])
+        CCDitems[i]['DarkCurrentError']=get_darkcurrent_error(CCDitems[i]) #in 10**12 photons/nm/m2/str/pixel/s
         CCDitems[i]['TotSysError'] = np.sqrt(CCDitems[i]['FlatfieldError']**2+CCDitems[i]['DarkCurrentError']**2)
         
 
@@ -114,12 +132,15 @@ def get_darkcurrent_error(CCDitem):
 
     #Add errors from log_a and log_b since they are correlated - this may be an overestimate - in fact they may be anticorrelated /LM 240513 
     errorab=CCDunit.getrawdark(log_a_img_avr+log_a_img_std, log_b_img_avr+log_b_img_std, T)-rawdark
+    # Add error from temperature, assuming deltaT=3 degrees
     deltaT=3
     errorT=CCDunit.getrawdark(log_a_img_avr, log_b_img_avr, T+deltaT)-rawdark
-    error=np.sqrt(errorT**2+errorab**2)
+    toterrorinelectronspers=np.sqrt(errorT**2+errorab**2)
+
+    print(' in electros: mean signal:',rawdark.mean(), ' errorab: ', errorab.mean(), ' errorT: ', errorT.mean()  )
 
 
-    totdarkcurrent2Derr=error* int(CCDitem["TEXPMS"])/ 1000.0
+    #totdarkcurrent2Derr=error* int(CCDitem["TEXPMS"])/ 1000.0 # in number of electrons
     
 
 
@@ -127,11 +148,12 @@ def get_darkcurrent_error(CCDitem):
 
     dark_calc_err_image = (
         CCDunit.ampcorrection
-        * totdarkcurrent2Derr
+        * toterrorinelectronspers
         / CCDunit.alpha_avr(CCDitem["GAIN Mode"])
-    )
+    ) # in number of counts per second
 
-    darkcurrent_err_binned = bin_abs_error(CCDitem, dark_calc_err_image)
+    calib_denominator=CCDunit.calib_denominator(CCDitems[i]['GAIN Mode'])
+    darkcurrent_err_binned = bin_abs_error(CCDitem, dark_calc_err_image)/calib_denominator #in photons/s
     return darkcurrent_err_binned 
 
 
@@ -149,16 +171,16 @@ def get_flatfield_error(CCDitem, calibration_data):
     
 
     # The error measured as the standard deviation of three images divided by square root of 3
-    flatfield_wo_baffle_err = np.load(
+    flatfield_err = np.load(
                 calibration_data["flatfield"]["flatfieldfolder"]
-                + "flatfield_wo_baffle_err_"
+                + "flatfield_err_"
                 + channel
                 + "_HSM.npy")
     # The baffle scalefield, where 1 means no effect, ie the flatfield is the 
     # same as the one without baffle. 
-    flatfield_scalefield = np.load(
+    flatfield = np.load(
                 calibration_data["flatfield"]["flatfieldfolder"]
-                + "baffle_scalefield_"
+                + "flatfield_"
                 + channel
                 + "_HSM.npy")
 
@@ -166,17 +188,21 @@ def get_flatfield_error(CCDitem, calibration_data):
     #flatfield_err_rel=flatfield_wo_baffle_err/flatfield_scalefield
     #flatfield_err_rel_binned=meanbin_image_with_BC(CCDitem, flatfield_err_rel) 
     #the above is not correct since it does not reduce the error when binning
-    flatfield_err_binned = bin_abs_error(CCDitem, flatfield_wo_baffle_err)
-    flatfield_binned=bin_image_with_BC(CCDitem, flatfield_scalefield)
+    flatfield_err_binned = bin_abs_error(CCDitem, flatfield_err)
+    flatfield_binned=bin_image_with_BC(CCDitem, flatfield)
+    
+    # For Nickolay
+    #savefield(flatfield_binned,'flatfield_binned_CROPD_'+channel, mat=True)
+    #savefield(flatfield,'flatfield_'+channel, mat=True)
+    #mark_current_cropping(CCDitem, flatfield, flatfield_binned)
 
-
-    mark_current_cropping(CCDitem, flatfield_scalefield, flatfield_binned)
-
+    #calculate the error in 10**12 photons/nm/m2/str/pixel/s by multiplying the relative error with the calibrated signal
     if "ImageCalibrated" in CCDitem.keys(): 
-        flatfield_err_nonflipped =CCDitem['ImageCalibrated']/ flatfield_binned * flatfield_err_binned 
+        flatfield_err_nonflipped =CCDitem['ImageCalibrated']* flatfield_err_binned / flatfield_binned # in 10**12 photons/nm/m2/str/pixel/s
     else:
-        flatfield_err_nonflipped =absolute_calibration(CCDitem,image=CCDitem['IMAGE'] )/ flatfield_binned * flatfield_err_binned 
+        flatfield_err_nonflipped =absolute_calibration(CCDitem,image=CCDitem['IMAGE'] )* flatfield_err_binned/ flatfield_binned  
         Warning("Image is not calibrated, which will result in a wrong error estimate")
+
 
     #relative error=flatfield_wo_baffle_err/flatfield_scalefield
     return flatfield_err_nonflipped    
@@ -184,20 +210,21 @@ def get_flatfield_error(CCDitem, calibration_data):
 
 
 
-# #%%
-# # # # #%% Select on explicit time
-# start_time = DT.datetime(2023, 5, 11, 6, 10)
-# stop_time = DT.datetime(2023, 5, 11, 6, 15)
-# df = read_MATS_data(start_time,stop_time,version='0.7',level='1b',dev=False)
+#%%
+# # # #%% Select on explicit time
+start_time = DT.datetime(2023, 5, 5, 6, 10)
+stop_time = DT.datetime(2023, 5, 5, 6, 15)
+df = read_MATS_data(start_time,stop_time,version='0.7',level='1a',dev=False)
 
-# CCDitems = dataframe_to_ccd_items(df)
-# # pickle.dump(CCDitems, open('testdata/CCD_items_in_orbit_l1b.pkl', 'wb'))
+CCDitems = dataframe_to_ccd_items(df)
+# pickle.dump(CCDitems, open('testdata/CCD_items_in_orbit_l1b.pkl', 'wb'))
 
 #%%
-#
-#with open('testdata/CCD_items_in_orbit_UVIR.pkl', 'rb') as f:
+
+# #
+# #with open('testdata/CCD_items_in_orbit_UVIR.pkl', 'rb') as f:
 with open('testdata/CCD_items_in_orbit_l1b.pkl', 'rb') as f:
-    CCDitems = pickle.load(f)
+  CCDitems = pickle.load(f)
 #%%
 calibration_file='/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/calibration_data_linda.toml'
 nccditems=7
