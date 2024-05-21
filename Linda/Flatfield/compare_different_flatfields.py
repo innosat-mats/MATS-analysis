@@ -27,7 +27,7 @@ df_fullprotocol = readprotocol(directory + protocol)
 df= df_fullprotocol[:40] #take only the images without shutter
 
 
-channels=['IR1','IR2','IR4','UV1','UV2']
+channels=['IR1','IR2','IR4','UV2','UV1'] #UV1 anf UV2 are swapped in the protocol file 
 
 directions=['horizontal', 'vertical']
 # Create a dictionaries to store the flatfields
@@ -68,6 +68,7 @@ for direction in directions:
 
 
 #%%
+channels=['IR1','IR2','IR4','UV1','UV2']
 # Now read in IR3:
 doIR3=True
 if doIR3:

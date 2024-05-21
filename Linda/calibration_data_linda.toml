@@ -14,6 +14,8 @@ title = "Level 1 calibration files for testing this package"
 	flatfieldfolder = "/Users/lindamegner/MATS/MATS-retrieval/MATS-L1-processing/calibration_data/flatfields/"
 	flatfieldfolder_cold_unprocessed = "/Users/lindamegner/MATS/MATS-retrieval/MATS-L1-processing/calibration_data/20200330_flatfields_0C/"
 	baffle_flatfield = "/Users/lindamegner/MATS/MATS-retrieval/MATS-L1-processing/calibration_data/Flatfield20210421/PayloadImages/"
+	baffle_flatfield_secondIR124UV12 = "/Users/lindamegner/MATS/MATS-retrieval/MATS-L1-processing/calibration_data/FlatfieldsIR124UV_210908/PayloadImages/"
+    baffle_flatfield_secondIR3 = "//Users/lindamegner/MATS/MATS-retrieval/MATS-L1-processing/calibration_data/BinningFlatfieldsIR3_210910/PayloadImages/"
 [linearity]
     pixel = '/Users/lindamegner/MATS/MATS-retrieval/MATS-L1-processing/calibration_data/linearity/linear/linearity'
     sumrow = '/Users/lindamegner/MATS/MATS-retrieval/MATS-L1-processing/calibration_data/linearity/linear/linearity'
