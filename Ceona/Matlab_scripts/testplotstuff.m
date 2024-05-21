@@ -1,18 +1,18 @@
 %% Calculate mean values and max min for month data
-addpath("Monthdata\")
-load("febpeaksSH.mat")
-load("febpeaksNH.mat")
+addpath("Monthdata\Marchmonth\")
+load("marpeaksSH.mat")
+load("marpeaksNH.mat")
 
 %set files for peaks
-peaksNH = febpeaksNH ;
-peaksSH = febpeaksSH ;
+peaksNH = marpeaksNH ;
+peaksSH = marpeaksSH ;
 
 meanSH = mean(peaksSH.Mlat) ;
 meanNH = mean(peaksNH.Mlat) ;
-minNH = min(peaksNH.maxI)  ;
-maxNH = max(peaksNH.maxI) ;
-minSH = min(peaksSH.maxI) ;
-maxSH = max(peaksSH.maxI) ;
+minNH = min(peaksNH.Mlat);
+maxNH = max(peaksNH.Mlat) ;
+minSH = min(peaksSH.Mlat) ;
+maxSH = max(peaksSH.Mlat) ;
 
 %% 
 addpath("Weekdata\Maystrips\")
@@ -23,8 +23,8 @@ load("may1WpeaksNH.mat")
 peaksNH = may1WpeaksNH ;
 peaksSH = may1WpeaksSH ;
 
-meanSH = mean(peaksSH.) 
-meanNH = mean(peaksNH.MLT) 
+meanSH = mean(peaksSH.maxI) ;
+meanNH = mean(peaksNH.maxI) ;
 minNH = min(peaksNH.maxI)  ;
 maxNH = max(peaksNH.maxI) ;
 minSH = min(peaksSH.maxI) ;
@@ -32,14 +32,15 @@ maxSH = max(peaksSH.maxI) ;
 
 %% Plots altitude vs time (uniform and non-uniform axis)
 close all
-addpath("Weekdata\Februarystrips\")
-load("feb3Wpeaks.mat")
+addpath("Monthdata\")
+load("aprpeaksSH.mat")
+load("aprpeaks.mat")
+peaks = aprpeaks ;
 
 figure(1)
-dateStrings = feb3Wpeaks.time; 
-dateTimes = datetime(dateStrings, 'Format', 'dd/MM HH:mm:ss');
-plot(dateTimes,feb3Wpeaks.alt,'.')
-title('15 feb, limit, non-uniform time spacing of x-axis')
+dateTimes = aprpeaksSH.time; 
+plot(dateTimes,aprpeaksSH.alt,'.')
+title('Non-uniform time spacing of x-axis')
 ylabel('Altitude (km)')
 grid on
 ylim([100,116]) ;
@@ -50,13 +51,28 @@ xtickangle(45);
 numTicks = 12;  % Number of ticks to display
 selectedIndices = round(linspace(1, length(dateTimes), numTicks));
 xticks(dateTimes(selectedIndices));
-xticklabels(datestr(dateTimes(selectedIndices), 'HH:MM:SS'));
+xticklabels(datestr(dateTimes(selectedIndices), 'dd/mm, HH:MM'));
+
+% figure(2)
+% plot(aprpeaksSH.alt,'.')
+% title('Uniform spacing of the points')
+% ylabel('Altitude (km)')
+% grid on
+% ylim([100,116]) ;
+% xtickangle(45);
 
 figure(2)
-plot(feb3Wpeaks.alt,'.')
-title('15 feb, limit, uniform spacing of x-axis')
+plot(peaks.time,peaks.alt,'.')
+title('April uniform spacing of x-axis')
 ylabel('Altitude (km)')
 grid on
-ylim([100,116]) ;
+ylim([0,9]) ;
 xtickangle(45);
 
+startDate = datetime(2023, 4, 1,'Format','dd/MM HH:mm:ss');
+endDate = datetime(2023, 4, 30, 'Format','dd/MM HH:mm:ss');
+timeline = startDate:endDate;
+
+numTicks = 12;  % Number of ticks to display
+selectedIndices = round(linspace(1, length(timeline), numTicks));
+xticklabels(datestr(timeline(selectedIndices), 'dd/mm'));
