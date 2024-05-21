@@ -12,7 +12,7 @@ from Auroradetection import gradientmatrix
 
 # %%
 def overview_grad(items, channel, allrows, filename, numdays):
-    "Create the overviews with added red dots for the aurora strips max points"
+    "Create the overviews with added red dots for the strips max points"
     Tperiod = timedelta(minutes=100)   #one orbit = ca 90 min
     airglowlim = 130
     auroralim = 150
@@ -76,8 +76,8 @@ def overview_grad(items, channel, allrows, filename, numdays):
                     dates = getSatDates(SH)
                     times_strings = [dt.strftime("%H:%M") for dt in dates]  #as strings
                     #gets the matrix corresponding to that hemisphere
-                    #matrix, stripslist = gradientmatrix(SH,airglowlim,auroralim)
-                    matrix, stripslist = makeStripMatrix(SH)   #use for april 2-4 week and may
+                    matrix, stripslist = gradientmatrix(SH,airglowlim,auroralim)
+                    #matrix, stripslist = makeStripMatrix(SH)   #use for april 2-4 week and may
                     
                     #plots the orbit found from n to current i
                     if channel == 'IR2':
@@ -85,8 +85,8 @@ def overview_grad(items, channel, allrows, filename, numdays):
                         axs[subplotNum,1].scatter(dates, allrows[n:i+1], marker='.', s = 5, color="red")
 
                     else:
-                        axs[subplotNum,1].pcolormesh(dates,range(matrix.shape[0]),matrix, rasterized = True, vmin=0, vmax=480) # for April week 2-4 and may
-                        #axs[subplotNum,1].pcolormesh(dates,range(matrix.shape[0]),matrix, rasterized = True, vmin=-30, vmax=300) # rasterized makes a pixel image instead of vector graphic, less saving time
+                        #axs[subplotNum,1].pcolormesh(dates,range(matrix.shape[0]),matrix, rasterized = True, vmin=0, vmax=480) # use for April week 2-4 and may
+                        axs[subplotNum,1].pcolormesh(dates,range(matrix.shape[0]),matrix, rasterized = True, vmin=-30, vmax=300) # rasterized makes a pixel image instead of vector graphic, less saving time
                         axs[subplotNum,1].scatter(dates,allrows[n:i+1], marker='.', s = 5, color="red")
                         
 
@@ -119,7 +119,7 @@ def overview_grad(items, channel, allrows, filename, numdays):
     pdf.close()
     return pdf
 
- # %% To run the code above
+ # %% To run the code above only
 def Main():
     # Determine the main time span and settings for multiple plots
     start_time = DT.datetime(2023,5,1,00,00,0)

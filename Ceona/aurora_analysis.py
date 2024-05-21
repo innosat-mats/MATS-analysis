@@ -192,7 +192,7 @@ def get_aurora_max(aurorastrips,filedate):
 
     return
 
-def save_strips(strips,filename,structname):
+def save_strips(strips,filedate,structname):
     "Creates a panda object of the strip list and saves it to matfile"
     fullIMG = [] #newly added, has not been re-run with all data
     maxalt = [] #altitude of max intensity point
@@ -221,8 +221,8 @@ def save_strips(strips,filename,structname):
         Mlon.append(strip.Maglon)
         MagLT.append(strip.MagLT)
     pandastrips = pd.DataFrame({'image':fullIMG,'row': maxrow ,'alt': maxalt, 'maxlat': maxlat, 'maxlon': maxlon, 'maxI': intensities, 'lat' : latitudes ,'time' : times, 'MLT' : MagLT, 'Mlat' : Mlat, 'Mlon' : Mlon})
-    pandastrips.to_pickle(structname)  
-    scipy.io.savemat(filename, {structname: pandastrips.to_dict('list')})
+    pandastrips.to_pickle('MatsData/'+ structname)  
+    scipy.io.savemat(filedate, {structname: pandastrips.to_dict('list')})
     return
 
 # %%
