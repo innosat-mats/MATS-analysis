@@ -194,8 +194,8 @@ oned_version="0.1"
 # dayglow stuff
 ascending=True
 # end day
-start_day=6
-end_day=7
+start_day=5
+end_day=6
 # dayglow (ALL SZA)
 dmin,dmax = 0, 95
 tplat0, tplat1 = -70, 70
