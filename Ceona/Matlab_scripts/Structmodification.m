@@ -1,11 +1,11 @@
 %% Functions used to add point afterwards in structure
 load("Weekdata\Maystrips\may1Waurorastrips.mat")
-load("Weekdata\Maystrips\may1Wpeaks.mat")
+load("Weekdata\Maystrips\may1WpeaksSH.mat")
 keys = fieldnames(may1Waurorastrips) ;
-tostruct = may1Wpeaks ;
+tostruct = may1WpeaksSH ;
 fromstruct = may1Waurorastrips ;
-fromidx = 552 ;
-toidx = 38;
+fromidx = 946 ;
+toidx = 26; %index which is before the location you want to place the new
 
 for i = 1:length(keys)
     key = keys{i};
@@ -16,8 +16,8 @@ for i = 1:length(keys)
     tostruct = setfield(tostruct,key,newfieldlist) ; %#ok<*SFLD>   
 end
 
-may1Wpeaksnew = tostruct ;
-save('Weekdata\Maystrips\may1Wpeaksnew.mat', "may1Wpeaksnew")
+may1WpeaksSH = tostruct ;
+save('Weekdata\Maystrips\may1WpeaksSH.mat', "may1WpeaksSH")
 
 %% Replace time vector in struct with matlab datetime list
 load('Weekdata\Marchstrips\mar3WpeaksSH.mat')
@@ -27,43 +27,43 @@ mar3WpeaksSH.time = datechar' ;
 save('Weekdata\mar3WpeaksSH.mat', "mar3WpeaksSH")
 
 %% Remove certain indices
-idx = [34,36,38,42,49,51] ; %ex indices to remove
+idx = [26] ; %ex indices to remove
 
-load("Weekdata\Maystrips\may1WpeaksNH.mat")
-struct = may1WpeaksNH ;
+load("Weekdata\Februarystrips\feb3Wpeaks.mat")
+struct = feb3Wpeaks;
 
 keys = fieldnames(struct) ;
 for i = 1:length(keys)
-    key = keys{i};
+    key = keys{i};                                                                                                          
     field = getfield(struct,key) ; %#ok<*GFLD>
     field(idx) = [] ;
     struct = setfield(struct,key,field) ; %#ok<*SFLD>
     
 end
-may1WpeaksNH = struct ;
-save('Weekdata\Maystrips\may1WpeaksNH.mat', "may1WpeaksNH")
+feb3Wpeaks = struct ;
+save('Weekdata\Februarystrips\feb3Wpeaks.mat', "feb3Wpeaks")
 
 
 %% Combine peak files for a month but also separately for the hemispheres.
-addpath("Weekdata/Marchstrips/") ;
-load("mar1WpeaksNH.mat");
-load("mar1WpeaksSH.mat") ;
-load("mar2WpeaksNH.mat") ;
-load("mar2WpeaksSH.mat") ;
-load("mar3WpeaksNH.mat") ;
-load("mar3WpeaksSH.mat") ;
-load("mar4WpeaksNH.mat");
-load("mar4WpeaksSH.mat") ;
+addpath("Weekdata/Februarystrips/") ;
+%load("apr1WpeaksNH.mat");
+%load("apr1WpeaksSH.mat") ;
+load("feb2WpeaksNH.mat") ;
+load("feb2WpeaksSH.mat") ;
+load("feb3WpeaksNH.mat") ;
+load("feb3WpeaksSH.mat") ;
+load("feb4WpeaksNH.mat");
+load("feb4WpeaksSH.mat") ;
 
-NH1 = mar1WpeaksNH;
-NH2 = mar2WpeaksNH;
-NH3 = mar3WpeaksNH;
-NH4 = mar4WpeaksNH;
+%NH1 = apr1WpeaksNH;
+NH2 = feb2WpeaksNH;
+NH3 = feb3WpeaksNH;
+NH4 = feb4WpeaksNH;
 
-SH1 = mar1WpeaksSH;
-SH2 = mar2WpeaksSH;
-SH3 = mar3WpeaksSH;
-SH4 = mar4WpeaksSH;
+%SH1 = apr1WpeaksSH;
+SH2 = feb2WpeaksSH;
+SH3 = feb3WpeaksSH;
+SH4 = feb4WpeaksSH;
 
 keys = fieldnames(NH4) ;
 newSH = struct() ;
@@ -71,16 +71,16 @@ newNH = struct() ;
 newH = struct() ;
 for j = 1:length(keys)
     field = keys{j} ;
-    newSH.(field) = [SH1.(field), SH2.(field) , SH3.(field) , SH4.(field)] ; 
-    newNH.(field) = [NH1.(field), NH2.(field) , NH3.(field) , NH4.(field)] ; 
-    newH.(field) = [SH1.(field),NH1.(field), SH2.(field),NH2.(field) , SH3.(field),NH3.(field) , SH4.(field),  NH4.(field)] ;
+    newSH.(field) = [SH2.(field) , SH3.(field) , SH4.(field)] ; %SH1.(field), Remove SH1 and NH1 when February
+    newNH.(field) = [NH2.(field) , NH3.(field) , NH4.(field)] ;  %NH1.(field),
+    newH.(field) = [SH2.(field),NH2.(field) , SH3.(field),NH3.(field) , SH4.(field),  NH4.(field)] ; %SH1.(field),NH1.(field), 
 end
-marpeaksSH = newSH ;
-marpeaksNH = newNH ;
-marpeaks = newH ;
-save('Monthdata\Marchmonth\marpeaks.mat', "marpeaks")
-save('Monthdata\Marchmonth\marpeaksSH.mat', "marpeaksSH")
-save('Monthdata\Marchmonth\marpeaksNH.mat', "marpeaksNH")
+febpeaksSH = newSH ;
+febpeaksNH = newNH ;
+febpeaks = newH ;
+save('Monthdata\Februarymonth\febpeaks.mat', "febpeaks")
+save('Monthdata\Februarymonth\febpeaksSH.mat', "febpeaksSH")
+save('Monthdata\Februarymonth\febpeaksNH.mat', "febpeaksNH")
 %% Combine aurora strip files for a month
 addpath("Weekdata/Marchstrips/") ;
 load("mar1Waurorastrips.mat");
@@ -115,11 +115,11 @@ save('KPdataMay','KPdata')
 % 1 = 00 , 2 = 03, 3 =06, 4 = 09, 5 = 12, 6 = 15, 7 = 18, 8 = 21
 
 %% Function to create kp values corresponding to the peaks
-addpath("Weekdata\Marchstrips\")
-load("mar3WpeaksSH.mat")
+addpath("Weekdata\Maystrips\")
+load("may1Wpeaks.mat")
 %load("KPdataMarch.mat")
 
-timedata = mar3WpeaksSH.time ;
+timedata = may1Wpeaks.time ;
 kp = [] ;
 
 %loops through list of strips
@@ -152,8 +152,8 @@ for i = 1:length(timedata)
     end
 end
 
-mar3WpeaksSH.kp = kp ;
-save('Weekdata\Marchstrips\mar3WpeaksSH.mat', "mar3WpeaksSH")
+may1Wpeaks.kp = kp ;
+save('Weekdata\Maystrips\may1Wpeaks.mat', "may1Wpeaks")
 
 %% This function splits list of strips to North and South hemisphere depending on TPlat 
 function [MLTNH,MlatNH,MLTSH,MlatSH] = splitHemisphere(Mlat, MLT) %#ok<*DEFNU>

@@ -7,12 +7,12 @@ load("marpeaksNH.mat")
 peaksNH = marpeaksNH ;
 peaksSH = marpeaksSH ;
 
-meanSH = mean(peaksSH.Mlat) ;
-meanNH = mean(peaksNH.Mlat) ;
-minNH = min(peaksNH.Mlat);
-maxNH = max(peaksNH.Mlat) ;
-minSH = min(peaksSH.Mlat) ;
-maxSH = max(peaksSH.Mlat) ;
+meanSH = mean(peaksSH.maxI) ;
+meanNH = mean(peaksNH.maxI) ;
+minNH = min(peaksNH.maxI);
+maxNH = max(peaksNH.maxI) ;
+minSH = min(peaksSH.maxI) ;
+maxSH = max(peaksSH.maxI) ;
 
 %% 
 addpath("Weekdata\Maystrips\")
@@ -23,16 +23,16 @@ load("may1WpeaksNH.mat")
 peaksNH = may1WpeaksNH ;
 peaksSH = may1WpeaksSH ;
 
-meanSH = mean(peaksSH.maxI) ;
-meanNH = mean(peaksNH.maxI) ;
-minNH = min(peaksNH.maxI)  ;
-maxNH = max(peaksNH.maxI) ;
-minSH = min(peaksSH.maxI) ;
-maxSH = max(peaksSH.maxI) ;
+meanSH = mean(peaksSH.kp) ;
+meanNH = mean(peaksNH.kp) ;
+minNH = min(peaksNH.kp)  ;
+maxNH = max(peaksNH.kp) ;
+minSH = min(peaksSH.kp) ;
+maxSH = max(peaksSH.kp) ;
 
 %% Plots altitude vs time (uniform and non-uniform axis)
 close all
-addpath("Monthdata\")
+addpath("Monthdata\Aprilmonth\")
 load("aprpeaksSH.mat")
 load("aprpeaks.mat")
 peaks = aprpeaks ;
@@ -43,7 +43,7 @@ plot(dateTimes,aprpeaksSH.alt,'.')
 title('Non-uniform time spacing of x-axis')
 ylabel('Altitude (km)')
 grid on
-ylim([100,116]) ;
+ylim([90,116]) ;
 xtickangle(45);
 
 % Select a subset of date strings to display as x-axis ticks, for
@@ -66,7 +66,7 @@ plot(peaks.time,peaks.alt,'.')
 title('April uniform spacing of x-axis')
 ylabel('Altitude (km)')
 grid on
-ylim([0,9]) ;
+ylim([90,116]) ;
 xtickangle(45);
 
 startDate = datetime(2023, 4, 1,'Format','dd/MM HH:mm:ss');

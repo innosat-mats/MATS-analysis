@@ -2,10 +2,10 @@
 close all
 clc
 clear
-addpath("Weekdata\Maystrips\")
-load("may1WpeaksSH.mat")
+addpath("Monthdata\")
+load("febpeaksSH.mat")
 figure(1)
-strips = may1WpeaksSH ;
+strips = febpeaksSH ;
 dateTimes = strips.time; % Assuming strips.time is in 'dd/mm, HH:MM' format
 
 % Select a subset of date strings to display as x-axis ticks
@@ -18,7 +18,7 @@ p1 = plot(strips.alt,'.') ;
 p1.DataTipTemplate.DataTipRows(1) = dataTipTextRow("Altitude",strips.alt);
 p1.DataTipTemplate.DataTipRows(2) = dataTipTextRow("Time",strips.time);
 
-title({'\bf Peak points in geodetic coordinates'; '\rm Period: May 1st to 7th'}, fontsize=16)
+title({'\bf Peak points in geodetic coordinates'; '\rm Period: February'}, fontsize=16)
 grid on
 grid minor
 ylabel('\bf Altitude (km)','FontSize',11)

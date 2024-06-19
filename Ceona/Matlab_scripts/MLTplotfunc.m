@@ -2,17 +2,18 @@ function fig = MLTplotfunc(type,stripsNH,stripsSH,peaksNH,peaksSH)
     % Arguments: type = 1 or 2, strips = matlab structure allstrips file
     % peaks = matlab structure peak file
     if type == 1
-        sgtitle({'\bf MLT plot of peak points correlated with intensity';'\rm Period: May month '},fontsize=16)
+        sgtitle({'\bf MLT plot of peak points correlated with intensity';'\rm Period: February 8th to 28th'},fontsize=16)
     
         %%%% North Hemisphere polar plot
         subplot(1,2,1);
        
         %plot settings
         p1 = polarscatter(peaksNH.MLT*(pi/12),peaksNH.Mlat,[],peaksNH.maxI,'filled');
-        set(gca,"CLim",[8*10^3 4*10^4])  %Altitude limit = 90-115,  kplimit = 0-9
+        set(gca,"CLim",[2*10^3 3*10^4])  %Altitude limit = 90 115,  kplimit = 0-9 intensity limit = 1*10^3 3*10^4
         cb = colorbar ;
         colormap jet
-        cb.Label.String = 'Intensity 10^{13}/ (nm \cdot m^2 \cdot str \cdot s)' ;%'Altitude (km)'; %'Kp-index' ;
+        cb.Label.String = '10^{13} photons / (nm \cdot m^2 \cdot sr \cdot s)'; %'10^{13} photons / (nm \cdot m^2 \cdot sr \cdot s)' 'Altitude (km)' 'Kp-index'
+        
         ax1 = gca;
         % MLT (theta settings)
         ax1.ThetaDir = 'counterclockwise' ;
@@ -37,10 +38,10 @@ function fig = MLTplotfunc(type,stripsNH,stripsSH,peaksNH,peaksSH)
         
         %%%% South Hemisphere polar plot
         subplot(1,2,2) ;
-        p2 = polarscatter(peaksSH.MLT*(pi/12),peaksSH.Mlat,[],peaksSH.maxI,'filled');
-        set(gca,"CLim",[2*10^3 4*10^4])  %[0 9] , [2*10^3 4*10^4] , [90 115]
+        p2 = polarscatter(peaksSH.MLT*(pi/12),peaksSH.Mlat,[],peaksSH.maxI,'filled'); %change the last attribute as see fit
+        set(gca,"CLim",[2*10^3 3*10^4])  %[0 9] , [2*10^3 4*10^4] , [90 115]
         cb = colorbar ;
-        cb.Label.String = 'Intensity 10^{13}/ (nm \cdot m^2 \cdot str \cdot s)';%'Altitude (km)'; 'Kp-index' ;
+        cb.Label.String = '10^{13} photons / (nm \cdot m^2 \cdot sr \cdot s)';  %'10^{13} photons / (nm \cdot m^2 \cdot sr \cdot s)'; 'Altitude (km)';'Kp-index' ; 
 
         ax2 = gca;
         ax2.ThetaDir = 'counterclockwise' ;
@@ -65,7 +66,7 @@ function fig = MLTplotfunc(type,stripsNH,stripsSH,peaksNH,peaksSH)
     end
 
     if type == 2
-        sgtitle({'\bf Peak points correlated with Kp-level and TP-path';'\rm Period: February'},fontsize=16)
+        sgtitle({'\bf Peak points correlated with Kp-level and TP-path';'\rm Period: May 1st to 8th'},fontsize=16)
         
         %%%% North Hemisphere polar plot
         subplot(1,2,1);
@@ -107,7 +108,7 @@ function fig = MLTplotfunc(type,stripsNH,stripsSH,peaksNH,peaksSH)
         %%%% South Hemisphere polar plot
         subplot(1,2,2) ;
         
-        s2 = polarscatter(stripsSH.MLT*(pi/12),stripsSH.Mlat,0.8,'filled','black','MarkerFaceAlpha',.4);
+        s2 = polarscatter(stripsSH.MLT*(pi/12),stripsSH.Mlat,0.8,'filled','black','MarkerFaceAlpha',.3);
         hold on
         p2 = polarscatter(peaksSH.MLT*(pi/12),peaksSH.Mlat,[],peaksSH.kp,'filled');
         

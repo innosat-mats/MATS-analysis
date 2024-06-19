@@ -1,17 +1,29 @@
 
 %% Plot single image
-load("mar2_1915.mat")
+close
+clear all
+load("mar31_00_58IR1.mat")
 clims = [min(min(ccdimage)) max(max(ccdimage))];
 figure(1)
 imagesc(ccdimage,clims)
 ax1 = gca;
 ax1.YDir = 'normal' ;
-title('2 March Image 19:15:25 ')
+title('March 31st Image 00:58:38 ')
 hold on
+
+peakrow = 160 ;
+crop = ccdimage(peakrow-4:peakrow+3,15:30) ;
+
 %add central column line
-%xline(23, Color=[1 0 0], LineWidth=4) 
+xline([15 30], Color=[1 0 0], LineWidth=2)
+hold on
+yline([peakrow-4 peakrow+3],Color=[1 0 0], LineWidth=2);
+
+S = sum(crop, "all") ;
+numpixels = 128 ;
+av = S/numpixels
 %% Plot a keogram and a corresponding position plot below (ex altitude)
-keogramgrad = keogram15feborb11
+keogramgrad = keogram15feborb11 ;
 clims = [min(min(keogramgrad)) max(max(keogramgrad))];
 figure(1)
 subplot(2,1,1) ;
