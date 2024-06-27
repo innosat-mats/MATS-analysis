@@ -55,14 +55,14 @@ saveas(gcf,'C:\Users\judit\OneDrive - KTH\MATS\Plots\kpvsmaxI.png')
 
 %%
 %close all
-%addpath("Monthdata\Marchmonth\")
-addpath("Weekdata\Maystrips\")
+%addpath("Monthdata\Marchstrips\")
+%addpath("Weekdata\Maystrips\")
 load("marpeaks.mat")
 %load("may1Wpeaks")
 peaks = marpeaks ;
 
-startDate = datetime(2023, 3, 1,'Format','dd/MM HH:mm:ss');
-endDate = datetime(2023, 5, 7, 'Format','dd/MM HH:mm:ss');
+startDate = peaks.time(1);%datetime(2023, 3, 1,'Format','dd/MM HH:mm:ss');
+endDate = peaks.time(end);%datetime(2023, 3, 31, 'Format','dd/MM HH:mm:ss');
 timeline = startDate:endDate;
 
 figure(4)
