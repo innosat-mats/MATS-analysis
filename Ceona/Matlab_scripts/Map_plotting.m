@@ -3,7 +3,7 @@ clf
 clear all
 clc
 %Files to plot the peak points
-addpath("Monthdata\")
+addpath("Monthdata\Aprilmonth\")
 load("aprpeaks.mat") ;
 load('coastlines')
 
@@ -14,13 +14,13 @@ Intensity = discretize(peaks.maxI,6,'categorical');
 figure(1)
 gb = geobubble(peaks.maxlat,peaks.maxlon,peaks.kp,ColorData=Intensity, BubbleColorList=colormap(jet(7)));
 gb.SizeLegendTitle = 'Kp';
-gb.Title = 'Aurora distribution 3 week April' ;
-gb.ColorLegendTitle = 'Intensity 10^{13}/ (nm \cdot m^2 \cdot str \cdot s)'; %Sum of intensity values or specific
+gb.Title = 'Aurora distribution April' ;
+gb.ColorLegendTitle = 'Intensity 10^{13} ph/ (nm \cdot m^2 \cdot sr \cdot s)'; %Sum of intensity values or specific
 %color for certain day
 geobasemap satellite
 
 figure(2)
-plot(feb3Wpeaks.kp,abs(feb3Wpeaks.Mlat), '.')
+plot(aprpeaks.kp,abs(aprpeaks.Mlat), '.')
 %% Create polar maps for a week 
 clear workspace
 clc
@@ -42,7 +42,7 @@ stripsSH = may1WallstripsSH;
 peaksNH = may1WpeaksNH ;
 peaksSH = may1WpeaksSH ;
 
-type = 1 ;  %1 means only peaks, 2 both peaks and satellite path
+type = 2;  %1 means only peaks, 2 both peaks and satellite path
 MLTplotfunc(type,stripsNH,stripsSH,peaksNH,peaksSH)
 
 %% Polar MLT plots for a whole month
@@ -50,21 +50,21 @@ clear workspace
 clc
 clf
 %Files to plot the peak points
-addpath("Monthdata\")
-load("febpeaksNH.mat");
-load("febpeaksSH.mat") ;
+addpath("Monthdata\Aprilmonth\")
+load("aprpeaksNH.mat");
+load("aprpeaksSH.mat") ;
 
 %Files to plot the TP trajectory
-load("feballstripsNH.mat")
-load("feballstripsSH.mat")
+load("aprallstripsNH.mat")
+load("aprallstripsSH.mat")
 
 %set files for the peaks you want to plot
-peaksNH = febpeaksNH ;
-peaksSH = febpeaksSH ;
+peaksNH = aprpeaksNH ;
+peaksSH = aprpeaksSH ;
 
 %set files for the TP path you want to plot
-stripsNH = feballstripsNH ;
-stripsSH = feballstripsSH;
+stripsNH = aprallstripsNH ;
+stripsSH = aprallstripsSH;
 
 type = 2 ;  %1 means only peaks are plotted, 2 both peaks and satellite path
 MLTplotfunc(type,stripsNH,stripsSH,peaksNH,peaksSH)

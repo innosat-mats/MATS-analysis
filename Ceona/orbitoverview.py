@@ -104,7 +104,7 @@ def orbit_pdf(items, channel, filename, numdays):
 
 # %%
 def overview_points(items, channel, allrows, filename, numdays):
-    "Create the overviews with added red dots for the aurora strips max points"
+    "Create the overviews with added red dots for the strips max points"
     Tperiod = timedelta(minutes=100)
     #one orbit = ca 90 min
     pdf = PdfPages(filename)

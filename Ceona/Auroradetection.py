@@ -108,9 +108,9 @@ def get_strips(items, numdays,filedate):
                         allstrips.append(strip)
 
                 elif items.iloc[i].TPlat < 0: #south hemisphere
-                    auroralim = 120    #Use 150 for pol-reg, 120 for normal keogram
-                    auroramean = 30     #Use 15 for pol-reg, 30 for normal keogram
-                    auroraintensity = 40   #18 used for pol-reg, 40 for normal
+                    auroralim = 150    #Use 150 for pol-reg, 120 for normal keogram (april week 2-4 and may)
+                    auroramean = 15     #Use 15 for pol-reg, 30 for normal keogram (april week 2-4 and may)
+                    auroraintensity = 18   #18 used for pol-reg, 40 for normal (april week 2-4 and may)
                     SH = items.iloc[n:i+1]
                     if len(SH) == 0 :
                         continue
@@ -202,7 +202,7 @@ def singleKeogramTest(items, filename):
     save_strips(striplist, filename +'allstrips.mat', filename +'allstrips')
     
     axs[1].pcolormesh(matrix,vmin=-10, vmax=300)
-    fig.legend()
+    #fig.legend()
     #print(newmatrix[:,0] -striplist[0].strip )
     plt.show()
     return
