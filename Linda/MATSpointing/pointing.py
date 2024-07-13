@@ -31,9 +31,9 @@ dataset = ds.dataset(
 
 table = dataset.to_table(
     filter=(
-        ds.field('time') > pd.to_datetime('2023-11-01T0:0:00z').to_datetime64()
+        ds.field('time') > pd.to_datetime('2023-02-01T0:0:00z').to_datetime64()
     ) & (
-        ds.field('time') < pd.to_datetime('2023-12-04T12:0z').to_datetime64()
+        ds.field('time') < pd.to_datetime('2023-05-17T12:0z').to_datetime64()
     )
 )
 
@@ -42,7 +42,7 @@ df = table.to_pandas()
 df=df[0::20].reset_index(drop=True)
 df.time=pd.to_datetime(df.time)
 df=df.sort_values('time').reset_index(drop=True)
-
+#%%
 plt.figure()
 plt.plot(df.time)
 plt.figure()
@@ -50,6 +50,9 @@ plt.plot(df.time,df.afsTangentH_wgs84)
 plt.gcf().autofmt_xdate()
 plt.ylabel('Nominal Tangent height')
 plt.xlabel('Time')
+plt.ylim(80, 100)
+
 # %%
 df.columns.tolist()
+
 # %%

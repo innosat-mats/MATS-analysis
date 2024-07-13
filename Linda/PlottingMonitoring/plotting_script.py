@@ -10,15 +10,16 @@ from mats_utils.plotting.animate import generate_gif
 data_folder = '/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/'
 
 # times for start and stop
-start_time = DT.datetime(2023, 7, 18, 6, 0, 0)
-stop_time = DT.datetime(2023, 7, 18, 6, 1, 0)
+start_time = DT.datetime(2023, 2, 4, 9, 0, 0)
+stop_time = DT.datetime(2023, 2, 4, 9, 0, 30)
 
 # filter
 filter={'CCDSEL': [5,6]}
 
 #%%
 # read in measurements
-df = read_MATS_data(start_time, stop_time,filter,level='1a',version='0.6')
+#df = read_MATS_data(start_time, stop_time,filter,level='1a',version='0.6')
+df = read_MATS_data(start_time, stop_time,level='1a',version='0.6')
 
 #%%
 #df.iloc

@@ -41,6 +41,7 @@ def plot_calib_step(dfentry, step1name,step2name,title,divide=False, clim1=None,
     ax[2].text(10, 60, 'max: '+str(np.max(change)), color='white')
     ax[2].text(10, 80, 'min: '+str(np.min(change)), color='white')
 
+
     plt.tight_layout()
     plt.savefig('../output/'+ title +'.png')
     plt.show()
@@ -54,15 +55,19 @@ def plot_calib_step(dfentry, step1name,step2name,title,divide=False, clim1=None,
 
 
 # # #%% Select on explicit time NLC
-start_time = DT.datetime(2023, 2, 2, 19, 38, 0) 
-stop_time = DT.datetime(2023, 2, 2, 19, 50, 0)
+#start_time = DT.datetime(2023, 2, 2, 19, 38, 0) 
+#stop_time = DT.datetime(2023, 2, 2, 19, 50, 0)
 
-# Dayglow
-#start_time = DT.datetime(2023, 2, 20, 19, 20, 0)
-#stop_time = DT.datetime(2023, 2, 20, 19, 21, 0)
-#Nightglow
-#start_time = DT.datetime(2023, 2, 20, 20, 48, 0)
-#stop_time = DT.datetime(2023, 2, 20, 20, 49, 0)
+dayornight='dayglow'
+if dayornight=='dayglow':
+    start_time = DT.datetime(2023, 2, 20, 19, 20, 0)
+    stop_time = DT.datetime(2023, 2, 20, 19, 21, 0)
+elif dayornight=='nightglow':
+    start_time = DT.datetime(2023, 2, 20, 20, 48, 0)
+    stop_time = DT.datetime(2023, 2, 20, 20, 49, 0)
+else:
+    raise Exception('dayornight not defined')
+
 
 df = read_MATS_data(start_time,stop_time,version='0.7',level='1a',dev=False)
 
@@ -84,7 +89,7 @@ ir4=df[df.channel=='IR4'][:n].reset_index()
 # with open('testdata/CCD_items_in_orbit_NLCuv1.pkl', 'rb') as f:
 #     CCDitems = pickle.load(f)
 #%%
-#instrument = Instrument('/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/calibration_data_MATSinstrument.toml')
+instrument = Instrument('/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/calibration_data_MATSinstrument.toml')
 
 uv1cal=calibrate_dataframe(uv1, instrument, debug_outputs=True)
 uv2cal=calibrate_dataframe(uv2, instrument, debug_outputs=True)
@@ -96,7 +101,7 @@ ir4cal=calibrate_dataframe(ir4, instrument, debug_outputs=True)
 #%%
 # plot all the different calibration steps
 #
-dfentry=ir3cal.iloc[0]
+dfentry=ir1cal.iloc[0]
 
 plot_calib_step(dfentry, 'image_lsb','image_se_corrected','SE correction')
 plot_calib_step(dfentry, 'image_se_corrected','image_hot_pixel_corrected','hot-pixel correction')
@@ -125,10 +130,10 @@ substeps=['image_lsb',
  'image_calibrated']
 
 nmax=len(substeps)-1
-stepnames=['a) '+ dfentry.channel+' '+str(dfentry.TMHeaderTime)[0:10]+' Level 1a [Counts]', 
+stepnames=['a)  Level 1a [Counts]', 
           #'SE corrected', 
           #'hot-pixel corrected', 
-           'c) Bias, hotpixel and single events subtracted [Counts]', 
+           'c) Bias, hotpixel and SE subtracted [Counts]', 
            'e) Linearized [Counts]', 
            'g) Desmeared [Counts]', 
            #'Dark current subtracted [Counts]', 
@@ -139,7 +144,7 @@ stepnames=['a) '+ dfentry.channel+' '+str(dfentry.TMHeaderTime)[0:10]+' Level 1a
 processnames=[
                 # 'SE correction',
                 # 'Hot-pixel correction',
-                'b) Bias, hot pixel and single event subtraction [Counts]',
+                'b) Bias, hot pixel and SE subtraction [Counts]',
                 'd) Linearization factor [Unitless]',
                 'f) Desmearing [counts]',
                 #'Dark current subtraction [Counts]',
@@ -148,51 +153,51 @@ processnames=[
                 'Calibration']
 
 
-#All substeps below:
+# #All substeps below:
 
-substeps=['image_lsb',
- 'image_se_corrected',
- 'image_hot_pixel_corrected',
- 'image_bias_sub',
- 'image_linear',
- 'image_desmeared',
- 'image_dark_sub',
- 'image_flatfielded',
- 'image_flipped',
- 'image_calibrated']
+# substeps=['image_lsb',
+#  'image_se_corrected',
+#  'image_hot_pixel_corrected',
+#  'image_bias_sub',
+#  'image_linear',
+#  'image_desmeared',
+#  'image_dark_sub',
+#  'image_flatfielded',
+#  'image_flipped',
+#  'image_calibrated']
 
-nmax=len(substeps)-1
-stepnames=[dfentry.channel+' '+str(dfentry.TMHeaderTime)[0:10]+' Level 1a [Counts]', 
-          'SE corrected', 
-          'hot-pixel corrected', 
-           'Bias, hotpixel and single events subtracted [Counts]', 
-           'Linearized [Counts]', 
-           'Desmeared [Counts]', 
-           'Dark current subtracted [Counts]', 
-           ' Calibrated [$10^{12}$ photons/nm/s/m$^{2}$/str]', 
-           'flipped', 
-           'calibrated']
+# nmax=len(substeps)-1
+# stepnames=[dfentry.channel+' '+str(dfentry.TMHeaderTime)[0:10]+' Level 1a [Counts]', 
+#           'SE corrected', 
+#           'hot-pixel corrected', 
+#            'Bias, hotpixel and single events subtracted [Counts]', 
+#            'Linearized [Counts]', 
+#            'Desmeared [Counts]', 
+#            'Dark current subtracted [Counts]', 
+#            ' Calibrated [$10^{12}$ photons/nm/s/m$^{2}$/str]', 
+#            'flipped', 
+#            'calibrated']
 
-processnames=[
-                'SE correction',
-                'Hot-pixel correction',
-                'Bias, hot pixel and single event subtraction [Counts]',
-                'Linearization factor [Unitless]',
-                'Desmearing [counts]',
-                'Dark current subtraction [Counts]',
-                'Calib. factor [$10^{12}$ photons/nm/s/m$^{2}$/str/counts]',
-                'Flipping',
-                'Calibration']
-
-
+# processnames=[
+#                 'SE correction',
+#                 'Hot-pixel correction',
+#                 'Bias, hot pixel and single event subtraction [Counts]',
+#                 'Linearization factor [Unitless]',
+#                 'Desmearing [counts]',
+#                 'Dark current subtraction [Counts]',
+#                 'Calib. factor [$10^{12}$ photons/nm/s/m$^{2}$/str/counts]',
+#                 'Flipping',
+#                 'Calibration']
 
 
-fig, ax = plt.subplots(nmax, 1, figsize=(10,18))
-for i in range(nmax):
-    plot_CCDimage(dfentry[substeps[i]], fig=fig, axis=ax[i], title=stepnames[i])
-    ax[i].text(5, 60,'min: '+str(np.min(dfentry[substeps[i]])), color='white')
-    ax[i].text(5, 90,'max: '+str(np.max(dfentry[substeps[i]])), color='white')
-plt.tight_layout()
+
+
+# fig, ax = plt.subplots(nmax, 1, figsize=(10,18))
+# for i in range(nmax):
+#     plot_CCDimage(dfentry[substeps[i]], fig=fig, axis=ax[i], title=stepnames[i])
+#     ax[i].text(5, 60,'min: '+str(np.min(dfentry[substeps[i]])), color='white')
+#     ax[i].text(5, 90,'max: '+str(np.max(dfentry[substeps[i]])), color='white')
+# plt.tight_layout()
 
 
 
@@ -227,10 +232,14 @@ for i in range(nmax-1):
     if substeps[i+1] in ['image_flatfielded']:
         clim=[0.050, 0.060]
         sc2 = ax2.imshow(field, origin='lower', interpolation="none", clim=clim)
+    elif substeps[i+1] in ['image_bias_sub'] and dayornight=='dayglow':
+        clim=[270, 293]
+        sc2 = ax2.imshow(field, origin='lower', interpolation="none", clim=clim)
+        hej=field
     else:
         sc2 = ax2.imshow(field, origin='lower', interpolation="none")
-    ax2.text(3, 40, 'max: '+str(np.max(field)), color='white')
-    ax2.text(3, 60, 'min: '+str(np.min(field)), color='white')
+    ax2.text(3, 40, 'max: {:.3g}'.format(np.max(field)), color='white')
+    ax2.text(3, 60, 'min: {:.3g}'.format(np.min(field)), color='white')
 
     ax2.set_title(processnames[i])    
     ax2.set_aspect('auto')
@@ -245,15 +254,24 @@ ax3.set_aspect('auto')
 cbar = fig.colorbar(sc3, ax=ax3, orientation='vertical')
 
 # Adjust the space between the subplots
-plt.subplots_adjust(hspace=0.5)
+#plt.subplots_adjust(hspace=.5)
 plt.tight_layout()
+
+
+fig.suptitle('Calibration example ford'+dayornight+': ' + dfentry.channel+' '+str(dfentry.TMHeaderTime)[0:19], fontsize=16)
+plt.subplots_adjust(top=.91)
 # Display the figure
 plt.show()
 
-#fig.savefig('../output/calibration_steps.png')
+
+fig.savefig('../output/calibration_steps_'+dayornight+'.png')
 
 # %%
-#Error Analysis
-import mats_utils.error_estimate.error_estimate as ee
-CCDitems = dataframe_to_ccd_items(ir1)
+field=dfentry['image_lsb']-dfentry['image_bias_sub']
+field=dfentry['image_linear']-dfentry['image_desmeared']
+plt.pcolor(field)
+plt.colorbar()
+field.max()
+field.min()
 
+# %%

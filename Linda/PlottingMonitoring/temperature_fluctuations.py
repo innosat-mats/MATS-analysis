@@ -9,8 +9,8 @@ import matplotlib.pyplot as plt
 #%%
 # Select Time
 
-starttime=DT.datetime(2023,4,2,12,0,0)
-endtime=DT.datetime(2023,4,2,17,0,0)
+starttime=DT.datetime(2023,2,11,14,0,0)
+endtime=DT.datetime(2023,2,15,14,30,0)
 
 
 df = read_MATS_data(starttime, endtime,filter=None,level='1a',version='0.6')
@@ -26,6 +26,7 @@ for sensor in sensors:
     line.set_label(sensor)
 plt.xlabel('Time')
 plt.ylabel('Temperature [C]')
+plt.ylim([-25, -17])
 ax.legend()
 # %%
 df['HTR8A'].plot()
