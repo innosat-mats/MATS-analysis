@@ -11,6 +11,7 @@ from mats_utils.plotting.plotCCD import plot_image, orbit_plot
 from sklearn.ensemble import IsolationForest
 import pandas as pd
 from database_generation.experimental_utils import plot_CCDimage
+from mats_utils.rawdata.cropping import make_crop_filter
 
  #%%
 # Function to download images from the MATS satellite
@@ -21,16 +22,6 @@ def download_image(url, save_path):
 
 
 
-def make_crop_filter(channel, cropversion):
-    from mats_utils.rawdata.cropping import set_crop_settings
-    NRSKIP, NRBIN, NROW, NCSKIP, NCBIN, NCOL, NCBINFPGA=set_crop_settings(channel, cropversion)
-    if NCBINFPGA==0:
-        NCBINFPGA=1
-    if NCBIN==0:
-        NCBIN=1
-    filter={'channel':channel, 'NRSKIP':[NRSKIP,NRSKIP], 'NRBIN':[NRBIN, NRBIN], 'NROW': [NROW, NROW], 
-            'NCSKIP':[NCSKIP,NCSKIP], 'NCBINCCDColumns':[NCBIN, NCBIN], 'NCOL': [NCOL, NCOL],'NCBINFPGAColumns':[NCBINFPGA,NCBINFPGA]}
-    return filter
 
 
 def random_datetimes(starttime, endtime, number_of_images, seed):
@@ -55,7 +46,7 @@ def random_datetimes(starttime, endtime, number_of_images, seed):
     for random_number in random_numbers:
         random_datetime = starttime + (endtime - starttime) * random_number
         random_datetimes.append(random_datetime)
-    return random_datetimesmessage:%3C46c50835-ed58-45eb-b32b-77050c3183a5@VRP-EXCH-IA01.ad.vr.se%3E
+    return random_datetimes
 
 def select_random_images(starttime, endtime, filter, number_of_images, seed, idifference=0):
     """
@@ -109,7 +100,7 @@ def select_random_images_all_channels(starttime, endtime, number_of_images, crop
     Args:
         starttime (datetime): The start time of the time range.
         endtime (datetime): The end time of the time range.
-        filter (str): The filter to apply for data download.
+        filter (str): The filter to apply for data download. 
         number_of_images (int): The number of random images to select.
         seed (int): The seed for random number generation.
         crop (str): The crop version to use for the data download.
@@ -210,7 +201,7 @@ def make_model(df, field='ImageCalibrated', whatmodel='IsolationForest'):
         model=None
     return model
 
-def make_variance_model(df, field='ImageCalibrated'):
+def make_variance_model(df, field='ImageCalibrated', plot=False):
     """
     Calculates the standard deviation of variation across the field of view 
     at the bottom half of the images, for all images in the given dataframe. 
@@ -236,15 +227,15 @@ def make_variance_model(df, field='ImageCalibrated'):
 
 def anomaly_calc(images, maxaltpix=75):
     """
-    Calculates the average standard deviation of variation across the field of view 
-    at the bottom half of the images up to a given altitude pixel. The inverse of this 
+    Calculates the average standard deviation of signal strenght variation across the field of view 
+    at the bottom half of the images up to a given altitude pixel. This 
     number is given ans an anolmaly score.
     Args:
         images (array): The images.
         maxaltpix (int): The maximum altitude pixel to consider. Default is 75.
 
     Returns:
-        avstd_across (array or float): Anolanly scores for the images.
+        avstd_across (array or float): Anomaly scores for the images.
     """
     if len(images.shape)==2:
         avstd_across=np.mean(np.std(images[0:maxaltpix,:], axis=1), axis=0)
@@ -253,7 +244,7 @@ def anomaly_calc(images, maxaltpix=75):
     else:
         Exception('The input images have the wrong shape', images.shape)
 
-    anomaly_score=1./avstd_across
+    anomaly_score=avstd_across
     return anomaly_score
 
 def rank_oddness_of_images(df, field, model=None):
@@ -314,23 +305,24 @@ def sort_images_by_anomaly_score(df, anomaly_scores):
 
 #%%
 # Select random images to train the model on
-if False:
+if True:
     #channel='IR1'
     crop='CROPD'
     #filter_channelcrop=make_crop_filter(channel, crop)
     starttime = DT.datetime(2023, 2, 10, 0, 0, 0)
     endtime = DT.datetime(2023, 5, 10, 0, 0, 0)
     seed=42
-    nrimages=10
+    nrimages=4
     idiff=1
     dfchannelsdict=select_random_images_all_channels(starttime, endtime, nrimages,crop, seed, idifference=idiff)
 
-    pickle.dump(dfchannelsdict, open('testdata/df_random_allchannels_'+crop+'_idiff_'+str(idiff)+'_nimg_'+str(nrimages)+'_seed_'+str(seed)+'.pkl', 'wb'))
+#%%
+pickle.dump(dfchannelsdict, open('testdata/df_random_allchannels_'+crop+'_idiff_'+str(idiff)+'_nimg_'+str(nrimages)+'_seed_'+str(seed)+'.pkl', 'wb'))
 
 
    #%%
 # Load the data
-#Select how many images to skip between the images wher the difference is taken    
+#Select how many images to skip between the images where the difference is taken    
 idiff=1
 #Select which channel to serch for anomalies in 
 channel='IR1'
@@ -347,7 +339,7 @@ df=dfchannelsdict[channel]
 
 #%%
 # Select which field to search for anomalies in and cut the dataset
-field='ImageCalibrated'#Diff'+str(idiff)
+field='ImageCalibratedDiff'+str(idiff)
 #df['MeanValue'] = df['ImageCalibrated'].apply(lambda x: np.mean(x))
 #Remove data from South Atlantic Anomaly
 df = df[~(((df['satlat'] <= 0) & (df['satlat'] >= -60) & ((df['satlon'] > 300) | (df['satlon'] < 30))))]
@@ -373,14 +365,15 @@ if useAI:
     #use model to predict anomaly scores
     anomaly_scores=rank_oddness_of_images(df_sel,field, model=model)
     plt.hist(anomaly_scores, bins=50)
+    anomalymethod='IsolationForest'
 else:
     mu, std =make_variance_model(df_sel,field)
     anomaly_scores=rank_oddness_based_on_variance(df_sel,field)
-
+    anomalymethod='Variance'
 
 
     #plt.hist(anomaly_scores, bins=50)
-
+#%%
 df_oddfirst=sort_images_by_anomaly_score(df_sel, anomaly_scores)
 
 # for ichannel in channels:
@@ -393,14 +386,15 @@ df_oddfirst=sort_images_by_anomaly_score(df_sel, anomaly_scores)
 #%%
 # Create the directory and plot images 
 data_folder = '/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/'
-directory = os.path.join(data_folder, 'satellite_smoke')
+
+directory = os.path.join(data_folder, 'satellite_smoke'+anomalymethod+'_'+channel+'_idiff_'+str(idiff)+'_nimg_'+str(nrimages)+'_seed_'+str(seed)+'_'+crop)  # Create a directory to save the images in
 os.makedirs(directory, exist_ok=True)
 
 
 
 # Select corresponding rows in all the channels, including the one that was selected as odd
 channels=['IR1', 'IR2', 'IR3', 'IR4', 'UV1', 'UV2']#, 'NADIR']
-dfchannelsdict_oddfirst = {}
+dfchannelsdict_oddfirst = {}        
 for ichannel in channels:
     dfchannelsdict_oddfirst[ichannel]=dfchannelsdict[ichannel].loc[df_oddfirst.index]
 
@@ -471,3 +465,9 @@ plt.show()
 same_times = (times_IR1 == times_IR2)
 print(f"Are the times the same? {same_times}")
 # %%
+
+filter_IR1={'TPsza':[97,150],'CCDSEL': [1,1], 'NRBIN': [2, 2],'NCBINCCDColumns': [40, 40],'NCOL':[43,43], 'NROW':[187,187], 'NRSKIP':[109,109]} 
+crop='CROPD'
+filter_channelcrop=make_crop_filter(channel, crop)
+starttime = DT.datetime(2023, 2, 10, 0, 0, 0)
+endtime = DT.datetime(2023, 5, 10, 0, 0, 0)

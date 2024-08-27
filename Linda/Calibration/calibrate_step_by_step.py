@@ -135,7 +135,7 @@ i = 5
 images = L1_calibrate(CCDitems[i], instrument,return_steps=True)
 datechannel = str(CCDitems[i]["TMHeaderTime"])[0:10] + '_' + CCDitems[i]["channel"]
 make_calibration_plots(images,datechannel, savefig=True)
-#%%
+ #%%
 #IR2
 i = 2
 images = L1_calibrate(CCDitems[i], instrument,return_steps=True)

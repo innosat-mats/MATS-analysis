@@ -58,13 +58,13 @@ def plot_calib_step(dfentry, step1name,step2name,title,divide=False, clim1=None,
 #start_time = DT.datetime(2023, 2, 2, 19, 38, 0) 
 #stop_time = DT.datetime(2023, 2, 2, 19, 50, 0)
 
-dayornight='dayglow'
+dayornight='nightglow'
 if dayornight=='dayglow':
-    start_time = DT.datetime(2023, 2, 20, 19, 20, 0)
-    stop_time = DT.datetime(2023, 2, 20, 19, 21, 0)
+    start_time = DT.datetime(2023, 2, 20, 19, 27, 0)
+    stop_time = DT.datetime(2023, 2, 20, 19, 27, 20)
 elif dayornight=='nightglow':
-    start_time = DT.datetime(2023, 2, 20, 20, 48, 0)
-    stop_time = DT.datetime(2023, 2, 20, 20, 49, 0)
+    start_time = DT.datetime(2023, 2, 20, 19, 47, 0)
+    stop_time = DT.datetime(2023, 2, 20, 19, 58, 15)
 else:
     raise Exception('dayornight not defined')
 
@@ -72,13 +72,14 @@ else:
 df = read_MATS_data(start_time,stop_time,version='0.7',level='1a',dev=False)
 
 #%%
-n=10
-uv1=df[df.channel=='UV1'][:n].reset_index()
-uv2=df[df.channel=='UV2'][:n].reset_index()
-ir1=df[df.channel=='IR1'][:n].reset_index()
-ir2=df[df.channel=='IR2'][:n].reset_index()
-ir3=df[df.channel=='IR3'][:n].reset_index()
-ir4=df[df.channel=='IR4'][:n].reset_index()
+b=10
+n=b+10
+uv1=df[df.channel=='UV1'][b:n].reset_index()
+uv2=df[df.channel=='UV2'][b:n].reset_index()
+ir1=df[df.channel=='IR1'][b:n].reset_index()
+ir2=df[df.channel=='IR2'][b:n].reset_index()
+ir3=df[df.channel=='IR3'][b:n].reset_index()
+ir4=df[df.channel=='IR4'][b:n].reset_index()
 
 
 # pickle.dump(CCDitemsuv1, open('testdata/CCD_items_in_orbit_NLCuv1.pkl', 'wb'))
@@ -89,19 +90,23 @@ ir4=df[df.channel=='IR4'][:n].reset_index()
 # with open('testdata/CCD_items_in_orbit_NLCuv1.pkl', 'rb') as f:
 #     CCDitems = pickle.load(f)
 #%%
-instrument = Instrument('/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/calibration_data_MATSinstrument.toml')
+if not 'instrument' in locals():
+    instrument = Instrument('/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/calibration_data_MATSinstrument.toml')
 
 uv1cal=calibrate_dataframe(uv1, instrument, debug_outputs=True)
 uv2cal=calibrate_dataframe(uv2, instrument, debug_outputs=True)
+#%%
 ir1cal=calibrate_dataframe(ir1, instrument, debug_outputs=True)
+#%%
 ir2cal=calibrate_dataframe(ir2, instrument, debug_outputs=True)
+#%%
 ir3cal=calibrate_dataframe(ir3, instrument, debug_outputs=True)
 ir4cal=calibrate_dataframe(ir4, instrument, debug_outputs=True)
 
 #%%
 # plot all the different calibration steps
 #
-dfentry=ir1cal.iloc[0]
+dfentry=ir2cal.iloc[0]
 
 plot_calib_step(dfentry, 'image_lsb','image_se_corrected','SE correction')
 plot_calib_step(dfentry, 'image_se_corrected','image_hot_pixel_corrected','hot-pixel correction')
@@ -124,7 +129,7 @@ substeps=['image_lsb',
  'image_bias_sub',
  'image_linear',
  'image_desmeared',
- #'image_dark_sub',
+ 'image_dark_sub',
  'image_flatfielded',
 # 'image_flipped',
  'image_calibrated']
@@ -136,8 +141,8 @@ stepnames=['a)  Level 1a [Counts]',
            'c) Bias, hotpixel and SE subtracted [Counts]', 
            'e) Linearized [Counts]', 
            'g) Desmeared [Counts]', 
-           #'Dark current subtracted [Counts]', 
-           'i) Calibrated [$10^{12}$ photons/nm/s/m$^{2}$/str]', 
+           'i) Dark current subtracted [Counts]', 
+           'k) Calibrated [$10^{12}$ photons/nm/s/m$^{2}$/sr]', 
           # 'flipped', 
            'calibrated']
 
@@ -147,8 +152,8 @@ processnames=[
                 'b) Bias, hot pixel and SE subtraction [Counts]',
                 'd) Linearization factor [Unitless]',
                 'f) Desmearing [counts]',
-                #'Dark current subtraction [Counts]',
-                'h) Calib. factor [$10^{12}$ photons/nm/s/m$^{2}$/str/counts]',
+                'h) Dark current subtraction [Counts]',
+                'j) Calib. factor [$10^{12}$ photons/nm/s/m$^{2}$/sr/counts]',
                 # 'Flipping',
                 'Calibration']
 
@@ -210,7 +215,7 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
 # Create a figure with a custom layout using GridSpec
-fig = plt.figure(figsize=(10, 9))
+fig = plt.figure(figsize=(14, 14))
 gs = gridspec.GridSpec(nmax*2, 2)
 
 # Display the images in the left column and their differences in the right column
@@ -229,16 +234,22 @@ for i in range(nmax-1):
     else:
         field=dfentry[substeps[i]]-dfentry[substeps[i+1]]
 
-    if substeps[i+1] in ['image_flatfielded']:
-        clim=[0.050, 0.060]
+    if substeps[i+1] in ['image_flatfielded'] and dfentry.channel=='IR2':
+        clim=[0.050, 0.056]
         sc2 = ax2.imshow(field, origin='lower', interpolation="none", clim=clim)
     elif substeps[i+1] in ['image_bias_sub'] and dayornight=='dayglow':
         clim=[270, 293]
         sc2 = ax2.imshow(field, origin='lower', interpolation="none", clim=clim)
-        hej=field
+    elif substeps[i+1] in ['image_dark_sub']:
+        clim=[field.max()-1, field.max()+1]
+        sc2 = ax2.imshow(field, origin='lower', interpolation="none", clim=clim)
     else:
         sc2 = ax2.imshow(field, origin='lower', interpolation="none")
-    ax2.text(3, 40, 'max: {:.3g}'.format(np.max(field)), color='white')
+    if substeps[i+1] in ['image_bias_sub'] and dayornight=='dayglow':
+        ax2.text(3, 30, 'max: {:.3g}'.format(np.min(field)), color='white')
+        print('Warning: bug fix, max value is displayed as min')
+    else:
+        ax2.text(3, 30, 'max: {:.3g}'.format(np.max(field)), color='white')
     ax2.text(3, 60, 'min: {:.3g}'.format(np.min(field)), color='white')
 
     ax2.set_title(processnames[i])    
@@ -258,8 +269,8 @@ cbar = fig.colorbar(sc3, ax=ax3, orientation='vertical')
 plt.tight_layout()
 
 
-fig.suptitle('Calibration example ford'+dayornight+': ' + dfentry.channel+' '+str(dfentry.TMHeaderTime)[0:19], fontsize=16)
-plt.subplots_adjust(top=.91)
+fig.suptitle('Calibration example for '+dayornight+': ' + dfentry.channel+' '+str(dfentry.TMHeaderTime)[0:19], fontsize=16)
+plt.subplots_adjust(top=.93)
 # Display the figure
 plt.show()
 
@@ -267,11 +278,14 @@ plt.show()
 fig.savefig('../output/calibration_steps_'+dayornight+'.png')
 
 # %%
+
+
+field=dfentry['image_desmeared']-dfentry['image_dark_sub']
 field=dfentry['image_lsb']-dfentry['image_bias_sub']
-field=dfentry['image_linear']-dfentry['image_desmeared']
 plt.pcolor(field)
 plt.colorbar()
 field.max()
 field.min()
+np.where(field==field.max)
 
 # %%
