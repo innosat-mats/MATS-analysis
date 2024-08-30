@@ -319,8 +319,7 @@ if True:
 #%%
 pickle.dump(dfchannelsdict, open('testdata/df_random_allchannels_'+crop+'_idiff_'+str(idiff)+'_nimg_'+str(nrimages)+'_seed_'+str(seed)+'.pkl', 'wb'))
 
-
-   #%%
+ #%%
 # Load the data
 #Select how many images to skip between the images where the difference is taken    
 idiff=1
@@ -340,6 +339,7 @@ df=dfchannelsdict[channel]
 #%%
 # Select which field to search for anomalies in and cut the dataset
 field='ImageCalibratedDiff'+str(idiff)
+#field='ImageCalibrated'
 #df['MeanValue'] = df['ImageCalibrated'].apply(lambda x: np.mean(x))
 #Remove data from South Atlantic Anomaly
 df = df[~(((df['satlat'] <= 0) & (df['satlat'] >= -60) & ((df['satlon'] > 300) | (df['satlon'] < 30))))]
@@ -351,7 +351,6 @@ df_night = df[(df['TPsza'] >= 100)]
 
 
 df_sel=df_day.copy()
-#%%
 
 
 #%%
@@ -359,7 +358,7 @@ df_sel=df_day.copy()
 # dfchannelsdictcut = {}
 # for ichannel in channels:
 #     dfchannelsdictcut[ichannel] = dfchannelsdict[ichannel].loc[df_sel.index]
-useAI=False
+useAI=True
 if useAI:
     model=make_model(df_sel,field, whatmodel='IsolationForest')
     #use model to predict anomaly scores
@@ -401,7 +400,7 @@ for ichannel in channels:
 
 # Plot the most unlike images
 for index in range(0, 5):
-    #plot_image(CCD, outpath=directory+'/')
+    #plot_image(CCD, outpath=directory+'/')8790
     #CCD = df_oddfirst.iloc[index]
     fig, ax = plt.subplots(6, 2, figsize=(7, 15))  
     for i, ichannel in enumerate(channels):
