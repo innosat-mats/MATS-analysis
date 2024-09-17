@@ -358,7 +358,7 @@ df_sel=df_day.copy()
 # dfchannelsdictcut = {}
 # for ichannel in channels:
 #     dfchannelsdictcut[ichannel] = dfchannelsdict[ichannel].loc[df_sel.index]
-useAI=True
+useAI=False
 if useAI:
     model=make_model(df_sel,field, whatmodel='IsolationForest')
     #use model to predict anomaly scores
@@ -395,11 +395,11 @@ os.makedirs(directory, exist_ok=True)
 channels=['IR1', 'IR2', 'IR3', 'IR4', 'UV1', 'UV2']#, 'NADIR']
 dfchannelsdict_oddfirst = {}        
 for ichannel in channels:
-    dfchannelsdict_oddfirst[ichannel]=dfchannelsdict[ichannel].loc[df_oddfirst.index]
+    dfchannelsdict_oddfirst[ichannel]=dfchannelsdict[ichannel].loc[df_oddfirst.index] #reorder so that the image datat that has the oddest looking image in the selected channel becomes the first image in the dataframe
 
 
-# Plot the most unlike images
-for index in range(0, 5):
+# Plot the most odd looking images in the selected channel, and the corresponding images in the other channels
+for index in range(0, 5): #upper limit is how many of the oddest images you want to plot
     #plot_image(CCD, outpath=directory+'/')8790
     #CCD = df_oddfirst.iloc[index]
     fig, ax = plt.subplots(6, 2, figsize=(7, 15))  
