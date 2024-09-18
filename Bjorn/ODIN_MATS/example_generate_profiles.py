@@ -20,7 +20,7 @@ def prepare_profile(ch):
     heights = np.array(cs(range(ch['NROW'])))
 
     # multiply with factor to get right values (depends on version?)
-    profile = np.array(image[:, col-2:col+2].mean(axis=1)*1e13)
+    profile = np.array(image[:, col-2:col+2].mean(axis=1)*1e12)
 
     # set heights
     common_heights = np.arange(60000,110250,250)
