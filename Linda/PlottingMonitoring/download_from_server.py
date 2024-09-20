@@ -13,3 +13,6 @@ datafolder='/home/linda/data/tmp'
 for index, CCD in df[:5].iterrows():
     #plot_CCDimage(CCD['ImageCalibrated'])
     plot_image(CCD, outpath=datafolder)
+#''
+
+# %%
