@@ -83,7 +83,7 @@ for i, channel in enumerate(CCDlist):
     plot_CCDimage(flatfield_binned, fig, ax[1], clim=clim, title='binned '+channel)
 
 
-    path='/Users/lindamegner/MATS/MATS-retrieval/MATS-data/flatfields_to_nickolay'
+    path='/Users/lindamegner/MATS/MATS-retrieval/data/flatfields_to_nickolay'
     flatfield_binned.astype('uint32').tofile(path+'/mergedflatfield_binned_'+channel)# %%
 
 # old stuff 
@@ -120,7 +120,7 @@ for i, channel in enumerate(CCDlist):
 #     plot_CCDimage(flatfield_binned/npixinbin, fig, ax[1], clim=clim, title='binned '+channel)
 
 
-#     path='/Users/lindamegner/MATS/MATS-retrieval/MATS-data/flatfields_to_nickolay'
+#     path='/Users/lindamegner/MATS/MATS-retrieval/data/flatfields_to_nickolay'
 #     flatfield_binned.astype('uint32').tofile(path+'/mergedflatfield_binned_'+channel)
 
 # %%

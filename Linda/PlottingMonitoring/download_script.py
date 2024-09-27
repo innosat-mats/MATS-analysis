@@ -9,10 +9,10 @@ import os
 
 
 # head data folder
-head_folder = '/Users/lindamegner/MATS/MATS-retrieval/MATS-data/rawdata/'
+head_folder = '/Users/lindamegner/MATS/MATS-retrieval/data/rawdata/'
 subdir='nonfiltered/'
 directory = head_folder+subdir
-directory = '/Users/lindamegner/MATS/MATS-retrieval/MATS-data/for_movie/'
+directory = '/Users/lindamegner/MATS/MATS-retrieval/data/for_movie/'
 os.makedirs(directory, exist_ok=True)
 #directory = os.path.join(data_folder, 'satellite_smoke'+anomalymethod+'_'+channel+'_idiff_'+str(idiff)+'_nimg_'+str(nrimages)+'_seed_'+str(seed)+'_'+crop)  # Create a directory to save the images in
 

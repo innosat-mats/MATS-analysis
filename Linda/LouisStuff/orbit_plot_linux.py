@@ -23,7 +23,7 @@ from temp_nadir import *
 #%%
 ##### TO BE MODIFIED #####
 # directory where the geolocation of each pixel is stored
-orb_dir = "/Users/lindamegner/MATS/MATS-retrieval/MATS-Data/NADIR_geolocation/geolocation_test_final"
+orb_dir = "/Users/lindamegner/MATS/MATS-retrieval/data/NADIR_geolocation/geolocation_test_final"
 # directory where the maps are stored
 map_dir = "/Users/lindamegner/MATS/MATS-retrieval/Polar_plot_final"
 

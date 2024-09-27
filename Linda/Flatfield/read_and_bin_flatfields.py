@@ -59,7 +59,7 @@ for i, channel in enumerate(CCDlist):
     plot_CCDimage(bflatfield_wo_baffle, fig, ax[1],title='binned without baffle '+channel)
 
     # Save fields
-    dirname='/Users/lindamegner/MATS/MATS-retrieval/MATS-data/irr/'
+    dirname='/Users/lindamegner/MATS/MATS-retrieval/data/irr/'
     bflatfield_wo_baffle.astype('uint32').tofile(dirname+'binned_flatf_wobaffle_'+channel)
     bflatfield_w_baffle.astype('uint32').tofile(dirname+'binned_flatf_wbaffle_'+channel)
 

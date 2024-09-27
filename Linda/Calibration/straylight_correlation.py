@@ -80,7 +80,7 @@ def plot_correlations(df, time_of_day='', color='black'):
 
 #%%
 output_folder = '/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/'
-datafolder = '/Users/lindamegner/MATS/MATS-retrieval/MATS-data/'
+datafolder = '/Users/lindamegner/MATS/MATS-retrieval/data/'
 name=straylight_correlation
 # times for start and stop
 start_time = DT.datetime(2023, 1, 4, 0, 0, 0)
