@@ -4,38 +4,11 @@ import pandas as pd
 import datetime as DT
 from mats_utils.plotting.plotCCD import simple_plot, plot_image, orbit_plot
 from mats_utils.plotting.animate import generate_gif
-from mats_utils.imagetools.additional_fields import add_field_with_subtracted_rolling_mean
+from mats_utils.imagetools.additional_fields import add_field_with_subtracted_rolling_mean, add_field_with_subtracted_rolling_mean2
 import numpy as np
 
 from database_generation.experimental_utils import plot_CCDimage
 
-def add_field_with_subtracted_rolling_mean2(df, field, outfieldname,  window_before=10, window_after=20, skipbefore=0, skipafter=0):
-
-
-    def rolling_mean(images, window_before=10, window_after=20, skipbefore=0, skipafter=0):
-        means = []
-        for i in range(len(images)):
-            # Define the window range
-            start = max(0, i - window_before)
-            end = min(len(images), i + window_after + 1)
-
-            combined_range = list(range(start, i - skipbefore)) + list(range(i + skipafter, end))
-            
-            # Calculate the rolling mean for the window
-            rolling_mean = np.mean([images[j] for j in combined_range], axis=0)
-            means.append(rolling_mean)
-        return means
-
-    rolling_means = rolling_mean(df[field].tolist(), window_before=window_before, window_after=window_after, skipbefore=skipbefore, skipafter=skipafter)
-    df[outfieldname] = [
-        img - mean for img, mean in zip(df_channel[field], rolling_means)
-    ]
-    
-
-
-    # rolling_means = rolling_mean(df_channel['ImageCalibrated'].tolist(), window=90, skipnr=10)
-    # df_channel['ImageCalibrated_diff_from_earlier_mean'] = [
-    #     img - mean for img, mean in zip(df_channel['ImageCalibrated'], rolling_means)
 
 # data folder
 data_folder = '/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/'
@@ -69,9 +42,9 @@ channel='IR2'
 df_channel = df[df['channel'] == channel].copy()
 
 #%%'
-diff=True
+diff=False
 rolling_mean=True
-diff_from_first=True
+diff_from_first=False
 diff_from_bg=False
 if diff:
     # Create a field that is the difference between consecutive rows in df_channel['ImageCalibrated']
@@ -91,16 +64,21 @@ if diff_from_bg:
 
 if rolling_mean:
 
-    add_field_with_subtracted_rolling_mean(df_channel, 'ImageCalibrated', 'ImageCalibrated_minus_rolling_mean', window_before=20, window_after=20, skipbefore=5, skipafter=5)
+    add_field_with_subtracted_rolling_mean(df_channel, 'ImageCalibrated', 'ImageCalibrated_minus_rolling_mean', window_before=10, window_after=10, skipbefore=3, skipafter=3)
 
-
-
+#%%
+from matplotlib import pyplot as plt
+fig, ax = plt.subplots(2, 1, figsize=(10, 10))
+imgnr=100
+plot_CCDimage(df_channel['ImageCalibrated'].iloc[imgnr], fig=fig, axis=ax[0], title='First image')
+plot_CCDimage(df_channel['ImageCalibrated_minus_rolling_mean'].iloc[imgnr], fig=fig, axis=ax[1], title='100th image')
 
 #%% testing orbit_plot changes
 #simple_plot(df,data_folder)
-subfolder='movie21'
+subfolder='movie24'
 imagedir=data_folder+subfolder+'/'+channel+'/'
 orbit_plot(df_channel[320:400],imagedir,nbins=7, cmap='YlGnBu_r', plothistogram=False, field_of_choise='ImageCalibrated_minus_rolling_mean', ranges=[-50,50])   
+print('Images are to be found in '+imagedir)
 #cmap='YlGnBu_r'
 # %%
 #/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/test2
@@ -111,4 +89,5 @@ elif channel == 'IR2':
     generate_gif(imagedir+'CCDSEL4/', data_folder+'orbit_IR2_'+subfolder+'.gif')
 elif channel == 'UV2':
     generate_gif(imagedir+'CCDSEL6/', data_folder+'orbit_UV2_'+subfolder+'.gif')
+print('Gif is to be found in '+data_folder+'orbit_UV2_'+subfolder+'.gif')
 # %%

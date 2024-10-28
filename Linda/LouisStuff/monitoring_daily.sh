@@ -17,7 +17,7 @@ MATS_dir='/Users/lindamegner/MATS/MATS-retrieval/'
 # current date
 day_start=$(date -v -1d +'%Y_%m_%d')
 # output folder for images
-outdir=${MATS_dir}'MATS-data/daily_'${day_start}
+outdir=${MATS_dir}'data/daily_'${day_start}
 
 # monitoring parameters (False by default)
 sampling_period=60 # sampling period in seconds

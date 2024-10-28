@@ -13,7 +13,7 @@ from mats_utils.rawdata.calibration import calibrate_dataframe
 
 
 
-def plot_calib_step(dfentry, step1name,step2name,title,divide=False, clim1=None, clim2=None,clim3=None,fig=None, ax=None):
+def plot_calib_step(dfentry, step1name,step2name,title,divide=False, clim1=None, clim2=None,clim3=None,fig=None, ax=None, textcolor='white'):
 
     step1=dfentry[step1name]
     step2=dfentry[step2name]
@@ -31,15 +31,15 @@ def plot_calib_step(dfentry, step1name,step2name,title,divide=False, clim1=None,
         change=step2-step1
 
     plot_CCDimage(step1, fig=fig, axis=ax[0], title=step1name, clim=clim1)
-    ax[0].text(10, 60, 'max: '+str(np.max(step1)), color='white')
-    ax[0].text(10, 80, 'min: '+str(np.min(step1)), color='white')
+    ax[0].text(10, 60, 'max: '+str(np.max(step1)), color=textcolor)
+    ax[0].text(10, 80, 'min: '+str(np.min(step1)), color=textcolor)
     plot_CCDimage(step2, fig=fig, axis=ax[1], title=step2name, clim=clim2)
-    ax[1].text(10, 60, 'max: '+str(np.max(step2)), color='white')
-    ax[1].text(10, 80, 'min: '+str(np.min(step2)), color='white')
+    ax[1].text(10, 60, 'max: '+str(np.max(step2)), color=textcolor)
+    ax[1].text(10, 80, 'min: '+str(np.min(step2)), color=textcolor)
 
     plot_CCDimage(change, fig=fig, axis=ax[2], title='change')
-    ax[2].text(10, 60, 'max: '+str(np.max(change)), color='white')
-    ax[2].text(10, 80, 'min: '+str(np.min(change)), color='white')
+    ax[2].text(10, 60, 'max: '+str(np.max(change)), color=textcolor)
+    ax[2].text(10, 80, 'min: '+str(np.min(change)), color=textcolor)
 
 
     plt.tight_layout()
@@ -58,13 +58,19 @@ def plot_calib_step(dfentry, step1name,step2name,title,divide=False, clim1=None,
 #start_time = DT.datetime(2023, 2, 2, 19, 38, 0) 
 #stop_time = DT.datetime(2023, 2, 2, 19, 50, 0)
 
-dayornight='nightglow'
+dayornight='bjornsnight'
 if dayornight=='dayglow':
     start_time = DT.datetime(2023, 2, 20, 19, 27, 0)
     stop_time = DT.datetime(2023, 2, 20, 19, 27, 20)
 elif dayornight=='nightglow':
     start_time = DT.datetime(2023, 2, 20, 19, 47, 0)
     stop_time = DT.datetime(2023, 2, 20, 19, 58, 15)
+elif dayornight=='bjornsnight':
+#Här är en jämförelse från 5/1 -2023 som inte stämmer bra. MATS mäter från 05:39:30 - 05:39:50 ca
+    start_time = DT.datetime(2023, 1, 5, 5, 39, 30)
+    stop_time = DT.datetime(2023, 1, 5, 5, 39, 50)
+    print('Warning: Björns night, not for the paper')
+
 else:
     raise Exception('dayornight not defined')
 
@@ -72,7 +78,10 @@ else:
 df = read_MATS_data(start_time,stop_time,version='0.7',level='1a',dev=False)
 
 #%%
-b=10
+if dayornight=='nightglow':
+    b=10
+else:
+    b=0
 n=b+10
 uv1=df[df.channel=='UV1'][b:n].reset_index()
 uv2=df[df.channel=='UV2'][b:n].reset_index()
@@ -92,7 +101,7 @@ ir4=df[df.channel=='IR4'][b:n].reset_index()
 #%%
 if not 'instrument' in locals():
     instrument = Instrument('/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/calibration_data_MATSinstrument.toml')
-
+    #instrument= Instrument('/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/calibration_data_linda.toml')
 uv1cal=calibrate_dataframe(uv1, instrument, debug_outputs=True)
 uv2cal=calibrate_dataframe(uv2, instrument, debug_outputs=True)
 #%%
@@ -111,13 +120,36 @@ dfentry=ir2cal.iloc[0]
 plot_calib_step(dfentry, 'image_lsb','image_se_corrected','SE correction')
 plot_calib_step(dfentry, 'image_se_corrected','image_hot_pixel_corrected','hot-pixel correction')
 plot_calib_step(dfentry, 'image_hot_pixel_corrected','image_bias_sub','bias subtraction')
-plot_calib_step(dfentry, 'image_bias_sub','image_linear','linearization',divide=True)
+plot_calib_step(dfentry, 'image_bias_sub','image_linear','linearization',divide=True, textcolor='green')
 plot_calib_step(dfentry, 'image_linear','image_desmeared','desmear')
 plot_calib_step(dfentry, 'image_desmeared','image_dark_sub','dark subtraction')
 plot_calib_step(dfentry, 'image_dark_sub','image_flatfielded','flatfielding',divide=True)
 plot_calib_step(dfentry, 'image_flatfielded','image_flipped','flipping')
+#%%
 
 
+
+
+#plot the middle columns for all the different calibration steps
+fig, ax = plt.subplots(1, 1, figsize=(10,18))
+plt.plot(dfentry['image_lsb'].mean(axis=1), range(dfentry['image_lsb'].shape[0]), label='image_lsb')
+plt.plot(dfentry['image_se_corrected'].mean(axis=1), range(dfentry['image_se_corrected'].shape[0]), label='image_se_corrected')
+plt.plot(dfentry['image_hot_pixel_corrected'].mean(axis=1), range(dfentry['image_hot_pixel_corrected'].shape[0]), label='image_hot_pixel_corrected')
+plt.plot(dfentry['image_bias_sub'].mean(axis=1), range(dfentry['image_bias_sub'].shape[0]), label='image_bias_sub')
+plt.plot(dfentry['image_linear'].mean(axis=1), range(dfentry['image_linear'].shape[0]), label='image_linear')
+plt.plot(dfentry['image_desmeared'].mean(axis=1), range(dfentry['image_desmeared'].shape[0]), label='image_desmeared')
+plt.plot(dfentry['image_dark_sub'].mean(axis=1), range(dfentry['image_dark_sub'].shape[0]), label='image_dark_sub')
+#plt.plot(dfentry['image_flatfielded'].mean(axis=1), range(dfentry['image_flatfielded'].shape[0]), label='image_flatfielded')
+#plt.plot(dfentry['image_flipped'].mean(axis=1), range(dfentry['image_flipped'].shape[0]), label='image_flipped')
+plt.xlabel('Mean Pixel Value')
+plt.ylabel('Pixel Row')
+plt.xlim([40, 400])
+plt.legend()
+plt.title('Mean Pixel Value Across Columns')
+plt.show()
+
+#calculate bias per pixel
+#(dfentry['image_hot_pixel_corrected'].mean(axis=1) -dfentry['image_bias_sub'].mean(axis=1))/(dfentry['NRBIN']*dfentry['NCBINCCDColumns'])
 
 
 

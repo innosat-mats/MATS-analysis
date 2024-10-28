@@ -52,7 +52,7 @@ start_time='2023:12:21_0:0:0'
 stop_time='2023:12:24_0:0:0'
 mode=all
 # output folder for images
-outdir=${MATS_dir}'MATS-Data/Monitoring/event_analysis/03_25_03_29/'
+outdir=${MATS_dir}'data/Monitoring/event_analysis/03_25_03_29/'
 { python ${MATS_dir}MATS-analysis/Louis/monitoring/monitoring_routine.py --outdir ${outdir} --start_time ${start_time} --stop_time ${stop_time} --sampling_period ${sampling_period} --mode ${mode}; } &
 pid=$!
 wait $pid

@@ -19,7 +19,7 @@ week_start=$(date -d "$date -"$(date +'%w')" days - 6 days" +'%Y_%m_%d') #For Li
 #week_start=$(date -v-$(($(date +'%w') + 6))d +'%Y_%m_%d') #For MAC OS users
 
 # output folder for images
-outdir=${MATS_dir}'MATS-Data/Monitoring/weekly_'${week_start}
+outdir=${MATS_dir}'data/Monitoring/weekly_'${week_start}
 
 # monitoring parameters
 sampling_period=600 # sampling period in seconds
