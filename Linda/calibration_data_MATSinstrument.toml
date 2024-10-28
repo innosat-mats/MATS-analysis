@@ -15,10 +15,7 @@ title = "Level 1 calibration files for testing this package"
 	flatfieldfolder_cold_unprocessed = "/Users/lindamegner/MATS/MATS-retrieval/MATS-instrument-data/calibration_data/20200330_flatfields_0C/"
 	baffle_flatfield = "/Users/lindamegner/MATS/MATS-retrieval/MATS-instrument-data/calibration_data/Flatfield20210421/PayloadImages/"
 [linearity]
-    pixel = '/Users/lindamegner/MATS/MATS-retrieval/MATS-instrument-data/calibration_data/linearity/final/linearity_exp'
-    sumrow = '/Users/lindamegner/MATS/MATS-retrieval/MATS-instrument-data/calibration_data/linearity/final/linearity_row'
-    sumwell = '/Users/lindamegner/MATS/MATS-retrieval/MATS-instrument-data/calibration_data/linearity/final/linearity_col'
-    tables = '/Users/lindamegner/MATS/MATS-retrieval/MATS-instrument-data/calibration_data/linearity/tables/'
+    linearity = "/Users/lindamegner/MATS/MATS-retrieval/MATS-instrument-data/calibration_data/linearity/linearity.csv"
 [abs_rel_calib] 
 	abs_rel_calib_constants= "/Users/lindamegner/MATS/MATS-retrieval/MATS-instrument-data/calibration_data/abs_rel_calib/abs_rel_calib_constants.csv"
 [pointing]
