@@ -1,21 +1,59 @@
 #%%
-from mats_utils.rawdata.read_data import read_MATS_data, read_MATS_PM_data
+from mats_utils.rawdata.read_data import read_MATS_data, read_MATS_PM_data, add_ccd_item_attributes
 import pandas as pd
 import datetime as DT
 from mats_l1_processing.L1_calibrate import L1_calibrate
 from mats_l1_processing.instrument import Instrument
-from mats_l1_processing.read_parquet_functions import dataframe_to_ccd_items
-
+from mats_l1_processing.read_parquet_functions import dataframe_to_ccd_items, read_ccd_data, remove_faulty_rows,convert_image_data
+from pyarrow import fs
+import pyarrow.dataset as ds
+import boto3
 #%% 
-calibration_file ="/home/olemar/Projects/Universitetet/MATS/MATS-L1-processing/scripts/calibration_data.toml"    
-instrument = Instrument(calibration_file)
+#calibration_file ="/home/olemar/Projects/Universitetet/MATS/MATS-L1-processing/scripts/calibration_data.toml"    
+#instrument = Instrument(calibration_file)
 
 #%% Select on explicit time
-start_time = DT.datetime(2023, 5, 5, 1, 40)
-stop_time = DT.datetime(2023, 5, 5, 1, 45)
+start_time = DT.datetime(2022, 11, 27, 0, 0)
+stop_time = DT.datetime(2022, 11,30, 0, 0)
 
 #%%
-df = read_MATS_data(start_time,stop_time,version='0.6',level='1a',dev=False)
+#df = read_MATS_data(start_time,stop_time,version='0.2',level='1a',dev=False)
+
+
+session = boto3.session.Session(profile_name="mats")
+credentials = session.get_credentials()
+
+s3 = fs.S3FileSystem(
+    secret_key=credentials.secret_key,
+    access_key=credentials.access_key,
+    region=session.region_name,
+    connect_timeout=10,
+    session_token=credentials.token)
+
+#%%
+main_level = '1a'
+version = '0.2'
+subdir = '2022/11/28'
+path = f"ops-payload-level{main_level}-v{version}" + "/" + subdir
+
+dataframe = read_ccd_data(path,s3)
+
+if dataframe.index.name == 'EXPDate':
+    dataframe.reset_index(inplace=True)
+    dataframe.set_index('TMHeaderTime', inplace=True)
+    dataframe.sort_index(inplace=True)
+    dataframe.reset_index(inplace=True)
+else:
+    dataframe.reset_index(drop=True, inplace=True)
+    dataframe.set_index('TMHeaderTime', inplace=True)
+    dataframe.sort_index(inplace=True)
+    dataframe.reset_index(inplace=True)
+
+add_ccd_item_attributes(dataframe)
+convert_image_data(dataframe)
+remove_faulty_rows(dataframe)    
+
+
 
 #%%
 #df_ph = read_MATS_PM_data(start_time,stop_time,version='0.1',level='1b')
