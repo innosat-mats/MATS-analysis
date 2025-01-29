@@ -27,7 +27,7 @@ import cv2
 import numpy as np
 
 from variability_analysis_functions import calculate_wavelike_score, calculate_energy_score, analyze_wavelet_coefficients, wavelet_denoising_and_thresholding
-
+from variability_analysis_functions import generate_movies
 # %%
 # ASCENDING MAP PLOT /// UPDATED TO READ FROM L1b_v05
 
@@ -74,8 +74,8 @@ elif datasource=='aws':
     df.to_pickle(directory+name+'.pkl')
     print('pickling:'+name)
 elif datasource=='pickled':
-    #df=pd.read_pickle(f'{directory}df_20230204_090000_20230204_103000.pkl') #one orbit
-    df=pd.read_pickle(f'{directory}df_20230204_090000_20230205_090000.pkl') # one day
+    df=pd.read_pickle(f'{directory}df_20230204_090000_20230204_103000.pkl') #one orbit
+    #df=pd.read_pickle(f'{directory}df_20230204_090000_20230205_090000.pkl') # one day
 
 
 df_saveme=df.copy()
@@ -94,7 +94,7 @@ midday=DT.time(12, 0, 0)
 df = df_saveme[(df_saveme['channel'] == 'IR2')]
 
 # ascending
-ascending = False
+ascending = True
 if ascending:
     df = df[(df['TPlocaltime'].dt.time > midday)]
 else:
@@ -145,6 +145,8 @@ df['energy_score'] = df['im_detrended'].apply(lambda x: calculate_energy_score(x
 df['fourier_score_diff'] = df['im_diff_filtered'].apply(lambda x: calculate_wavelike_score(x[:90,:], plot=False))
 df['variance_score_diff'] = df['im_diff_filtered'].apply(lambda x: np.var(x[:90,:], axis=1).mean())
 df['energy_score_diff'] = df['im_diff'].apply(lambda x: calculate_energy_score(x[:90,:], level=4))
+df['aurora_indicator']=df.ImageCalibrated.apply(lambda x: np.mean(x[180,:]))
+
 
 
 
@@ -194,24 +196,20 @@ field_of_choise='im_detrended_filtered'
 import random
 import string
 imagefolder = '/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/temp/'+''.join(random.choices(string.ascii_uppercase + string.digits, k=5))
-generate_movies(df[100:120], imagefolder, '/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output', movienameprefix='movie_'+field_of_choise,field_of_choise=field_of_choise, clim=[-15,15])
-
-
+generate_movies(df[10:-10], imagefolder, '/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output', movienameprefix='movie_'+field_of_choise,field_of_choise=field_of_choise, clim=[-15,15], cmap='YlGnBu_r')
+#%%
+# om programmet crashar och du vill generera film af de bilder du redan har:
+from mats_utils.plotting.animate import generate_gif
+fullimagefolder = '/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/temp/336RL/movies/CCDSEL4'
+generate_gif(fullimagefolder, '/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/movie1.gif')
 
 #%%
 
 #sort the dataframe by wavelike score
-df = df.sort_values(by='energy_score', ascending=False)
+df = df.sort_values(by='fourier_score_diff', ascending=False)
 df.reset_index(drop=True, inplace=True)
-
-
-#df['im_detrended_filtered'].apply(plot_CCDimage)
-
-# set colour limits
-
     
 clim = [-20, 20]
-
 for index, dfrow in df[:10].iterrows():
     plot_CCDimage(dfrow['im_detrended_filtered'], title=f'variance: {dfrow["variance_score"]:.2g}, fourier: {dfrow["fourier_score"]:.2g}, energy: {dfrow["energy_score"]:.2g}', clim=clim, cmap='viridis')  
     wenergy=calculate_energy_score(dfrow['im_detrended'], level=5, printout=True)
@@ -304,4 +302,15 @@ plt.show()
 # energy_ratios = [energy / total_energy for energy in energies]
 
 # print('energy ratios:',energy_ratios)
+# %%
+
+#plot df['aurora_indicator'] against df['TPlat']
+fig, ax = plt.subplots()
+ax.scatter(df['TPlat'],df['aurora_indicator'])
+ax.set_xlabel('Latitude')
+ax.set_ylabel('Aurora indicator')
+
+image=df['im_detrended_filtered'].iloc[0]
+plot_CCDimage(image, title='original image')
+
 # %%

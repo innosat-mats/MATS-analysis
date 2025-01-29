@@ -96,11 +96,19 @@ def plot_calib_step(step1,step2,title,error,divide=False, clim1=None, clim2=None
 start_time = DT.datetime(2023, 5, 5, 20, 10)
 stop_time = DT.datetime(2023, 5, 5, 20, 15)
 
+
+
+# # #%% Select on explicit time NLC
+start_time = DT.datetime(2023, 2, 9, 18, 54, 39) 
+stop_time = DT.datetime(2023, 2, 9, 19, 3, 44)
+
 #start_time = DT.datetime(2023, 2, 12, 1, 10)
 #stop_time = DT.datetime(2023, 2, 12, 1, 15)
-df = read_MATS_data(start_time,stop_time,version='0.6',level='1a',dev=False)
+df = read_MATS_data(start_time,stop_time,version='0.9',level='1a',dev=False)
 CCDitems = dataframe_to_ccd_items(df)
+#%%
 
+# # #%% Select on explicit time NLC
 
 # # # #%% Select on explicit time NLC
 # start_time = DT.datetime(2023, 2, 3, 0, 27)

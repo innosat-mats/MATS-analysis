@@ -23,12 +23,16 @@ from database_generation.experimental_utils import plot_CCDimage
 import pywt
 import cv2
 import numpy as np
+from scipy.signal import windows
+
+
+
 def stack(image):
     stacked_im=np.stack(image.values)
     return stacked_im
 
 
-def generate_movies(df, data_folder, outputfolder,movienameprefix='movie', field_of_choise='ImageCalibrated', clim=None):
+def generate_movies(df, data_folder, outputfolder,movienameprefix='movie', field_of_choise='ImageCalibrated', clim=None, cmap='YlGnBu_r'):
     """
     Generate a movie from a dataframe with a certain channel
 
@@ -62,7 +66,7 @@ def generate_movies(df, data_folder, outputfolder,movienameprefix='movie', field
 
     
 
-    orbit_plot(df,imagedir,nbins=7,cmap='magma', plothistogram=False, field_of_choise=field_of_choise, useplotCCDimage=True, ranges=clim)
+    orbit_plot(df,imagedir,nbins=7,cmap=cmap, plothistogram=False, field_of_choise=field_of_choise, useplotCCDimage=True, ranges=clim)
     
     for CCDno in range(0, 8):
         CCDs = df[df['CCDSEL'] == CCDno]
@@ -76,12 +80,22 @@ def generate_movies(df, data_folder, outputfolder,movienameprefix='movie', field
 
     return
 
-
+def apply_window_function(image, window_type='hann'):
+    if window_type == 'hann':
+        window = np.outer(windows.hann(image.shape[0]), windows.hann(image.shape[1]))
+    elif window_type == 'hamming':
+        window = np.outer(windows.hamming(image.shape[0]), windows.hamming(image.shape[1]))
+    else:
+        raise ValueError("Unsupported window type")
+    
+    windowed_image = image * window
+    return windowed_image
 
 def calculate_wavelike_score(image, plot=False):
 
+    windowed_image = apply_window_function(image, window_type='hann')
     # Apply Fourier Transform
-    f = np.fft.fft2(image)
+    f = np.fft.fft2(windowed_image)
     fshift = np.fft.fftshift(f)
     magnitude_spectrum = 20 * np.log(np.abs(fshift))
     #magnitude_spectrum = f
@@ -92,11 +106,12 @@ def calculate_wavelike_score(image, plot=False):
     maskwidth=1
     magnitude_spectrum[crow-maskwidth:crow+maskwidth, ccol-maskwidth:ccol+maskwidth] = np.nan
     # mask the edges 
-    edge=1
-    magnitude_spectrum[-edge:, :] = np.nan
-    magnitude_spectrum[:edge, :] = np.nan
-    magnitude_spectrum[:, -edge:] = np.nan
-    magnitude_spectrum[:, :edge] = np.nan
+    topedge=20
+    sideedge=10
+    magnitude_spectrum[-topedge:, :] = np.nan
+    magnitude_spectrum[:topedge, :] = np.nan
+    magnitude_spectrum[:, -sideedge:] = np.nan
+    magnitude_spectrum[:, :sideedge] = np.nan
 
     mid_freq_magnitude = np.nanmean(magnitude_spectrum)
     #magnitude_spectrum[crow+2:crow+30, :ccol-1]

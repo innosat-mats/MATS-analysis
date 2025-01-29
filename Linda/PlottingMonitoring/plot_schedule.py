@@ -26,7 +26,7 @@ for file_name in file_list:
 
 # %%
 #plot_schedule(dflong)
-plot_schedule(dflong,start_date = DT.datetime(2022,11,28),end_date = DT.datetime(2023,1,5))
+plot_schedule(dflong,start_date = DT.datetime(2023,5,1),end_date = DT.datetime(2023,5,5))
 
 
 

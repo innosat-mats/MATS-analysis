@@ -10,9 +10,9 @@ import pickle
 import matplotlib.pyplot as plt
 from database_generation.experimental_utils import plot_CCDimage
 from mats_utils.rawdata.calibration import calibrate_dataframe
-
-
-
+from mats_l1_processing.L1_calibration_functions import calculate_flatfield
+from all_channels_figure_calibpaper import converttostarcal
+#%%
 def plot_calib_step(dfentry, step1name,step2name,title,divide=False, clim1=None, clim2=None,clim3=None,fig=None, ax=None, textcolor='white'):
 
     step1=dfentry[step1name]
@@ -58,30 +58,37 @@ def plot_calib_step(dfentry, step1name,step2name,title,divide=False, clim1=None,
 #start_time = DT.datetime(2023, 2, 2, 19, 38, 0) 
 #stop_time = DT.datetime(2023, 2, 2, 19, 50, 0)
 
-dayornight='bjornsnight'
+dayornight='nightglow'
 if dayornight=='dayglow':
-    start_time = DT.datetime(2023, 2, 20, 19, 27, 0)
-    stop_time = DT.datetime(2023, 2, 20, 19, 27, 20)
+    #start_time = DT.datetime(2023, 2, 25, 19, 27, 0)
+    #stop_time = DT.datetime(2023, 2, 25, 19, 32, 20)
+    start_time = DT.datetime(2023, 2, 25, 20, 1, 0)
+    stop_time = DT.datetime(2023, 2, 25, 20, 6, 0)
 elif dayornight=='nightglow':
-    start_time = DT.datetime(2023, 2, 20, 19, 47, 0)
-    stop_time = DT.datetime(2023, 2, 20, 19, 58, 15)
-elif dayornight=='bjornsnight':
+    start_time = DT.datetime(2023, 2, 25, 20, 31, 0)
+    stop_time = DT.datetime(2023, 2, 25, 20, 36, 0)
+elif dayornight=='bjorns':
 #Här är en jämförelse från 5/1 -2023 som inte stämmer bra. MATS mäter från 05:39:30 - 05:39:50 ca
     start_time = DT.datetime(2023, 1, 5, 5, 39, 30)
     stop_time = DT.datetime(2023, 1, 5, 5, 39, 50)
-    print('Warning: Björns night, not for the paper')
+    print('Warning: Björns, not for the paper')
 
 else:
     raise Exception('dayornight not defined')
 
+# # #%% Select on explicit time NLC
+start_time = DT.datetime(2023, 2, 9, 18, 59, 39) 
+stop_time = DT.datetime(2023, 2, 9, 19, 3, 44)
+
 
 df = read_MATS_data(start_time,stop_time,version='0.7',level='1a',dev=False)
 
+
 #%%
 if dayornight=='nightglow':
-    b=10
+    b=15
 else:
-    b=0
+    b=10
 n=b+10
 uv1=df[df.channel=='UV1'][b:n].reset_index()
 uv2=df[df.channel=='UV2'][b:n].reset_index()
@@ -115,7 +122,10 @@ ir4cal=calibrate_dataframe(ir4, instrument, debug_outputs=True)
 #%%
 # plot all the different calibration steps
 #
-dfentry=ir2cal.iloc[0]
+#ir2cal=converttostarcal(ir2cal, field='image_flatfielded')
+dfentry=uv2cal.iloc[0]
+print('conversion of calibration is not needed since this if this says IR2: ', dfentry.channel)
+
 
 plot_calib_step(dfentry, 'image_lsb','image_se_corrected','SE correction')
 plot_calib_step(dfentry, 'image_se_corrected','image_hot_pixel_corrected','hot-pixel correction')
@@ -125,11 +135,11 @@ plot_calib_step(dfentry, 'image_linear','image_desmeared','desmear')
 plot_calib_step(dfentry, 'image_desmeared','image_dark_sub','dark subtraction')
 plot_calib_step(dfentry, 'image_dark_sub','image_flatfielded','flatfielding',divide=True)
 plot_calib_step(dfentry, 'image_flatfielded','image_flipped','flipping')
+
+
+
 #%%
-
-
-
-
+#
 #plot the middle columns for all the different calibration steps
 fig, ax = plt.subplots(1, 1, figsize=(10,18))
 plt.plot(dfentry['image_lsb'].mean(axis=1), range(dfentry['image_lsb'].shape[0]), label='image_lsb')
@@ -143,7 +153,6 @@ plt.plot(dfentry['image_dark_sub'].mean(axis=1), range(dfentry['image_dark_sub']
 #plt.plot(dfentry['image_flipped'].mean(axis=1), range(dfentry['image_flipped'].shape[0]), label='image_flipped')
 plt.xlabel('Mean Pixel Value')
 plt.ylabel('Pixel Row')
-plt.xlim([40, 400])
 plt.legend()
 plt.title('Mean Pixel Value Across Columns')
 plt.show()
@@ -154,7 +163,15 @@ plt.show()
 
 
 # %%
-
+#print('Linda look here')
+#totbin=dfentry['NRBIN']*dfentry['NCBINCCDColumns']*dfentry['NCBINFPGAColumns']
+#dfentry["NCBIN CCDColumns"]=dfentry["NCBINCCDColumns"]
+#dfentry["NCBIN FPGAColumns"]=dfentry["NCBINFPGAColumns"]
+#calib_denominator =instrument.get_CCD(dfentry["channel"]).calib_denominator('High')
+##dfentry['image_flatfielded']=dfentry['image_flatfielded']*dfentry["CCDunit"].calib_denominator('High')/totbin
+#print ('Note that high signal mode HSM is hardcoded here')
+#image_flatf_fact,  error_flag_largeflatf = calculate_flatfield(dfentry)
+#dfentry['image_flatfielded_non']=dfentry['image_flatfielded']*calib_denominator
 substeps=['image_lsb',
  #'image_se_corrected',
  #'image_hot_pixel_corrected',
@@ -247,14 +264,15 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
 # Create a figure with a custom layout using GridSpec
-fig = plt.figure(figsize=(14, 14))
+fig = plt.figure(figsize=(10, 10))
 gs = gridspec.GridSpec(nmax*2, 2)
 
 # Display the images in the left column and their differences in the right column
 for i in range(nmax-1):
     # Display dfentry[substeps[i]] in the left column
+    print('substep:', substeps[i])
     ax1 = fig.add_subplot(gs[2*i:2*i+2, 0])
-    sc1=ax1.imshow(dfentry[substeps[i]], origin='lower', interpolation="none")
+    sc1 = ax1.imshow(dfentry[substeps[i]], origin='lower', interpolation="none", cmap='inferno')
     cbar = fig.colorbar(sc1, ax=ax1, orientation='vertical')
     ax1.set_title(stepnames[i])
     ax1.set_aspect('auto')
@@ -262,26 +280,29 @@ for i in range(nmax-1):
     # Display dfentry[substeps[i]] - dfentry[substeps[i+1]] in the right column
     ax2 = fig.add_subplot(gs[2*i+1:2*i+3, 1])
     if substeps[i+1] in ['image_linear', 'image_flatfielded']:
-        field=dfentry[substeps[i+1]]/dfentry[substeps[i]]
+        field = dfentry[substeps[i+1]] / dfentry[substeps[i]]
     else:
-        field=dfentry[substeps[i]]-dfentry[substeps[i+1]]
+        field = dfentry[substeps[i]] - dfentry[substeps[i+1]]
 
-    if substeps[i+1] in ['image_flatfielded'] and dfentry.channel=='IR2':
-        clim=[0.050, 0.056]
-        sc2 = ax2.imshow(field, origin='lower', interpolation="none", clim=clim)
-    elif substeps[i+1] in ['image_bias_sub'] and dayornight=='dayglow':
-        clim=[270, 293]
-        sc2 = ax2.imshow(field, origin='lower', interpolation="none", clim=clim)
+    if substeps[i+1] in ['image_flatfielded'] and dfentry.channel == 'IR2':
+        clim = [0.043, 0.052]
+        sc2 = ax2.imshow(field, origin='lower', interpolation="none", clim=clim, cmap='inferno')
+    elif substeps[i+1] in ['image_bias_sub']:
+        if dayornight == 'dayglow':
+            clim = [290, 380]
+        else:
+            clim = [290, 380]
+        sc2 = ax2.imshow(field, origin='lower', interpolation="none", clim=clim, cmap='inferno')
     elif substeps[i+1] in ['image_dark_sub']:
-        clim=[field.max()-1, field.max()+1]
-        sc2 = ax2.imshow(field, origin='lower', interpolation="none", clim=clim)
+        clim = [field.max() - 1, field.max() + 1]
+        sc2 = ax2.imshow(field, origin='lower', interpolation="none", clim=clim, cmap='inferno')
     else:
-        sc2 = ax2.imshow(field, origin='lower', interpolation="none")
-    if substeps[i+1] in ['image_bias_sub'] and dayornight=='dayglow':
-        ax2.text(3, 30, 'max: {:.3g}'.format(np.min(field)), color='white')
-        print('Warning: bug fix, max value is displayed as min')
-    else:
-        ax2.text(3, 30, 'max: {:.3g}'.format(np.max(field)), color='white')
+        sc2 = ax2.imshow(field, origin='lower', interpolation="none", cmap='inferno')
+    #if substeps[i+1] in ['image_bias_sub'] and dayornight == 'dayglow':
+    #    ax2.text(3, 30, 'max: {:.3g}'.format(np.min(field)), color='white')
+    #    print('Warning: bug fix, max value is displayed as min')
+    #else:
+    ax2.text(3, 30, 'max: {:.3g}'.format(np.max(field)), color='white')
     ax2.text(3, 60, 'min: {:.3g}'.format(np.min(field)), color='white')
 
     ax2.set_title(processnames[i])    
@@ -290,34 +311,21 @@ for i in range(nmax-1):
 
 # Display dfentry[substeps[8]] in the last row of the left column
 ax3 = fig.add_subplot(gs[-2:, 0])
-clim=[np.mean(dfentry[substeps[nmax-1]])-2*np.std(dfentry[substeps[nmax-1]]), np.mean(dfentry[substeps[nmax-1]])+2*np.std(dfentry[substeps[nmax-1]])]
-sc3 = ax3.imshow(dfentry[substeps[nmax-1]], origin='lower', interpolation="none", clim=clim)
+clim = [np.mean(dfentry[substeps[nmax-1]]) - 2 * np.std(dfentry[substeps[nmax-1]]), np.mean(dfentry[substeps[nmax-1]]) + 2 * np.std(dfentry[substeps[nmax-1]])]
+sc3 = ax3.imshow(dfentry[substeps[nmax-1]], origin='lower', interpolation="none", clim=clim, cmap='inferno')
 ax3.set_title(stepnames[nmax-1])
 ax3.set_aspect('auto')
 cbar = fig.colorbar(sc3, ax=ax3, orientation='vertical')
 
 # Adjust the space between the subplots
-#plt.subplots_adjust(hspace=.5)
 plt.tight_layout()
 
-
-fig.suptitle('Calibration example for '+dayornight+': ' + dfentry.channel+' '+str(dfentry.TMHeaderTime)[0:19], fontsize=16)
+fig.suptitle('Calibration example for ' + dayornight + ': ' + dfentry.channel + ' ' + str(dfentry.TMHeaderTime)[0:19], fontsize=16)
 plt.subplots_adjust(top=.93)
 # Display the figure
 plt.show()
 
+#fig.savefig('../output/calibration_steps_' + dayornight + '.png')
 
-fig.savefig('../output/calibration_steps_'+dayornight+'.png')
-
-# %%
-
-
-field=dfentry['image_desmeared']-dfentry['image_dark_sub']
-field=dfentry['image_lsb']-dfentry['image_bias_sub']
-plt.pcolor(field)
-plt.colorbar()
-field.max()
-field.min()
-np.where(field==field.max)
 
 # %%
