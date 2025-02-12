@@ -19,8 +19,8 @@ data_folder = '/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output
 
 start_time = DT.datetime(2023, 2, 12, 4, 50, 0)
 stop_time = DT.datetime(2023, 2, 12, 4, 54, 0)
-start_time = DT.datetime(2022, 12, 16, 18, 50, 0)
-stop_time = DT.datetime(2022, 12, 16, 19, 0, 0)
+#start_time = DT.datetime(2022, 12, 16, 18, 50, 0)
+#stop_time = DT.datetime(2022, 12, 16, 19, 0, 0)
 
 # filter
 filter={'CCDSEL': [5,6]}

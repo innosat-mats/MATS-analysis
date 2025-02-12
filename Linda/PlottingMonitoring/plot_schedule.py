@@ -5,7 +5,7 @@ import datetime as DT
 import os
 
 #%%
-directory = '/Users/lindamegner/MATS/MATS-retrieval/data/Schedules/'
+directory = '/Users/lindamegner/MATS/MATS-retrieval/data/TimelineSchedules/'
 
 
 # Get a list of all files in the directory
@@ -26,7 +26,7 @@ for file_name in file_list:
 
 # %%
 #plot_schedule(dflong)
-plot_schedule(dflong,start_date = DT.datetime(2023,5,1),end_date = DT.datetime(2023,5,5))
+plot_schedule(dflong,start_date = DT.datetime(2023,2,1),end_date = DT.datetime(2023,3,1))
 
 
 
