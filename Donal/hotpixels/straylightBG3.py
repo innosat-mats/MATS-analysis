@@ -231,3 +231,45 @@ for col in im_col_range:
 plt.show()
 # %%
 # %%
+coeffs = {}
+
+for st in range(70, 90):
+    bright_diff0 = bright.ImageCalibratedMinusSKImage0.where((bright.TPsza > st) & (bright.TPsza < st + 1)).mean("time") - darkbg
+    bright_diff1 = bright.ImageCalibratedMinusSKImage1.where((bright.TPsza > st) & (bright.TPsza < st + 1)).mean("time") - darkbg
+
+    im_col_range = range(len(bright_diff0.im_col))
+    slopes = []
+    intercepts = []
+
+    for col in im_col_range:
+        y0 = bright_diff0.sel(im_col=col).values[20:40]
+        y1 = bright_diff1.sel(im_col=col).values[20:40]
+        x = np.arange(20, 40)
+        
+        slope0, intercept0, _, _, _ = linregress(x, (y0 + y1) / 2)
+        
+        slopes.append(slope0)
+        intercepts.append(intercept0)
+    
+    coeffs[st] = {'slopes': slopes, 'intercepts': intercepts}
+
+print("Coefficients for each st value:", coeffs)
+# %%
+coeffs_xr = xr.Dataset(
+    {
+        'slopes': (('st', 'im_col'), np.array([coeffs[st]['slopes'] for st in coeffs])),
+        'intercepts': (('st', 'im_col'), np.array([coeffs[st]['intercepts'] for st in coeffs]))
+    },
+    coords={
+        'st': list(coeffs.keys()),
+        'im_col': im_col_range
+    }
+)
+
+print(coeffs_xr)
+# %%
+plt.figure()
+coeffs_xr.intercepts.plot()
+plt.figure()
+coeffs_xr.slopes.plot()
+# %%
