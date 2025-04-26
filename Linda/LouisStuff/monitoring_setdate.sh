@@ -31,7 +31,7 @@ start_time='2023:12:08_0:0:0'
 stop_time='2023:12:12_0:0:0'
 
 # output folder for images
-outdir=${MATS_dir}'MATS-Data/Monitoring/setdate_'${start_time}
+outdir=${MATS_dir}'data/Monitoring/setdate_'${start_time}
 
 
 #### RUNNING SCRIPT ####

@@ -16,39 +16,41 @@ from database_generation.experimental_utils import plot_CCDimage
 data_folder = '/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/'
 
 # times for start and stop
-start_time = DT.datetime(2023, 5, 2, 0, 0, 0)
-stop_time = DT.datetime(2023, 5, 2, 6, 0, 0)
+
 start_time = DT.datetime(2023, 2, 12, 4, 50, 0)
 stop_time = DT.datetime(2023, 2, 12, 4, 54, 0)
-
+#start_time = DT.datetime(2022, 12, 16, 18, 50, 0)
+#stop_time = DT.datetime(2022, 12, 16, 19, 0, 0)
 
 # filter
 filter={'CCDSEL': [5,6]}
 
 #%%
 # read in measurements
-df06 = read_MATS_data(start_time, stop_time,level='1b',version='0.6')
-df05 = read_MATS_data(start_time, stop_time,level='1b',version='0.5')
+df09 = read_MATS_data(start_time, stop_time,level='1b',version='0.9')
+#df06 = read_MATS_data(start_time, stop_time,level='1b',version='0.6')
+#df05 = read_MATS_data(start_time, stop_time,level='1b',version='0.5')
 
 #%%
 #df.iloc
 
-for index, CCD in df06[:6].iterrows():
-    fig, ax=plt.subplots(3,1)
-    plot_CCDimage(df06.iloc[index].ImageCalibrated, axis=ax[0],fig=fig, title=df06.iloc[index].channel+' v0.6')
-    unitfix=df05.iloc[index].TEXPMS/1000/10
-    plot_CCDimage(df05.iloc[index].ImageCalibrated/unitfix, axis=ax[1],fig=fig, title=str(unitfix)+' * v0.5 '+df05.iloc[index].channel)
-    diff=df06.iloc[index].ImageCalibrated-df05.iloc[index].ImageCalibrated/unitfix
+for index, CCD in df09[:6].iterrows():
+    fig, ax=plt.subplots(3,1, figsize=(10,10))
+    plot_CCDimage(df09.iloc[index].ImageCalibrated, axis=ax[0],fig=fig, title=df09.iloc[index].channel+' v0.9')
+    #unitfix=df05.iloc[index].TEXPMS/1000/10
+    #plot_CCDimage(df06.iloc[index].ImageCalibrated/unitfix, axis=ax[1],fig=fig, title=str(unitfix)+' * v0.6 '+df05.iloc[index].channel)
+    plot_CCDimage(df06.iloc[index].ImageCalibrated, axis=ax[1],fig=fig, title='v0.6 '+df06.iloc[index].channel)
+    diff=df09.iloc[index].ImageCalibrated-df06.iloc[index].ImageCalibrated#/unitfix
     plot_CCDimage(diff, axis=ax[2],fig=fig, title='Difference')
 
-    plt.savefig('../output/version05to06'+ df06.iloc[index].channel +'.png')
+    plt.savefig('../output/version05to06'+ df09.iloc[index].channel +'.png')
     
 #%%
-simple_plot(df06,data_folder)
+simple_plot(df09,data_folder)
 
 #%% testing orbit_plot changes
 
-orbit_plot(df06,data_folder+'reprocessingfeb/',nbins=7)
+orbit_plot(df09,data_folder+'reprocessingfeb/',nbins=7)
 
 # %%
 #/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/test2
