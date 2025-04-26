@@ -5,17 +5,17 @@ clear workspace
 clc
 
 %Files to plot the peak points
-addpath("Monthdata\Februarymonth\")
+addpath("\\ug.kth.se\dfs\home\j\u\juditpcj\appdata\xp.V2\Documents\GitHub\MATS-analysis\Ceona\Matlab_scripts\Monthdata\Februarymonth\")
 load("febpeaksNH.mat");
 load("febpeaksSH.mat") ;
 load("feballstripsNH.mat")
 load("feballstripsSH.mat")
-addpath("Monthdata\Marchmonth\")
+addpath("\\ug.kth.se\dfs\home\j\u\juditpcj\appdata\xp.V2\Documents\GitHub\MATS-analysis\Ceona\Matlab_scripts\Monthdata\Marchmonth\")
 load("marpeaksNH.mat");
 load("marpeaksSH.mat") ;
 load("marallstripsNH.mat")
 load("marallstripsSH.mat")
-addpath("Monthdata\Aprilmonth\")
+addpath("\\ug.kth.se\dfs\home\j\u\juditpcj\appdata\xp.V2\Documents\GitHub\MATS-analysis\Ceona\Matlab_scripts\Monthdata\Aprilmonth\")
 load("aprpeaksNH.mat");
 load("aprpeaksSH.mat");
 load("aprallstripsNH.mat")
@@ -46,13 +46,13 @@ fig = figure(position=[20 20 1200 600]);
 switch what
     case 'kp'
         sgtitle({'\bf MLT plot of peak points correlated with kp';'\rm Period: February 8th to April 30th'},fontsize=16)
-        savename ='C:\Users\judit\OneDrive - KTH\MATS\Plots\kp_all.png';
+        savename ='\\ug.kth.se\dfs\home\j\u\juditpcj\appdata\xp.V2\Documents\GitHub datafiles\MATS\kp_all.png';
     case 'maxI'
         sgtitle({'\bf MLT plot of peak points correlated with max Intensity';'\rm Period: February 8th to April 30th'},fontsize=16) 
-        savename ='C:\Users\judit\OneDrive - KTH\MATS\Plots\maxI_all.png';
+        savename ='\\ug.kth.se\dfs\home\j\u\juditpcj\appdata\xp.V2\Documents\GitHub datafiles\MATS\maxI_all.png';
     case 'alt'
         sgtitle({'\bf MLT plot of peak points correlated with altitude';'\rm Period: February 8th to April 30th'},fontsize=16)
-        savename ='C:\Users\judit\OneDrive - KTH\MATS\Plots\alt_all.png';
+        savename ='\\ug.kth.se\dfs\home\j\u\juditpcj\appdata\xp.V2\Documents\GitHub datafiles\MATS\alt_all.png';
 end
 %%%% North Hemisphere polar plot
 subplot(1,2,1);
@@ -99,7 +99,7 @@ p1.DataTipTemplate.DataTipRows(2) = dataTipTextRow("MLat",peaksNH_Mlat);
 p1.DataTipTemplate.DataTipRows(3) = dataTipTextRow("Altitude",peaksNH_alt);
 p1.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow("Kp",peaksNH_kp);
 p1.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow("Time",peaksNH_time);
-p1.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow("Intensity",peaksSH_maxI);
+p1.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow("Intensity",peaksNH_maxI);
 %Settings for the path data tips
 s1.DataTipTemplate.DataTipRows(1) = dataTipTextRow("MLT",stripsNH_MLT);
 s1.DataTipTemplate.DataTipRows(2) = dataTipTextRow("MLat",stripsNH_Mlat);
