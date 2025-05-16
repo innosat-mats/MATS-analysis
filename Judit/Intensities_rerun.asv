@@ -5,7 +5,7 @@ just_update = 1;
 test_keograms=0;
 remove_background = 0;
 month_chosen = 'March';
-hemisphere = 'N';
+hemisphere = 'S';
 colors= [0.9 0.2 0.8; 0.5 0.9 0.2; 0.2 0.2 0.2];
 
 %Get times of all auroral events
@@ -49,7 +49,7 @@ switch month_chosen
                 tevent_list = aprpeaksSH.time;
                 row_list = aprpeaksSH.row;
         end
-
+    
 end
 
 %% Download images
@@ -77,20 +77,23 @@ if just_update
     dirlist = dir(append('C:\Nobackup\juditpcj\MATS\Images_J\', month_chosen, '\',hemisphere,'H\'));
     imcal = 'ImageCalibrated';
     imtime = 'time';
-    intensity_array = zeros([length(dirlist),1]);
-    for i = 1:2%length(dirlist)-2
+    tevent_list = datetime(2023,month(tevent_list),day(tevent_list),hour(tevent_list),minute(tevent_list),...
+        second(tevent_list));
+    intensity_array = zeros([length(tevent_list),1]);
+    for i = 1:length(dirlist)-2
         namefile = dirlist(i+2).name
         source = append('C:\Nobackup\juditpcj\MATS\Images_J\',month_chosen,'\',hemisphere,'H\',namefile);
         vardata = ncread(source,imcal);
         vartime = ncread(source,imtime);
         times = vartime*10^(-9);
         time = datetime(2000,01,01,00,00,00) + seconds(times);
-        ind_event = find(tevent_list> time(1) & tevent_list< time(end));
+        ind_event = find(tevent_list> time(end) & tevent_list< time(end));
         ind_row = row_list(ind_event);
         [val,ind_col] = min(abs(time-tevent_list(ind_event)));
         
         %Figure
-        pxi = 30*(i-1); pyi = 110*rem(i,10); pxf = 1000; pyf = 500;
+        %pxi = 30*(i-1); pyi = 110*rem(i,10); pxf = 1000; pyf = 500;
+        pxi = 100; pyi = 100; pxf = 1000; pyf = 500;
         figure(Position= [pxi pyi pxf pyf]);
         tiledlayout(2,1)
         nexttile; hold on;
@@ -102,7 +105,10 @@ if just_update
             keogram(:,j) = mid_col';
         end
         imagesc(time,1:1:length(mid_col),keogram)
-                
+        xline(time(ind_col),'--')
+        yline(ind_row)
+        xlim([time(1) time(end)])
+        ylim([1 length(mid_col)])
         nexttile; hold on; grid;
         % Remove background for the wanted row and the ones before and
         % after
@@ -120,6 +126,12 @@ if just_update
             %Find where aurora starts and ends to separate the background
             is = find(row(1:imax)'<line1(1:imax),1,'last')-1;
             ie = find(row(imax:end)'<line1(imax:end),1,'first')+imax+1;
+            if isempty(ie)
+                ie = length(row)-5;
+            end
+            if isempty(is) || is == 0
+                is = 5;
+            end
             y = [row(1:is) row(ie:end)];
             x = [tsecs(1:is)' tsecs(ie:end)'];
     
@@ -133,6 +145,8 @@ if just_update
             plot(time,avg_woaurora', color = colors(ic,:))
             xline(time(is),color = colors(ic,:))
             xline(time(ie),color = colors(ic,:))
+            xline(time(ind_col),'--')
+            xline(time(imax),'r.-')
 
             %Row witout background
             row_wob = row-avg_woaurora';
@@ -148,42 +162,44 @@ if just_update
         %pixel
         intensity_new = mean(intensity_matrix,'all');
         %Save in array
-        intensity_array(i) = intensity_new;
+        intensity_array(ind_event)= intensity_new;
     end
     %doublecheck it worked and save in structure
+    
+    switch month_chosen
+        case 'February'
+            switch hemisphere
+                case 'N'
+                    febpeaksNH.newI = intensity_array;
+                    save('\\ug.kth.se\dfs\home\j\u\juditpcj\appdata\xp.V2\Documents\GitHub\MATS-analysis\Judit\Downloadfiles\Structures\febpeaksNH.mat','febpeaksNH')
+                case 'S'
+                    febpeaksSH.newI = intensity_array;
+                    save('\\ug.kth.se\dfs\home\j\u\juditpcj\appdata\xp.V2\Documents\GitHub\MATS-analysis\Judit\Downloadfiles\Structures\febpeaksSH.mat','febpeaksSH')
+            end
+        case 'March'
+            switch hemisphere
+                case 'N'
+                    marpeaksNH.newI = intensity_array;
+                    %save('\\ug.kth.se\dfs\home\j\u\juditpcj\appdata\xp.V2\Documents\GitHub\MATS-analysis\Judit\Downloadfiles\Structures\marpeaksNH.mat','marpeaksNH')
+                case 'S'
+                    marpeaksSH.newI = intensity_array;
+                    save('\\ug.kth.se\dfs\home\j\u\juditpcj\appdata\xp.V2\Documents\GitHub\MATS-analysis\Judit\Downloadfiles\Structures\marpeaksSH.mat','marpeaksSH')
+            end
+        case 'April'
+            switch hemisphere
+                case 'N'
+                    aprpeaksNH.newI = intensity_array;
+                    save('\\ug.kth.se\dfs\home\j\u\juditpcj\appdata\xp.V2\Documents\GitHub\MATS-analysis\Judit\Downloadfiles\Structures\aprpeaksNH.mat','aprpeaksNH')
+                case 'S'
+                    aprpeaksSH.newI = intensity_array;
+                    save('\\ug.kth.se\dfs\home\j\u\juditpcj\appdata\xp.V2\Documents\GitHub\MATS-analysis\Judit\Downloadfiles\Structures\aprpeaksSH.mat','aprpeaksSH')
+            end
+    end
     if length(nonzeros(intensity_array)) == length(intensity_array)
-        switch month_chosen
-            case 'February'
-                switch hemisphere
-                    case 'N'
-                        febpeaksNH.newI = intensity_array;
-                        save('\\ug.kth.se\dfs\home\j\u\juditpcj\appdata\xp.V2\Documents\GitHub\MATS-analysis\Judit\Downloadfiles\Structures\febpeaksNH.mat',febpeaksNH)
-                    case 'S'
-                        febpeaksSH.newI = intensity_array;
-                        save('\\ug.kth.se\dfs\home\j\u\juditpcj\appdata\xp.V2\Documents\GitHub\MATS-analysis\Judit\Downloadfiles\Structures\febpeaksSH.mat',febpeaksSH)
-                end
-            case 'March'
-                switch hemisphere
-                    case 'N'
-                        marpeaksNH.newI = intensity_array;
-                        save('\\ug.kth.se\dfs\home\j\u\juditpcj\appdata\xp.V2\Documents\GitHub\MATS-analysis\Judit\Downloadfiles\Structures\marpeaksNH.mat',marpeaksNH)
-                    case 'S'
-                        marpeaksSH.newI = intensity_array;
-                        save('\\ug.kth.se\dfs\home\j\u\juditpcj\appdata\xp.V2\Documents\GitHub\MATS-analysis\Judit\Downloadfiles\Structures\marpeaksSH.mat',marpeaksSH)
-                end
-            case 'April'
-                switch hemisphere
-                    case 'N'
-                        aprpeaksNH.newI = intensity_array;
-                        save('\\ug.kth.se\dfs\home\j\u\juditpcj\appdata\xp.V2\Documents\GitHub\MATS-analysis\Judit\Downloadfiles\Structures\aprpeaksNH.mat',aprpeaksNH)
-                    case 'S'
-                        aprpeaksSH.newI = intensity_array;
-                        save('\\ug.kth.se\dfs\home\j\u\juditpcj\appdata\xp.V2\Documents\GitHub\MATS-analysis\Judit\Downloadfiles\Structures\aprpeaksSH.mat',aprpeaksSH)
-                end
-        end
-        
+        disp('All the events were found')
     else
-        disp('Something went wrong! The updated intensities were not saved.')
+        events_missing = length(intensity_array) - length(nonzeros(intensity_array))
+        disp(append(num2str(events_missing),' out of ',num2str(length(intensity_array)),' events were not found, some intensities will be 0.'))
         
     end
        

@@ -137,21 +137,32 @@ yline(rown2,'--', color = c2, linewidth = 1.5)
 yline(rown3,'--', color = c3, linewidth = 1.5)
 xlim([timea(1) timea(end)])
 ylim([1 187])
-xticks_current = get(gca, 'xtick');
-xticklabels_new = cellstr(datestr(xticks_current, 'HH:MM'));
-set(gca, 'xticklabel', xticklabels_new)
-ax2 = axes('Position', ax1.Position, 'Color', 'none');
-x2 = TPlat;
-ax2.XLim = [min(x2), max(x2)]; % Escala independent
-ax2.YLim = ax1.YLim; % Comparteix escala Y
-ax2.YTick = [];   % Eliminar marques Y
-%ax2.XColor = 'none'; % Amagar la línia de l'eix X secundari
-ax2.YColor = 'none';
-ax2.XAxisLocation = 'bottom'; % Assegurar que estigui a baix
-ax2.Position(2) = ax1.Position(2) % Ajustar lleugerament cap avall
-xlabel(ax2, 'Latitude of Tangent Point');
-%set(gca,'ytick',[0 25 50 75 100 125 150 175])
-ax1.Position(2) = ax1.Position(2) + 0.05;
+
+ticklabelstim = timea(1):minutes(5):timea(end);
+ticklabelslat = TPlat(ismember(timea,ticklabelstim));
+labelArray = [compose('%5s',datestr(ticklabelstim,'HH:MM'))';compose('%.fº',ticklabelslat')];
+labelArray = strjust(pad(labelArray),'center');
+tickLabels = strtrim(sprintf('%s\\newline%s\n', labelArray{:}));
+ax = gca(); 
+ax.XTick = timea(1):minutes(3):timea(end); 
+ax.XLim = [timea(1) timea(end)];
+ax.XTickLabel = tickLabels; 
+text(ax1,'Units', 'Normalized','Position', [0.95, -0.1],'string','Time', color = 'k')
+text(ax1,'Units', 'Normalized','Position', [0.95, -0.25],'string','TPlat', color = 'k')
+
+%xticks_current = get(gca, 'xtick');
+%xticklabels_new = cellstr(datestr(xticks_current, 'HH:MM'));
+%set(gca, 'xticklabel', xticklabels_new)
+%ax2 = axes('Position', ax1.Position, 'Color', 'none');
+%x2 = TPlat;
+%ax2.XLim = [min(x2), max(x2)]; % Escala independent
+%ax2.YLim = ax1.YLim; % Comparteix escala Y
+%ax2.YTick = [];   % Eliminar marques Y
+%ax2.YColor = 'none';
+%ax2.XAxisLocation = 'bottom'; % Assegurar que estigui a baix
+%ax2.Position(2) = ax1.Position(2) % Ajustar lleugerament cap avall
+%xlabel(ax2, 'Latitude of Tangent Point');
+ax1.Position(2) = ax1.Position(2) + 0.03;
 
 ax3=subplot(3,4,[9 12]); hold on; grid; legend;
 scatter(timea, row1, [], c1, '.', DisplayName=append('Row ',num2str(rown1)))
