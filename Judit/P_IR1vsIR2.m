@@ -1,4 +1,4 @@
-% Intensities Re-run
+% This code plots the intensity gotten from IR1 vs the one gotten from IR2
 close all; clear all;
 retrieve = 0;
 just_update = 1;
@@ -68,6 +68,8 @@ for i = 1:length(full_tlist)
     if isempty(dirlist)
         disp('The file has not been found');
         continue
+    else
+        disp('Found')
     end
     source = append('C:\Nobackup\juditpcj\MATS\Images_J\',filter,'\', month_l, '\',hemisphere,'H\',dirlist.name);
     

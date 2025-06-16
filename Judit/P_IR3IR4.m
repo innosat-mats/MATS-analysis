@@ -1,6 +1,7 @@
-% Create a keogram from date and filter
+%This code plots the IR2, IR3 and IR4 keograms with and without background
+%Inclulding or not the downloading of the data
 
-download = 0;
+download = 1;
 
 ti = datetime(2023,02,27,21,10,00);
 te = datetime(2023,02,27,21,20,00);

@@ -1,10 +1,10 @@
-% Create a keogram from date and filter
+% Download data and Create a keogram from date and filter
 
 download = 1;
 
 ti = datetime(2023,02,27,21,10,00);
 te = datetime(2023,02,27,21,20,00);
-filter = 'IR3';
+filter = 'IR2';
 
 %% Download nc file with images
 if download

@@ -189,13 +189,13 @@ xticklabels([0:1:9, 14:1:24]);
 
 
 
-fit_INH = [maxI_NH03,maxI_NH36,maxI_NH69,maxI_SH03,maxI_SH36,maxI_SH69];
-fit_hNH = [alt_NH03 ,alt_NH36 ,alt_NH69,alt_SH03 ,alt_SH36 ,alt_SH69 ];
-[b, sigma2_x, hfitNH, IfitNH, stats]  = deming(fit_hNH',fit_INH',lambda);
-display(sigma2_x); display(stats)
-%hfitNH = linspace(min(fit_hNH), max(fit_hNH), 100);
-%IfitNH = b(1)+ b(2) * hfitNH;
-mNH = b(2);
+%fit_INH = [maxI_NH03,maxI_NH36,maxI_NH69,maxI_SH03,maxI_SH36,maxI_SH69];
+%fit_hNH = [alt_NH03 ,alt_NH36 ,alt_NH69,alt_SH03 ,alt_SH36 ,alt_SH69 ];
+%[b, sigma2_x, hfitNH, IfitNH, stats]  = deming(fit_hNH',fit_INH',lambda);
+%display(sigma2_x); display(stats)
+%%hfitNH = linspace(min(fit_hNH), max(fit_hNH), 100);
+%%IfitNH = b(1)+ b(2) * hfitNH;
+%mNH = b(2);
 
 
 ax2 = nexttile; hold on; grid;
@@ -205,7 +205,7 @@ plot(alt_NH69(maxI_NH69>0),nonzeros(maxI_NH69)','*', color = c3,HandleVisibility
 plot(alt_SH03(maxI_SH03>0),nonzeros(maxI_SH03)','^', color = c1,HandleVisibility = 'off')
 plot(alt_SH36(maxI_SH36>0),nonzeros(maxI_SH36)','^', color = c2,HandleVisibility = 'off')
 plot(alt_SH69(maxI_SH69>0),nonzeros(maxI_SH69)','^', color = c3,HandleVisibility = 'off')
-plot(hfitNH,IfitNH,'k-',DisplayName=append('m = ',num2str(mNH,'%.2f')))
+%plot(hfitNH,IfitNH,'k-',DisplayName=append('m = ',num2str(mNH,'%.2f')))
 
 ylabel('ph \cdot nm^{-1} \cdot m^{-2} \cdot sr^{-1} \cdot s^{-1}') ;
 xlabel('Altitude (km)')
@@ -218,36 +218,3 @@ text(ax2,'Units', 'Normalized','Position', [0.95, 0.96],'string','b)')
 set(findall(gcf,'-property','FontSize'),'FontSize',14)
 saveas(fig,savefig)
 
-
-
-
-
-function [xfit, yfit, m_sym] = fitsimetric(x, y)
-    % Ajust "clàssic": y = m1*x + b1
-    p_xy = polyfit(x, y, 1);
-    m1 = p_xy(1);
-    b1 = p_xy(2);
-    
-    % Ajust invers: x = m2*y + b2 → invertim després per obtenir y = ...
-    p_yx = polyfit(y, x, 1);
-    m2 = p_yx(1);
-    b2 = p_yx(2);
-    
-    % Pendent simètrica (mitjana geomètrica dels pendents directes i inversos)
-    m_sym = sqrt(m1 / m2);  % Com que m2 = dx/dy, 1/m2 ≈ dy/dx
-    % Opcionalment pots agafar signe de m1:
-    if m1 < 0
-        m_sym = -abs(m_sym);
-    else
-        m_sym = abs(m_sym);
-    end
-    
-    % Per trobar la intersecció amb m_sym, fem servir el centre de masses
-    x0 = mean(x);
-    y0 = mean(y);
-    
-    % Recta: y = y0 + m_sym * (x - x0)
-    xfit = linspace(min(x), max(x), 100);
-    yfit = y0 + m_sym * (xfit - x0);
-end
-  

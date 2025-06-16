@@ -1,4 +1,10 @@
 % Intensities Re-run
+
+%This code takes all the event times from Ceona's list and asks to confirm
+%that there is actually arurora in them. It also calculates the new
+%intensity with the chosen filter and it saves it in the Structuresnew
+%folder
+
 close all; clear all;
 retrieve = 0;
 just_update = 1;
@@ -328,35 +334,35 @@ if just_update
 
 
     disp('Saving')
-    %switch month_chosen
-    %    case 'February'
-    %        switch hemisphere
-    %            case 'N'
-    %                febNH = newsave;
-    %                save(append('\\ug.kth.se\dfs\home\j\u\juditpcj\appdata\xp.V2\Documents\GitHub\MATS-analysis\Judit\Downloadfiles\Structuresnew\',filter,'\febpeaksNH.mat'),'febNH')
-    %            case 'S'
-    %                febSH = newsave;
-    %                save(append('\\ug.kth.se\dfs\home\j\u\juditpcj\appdata\xp.V2\Documents\GitHub\MATS-analysis\Judit\Downloadfiles\Structuresnew\',filter,'\febpeaksSH.mat'),'febSH')
-    %        end
-    %    case 'March'
-    %        switch hemisphere
-    %            case 'N'
-    %                marNH = newsave;
-    %                save(append('\\ug.kth.se\dfs\home\j\u\juditpcj\appdata\xp.V2\Documents\GitHub\MATS-analysis\Judit\Downloadfiles\Structuresnew\',filter,'\marpeaksNH.mat'),'marNH')
-    %            case 'S'
-    %                marSH = newsave; 
-    %                save(append('\\ug.kth.se\dfs\home\j\u\juditpcj\appdata\xp.V2\Documents\GitHub\MATS-analysis\Judit\Downloadfiles\Structuresnew\',filter,'\marpeaksSH.mat'),'marSH')
-    %        end
-    %    case 'April'
-    %        switch hemisphere
-    %            case 'N'
-    %                aprNH = newsave; 
-    %                save(append('\\ug.kth.se\dfs\home\j\u\juditpcj\appdata\xp.V2\Documents\GitHub\MATS-analysis\Judit\Downloadfiles\Structuresnew\',filter,'\aprpeaksNH.mat'),'aprNH')
-    %            case 'S'
-    %                aprSH = newsave;
-    %                save(append('\\ug.kth.se\dfs\home\j\u\juditpcj\appdata\xp.V2\Documents\GitHub\MATS-analysis\Judit\Downloadfiles\Structuresnew\',filter,'\aprpeaksSH.mat'),'aprSH')
-    %        end
-    %end
+    switch month_chosen
+        case 'February'
+            switch hemisphere
+                case 'N'
+                    febNH = newsave;
+                    save(append('\\ug.kth.se\dfs\home\j\u\juditpcj\appdata\xp.V2\Documents\GitHub\MATS-analysis\Judit\Downloadfiles\Structuresnew\',filter,'\febpeaksNH.mat'),'febNH')
+                case 'S'
+                    febSH = newsave;
+                    save(append('\\ug.kth.se\dfs\home\j\u\juditpcj\appdata\xp.V2\Documents\GitHub\MATS-analysis\Judit\Downloadfiles\Structuresnew\',filter,'\febpeaksSH.mat'),'febSH')
+            end
+        case 'March'
+            switch hemisphere
+                case 'N'
+                    marNH = newsave;
+                    save(append('\\ug.kth.se\dfs\home\j\u\juditpcj\appdata\xp.V2\Documents\GitHub\MATS-analysis\Judit\Downloadfiles\Structuresnew\',filter,'\marpeaksNH.mat'),'marNH')
+                case 'S'
+                    marSH = newsave; 
+                    save(append('\\ug.kth.se\dfs\home\j\u\juditpcj\appdata\xp.V2\Documents\GitHub\MATS-analysis\Judit\Downloadfiles\Structuresnew\',filter,'\marpeaksSH.mat'),'marSH')
+            end
+        case 'April'
+            switch hemisphere
+                case 'N'
+                    aprNH = newsave; 
+                    save(append('\\ug.kth.se\dfs\home\j\u\juditpcj\appdata\xp.V2\Documents\GitHub\MATS-analysis\Judit\Downloadfiles\Structuresnew\',filter,'\aprpeaksNH.mat'),'aprNH')
+                case 'S'
+                    aprSH = newsave;
+                    save(append('\\ug.kth.se\dfs\home\j\u\juditpcj\appdata\xp.V2\Documents\GitHub\MATS-analysis\Judit\Downloadfiles\Structuresnew\',filter,'\aprpeaksSH.mat'),'aprSH')
+            end
+    end
     if length(nonzeros(intensity_array)) == length(intensity_array)
         disp('All the events were found')
     else
