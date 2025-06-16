@@ -2,9 +2,9 @@
 
 download = 1;
 
-ti = datetime(2023,04,23,11,00,00);
-te = datetime(2023,04,23,12,00,00);
-filter = 'IR2';
+ti = datetime(2023,02,27,21,10,00);
+te = datetime(2023,02,27,21,20,00);
+filter = 'IR3';
 
 %% Download nc file with images
 if download
@@ -43,7 +43,7 @@ end
 
 pxi = 100;pyi = 100;pxf = 1700;pyf = 600;  
 figure(Position= [pxi pyi pxf pyf]); 
-imagesc(timepl,1:length(vardata(1,:,1)),keogram,[0 1e15]);
+imagesc(timepl,1:length(vardata(1,:,1)),keogram,[0 6e14]);
 set(gca,'YDir','normal');
 ylim([1 length(mid_col)])
 title(filter)

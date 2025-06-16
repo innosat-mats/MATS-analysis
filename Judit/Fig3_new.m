@@ -35,6 +35,8 @@ if newintensities
     peaksSH_maxI = [febSH.newI ,marSH.newI ,aprSH.newI]*3; %The 3 is fixing an indexing problem for the algorithm
     peaksNH_alt =  [febNH.altnew,marNH.altnew  ,aprNH.altnew]/1000;
     peaksSH_alt =  [febSH.altnew,marSH.altnew  ,aprSH.altnew]/1000;
+    peaksNH_tim =  [febNH.time,marNH.time  ,aprNH.time];
+    peaksSH_tim =  [febSH.time,marSH.time  ,aprSH.time];
 else
     addpath("\\ug.kth.se\dfs\home\j\u\juditpcj\appdata\xp.V2\Documents\GitHub\MATS-analysis\Ceona\Matlab_scripts\Monthdata\Februarymonth\")
     load("febpeaksNH.mat");
@@ -184,6 +186,18 @@ ylim([95 110])
 xticks([0:1:9, 10:1:20]);
 xticklabels([0:1:9, 14:1:24]);
 
+
+
+
+fit_INH = [maxI_NH03,maxI_NH36,maxI_NH69,maxI_SH03,maxI_SH36,maxI_SH69];
+fit_hNH = [alt_NH03 ,alt_NH36 ,alt_NH69,alt_SH03 ,alt_SH36 ,alt_SH69 ];
+[b, sigma2_x, hfitNH, IfitNH, stats]  = deming(fit_hNH',fit_INH',lambda);
+display(sigma2_x); display(stats)
+%hfitNH = linspace(min(fit_hNH), max(fit_hNH), 100);
+%IfitNH = b(1)+ b(2) * hfitNH;
+mNH = b(2);
+
+
 ax2 = nexttile; hold on; grid;
 plot(alt_NH03(maxI_NH03>0),nonzeros(maxI_NH03)','*', color = c1,HandleVisibility = 'off')
 plot(alt_NH36(maxI_NH36>0),nonzeros(maxI_NH36)','*', color = c2,HandleVisibility = 'off')
@@ -191,7 +205,7 @@ plot(alt_NH69(maxI_NH69>0),nonzeros(maxI_NH69)','*', color = c3,HandleVisibility
 plot(alt_SH03(maxI_SH03>0),nonzeros(maxI_SH03)','^', color = c1,HandleVisibility = 'off')
 plot(alt_SH36(maxI_SH36>0),nonzeros(maxI_SH36)','^', color = c2,HandleVisibility = 'off')
 plot(alt_SH69(maxI_SH69>0),nonzeros(maxI_SH69)','^', color = c3,HandleVisibility = 'off')
-
+plot(hfitNH,IfitNH,'k-',DisplayName=append('m = ',num2str(mNH,'%.2f')))
 
 ylabel('ph \cdot nm^{-1} \cdot m^{-2} \cdot sr^{-1} \cdot s^{-1}') ;
 xlabel('Altitude (km)')
