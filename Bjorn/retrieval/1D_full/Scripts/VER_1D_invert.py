@@ -90,7 +90,7 @@ channels=['IR1','IR2']
 channels=['IR1']
 
 for channel in  channels:
-    files='/media/waves/AVAGO/data/MATS/1D_inversions/v0.1/mar_w1/MAR_first_week/*.nc'
+    files='/media/waves/AVAGO/data/MATS/1D_inversions/v0.1/apr_w1/week1/*.nc'
     #files=f'/media/waves/AVAGO/data/MATS/1D_inversions/v0.1/IR_comparison/{channel}_Mar1_l1bv0.5_sepabs.nc'
 
     ch=xr.open_mfdataset(files)
@@ -127,7 +127,7 @@ for channel in  channels:
 
     result_1d.ver.values = result_1d.ver.values * 4*np.pi / 10**6
 
-    result_1d.to_netcdf(f"{channel}_MarW1_l1bv0.5_VER.nc")
+    result_1d.to_netcdf(f"{channel}_AprW1_l1bv0.5_VER.nc")
 
 
 # %%

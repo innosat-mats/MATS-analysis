@@ -35,7 +35,7 @@ lambdas=np.ndarray.flatten(np.array(data['lambda']))
 Ls=np.ndarray.flatten(np.array(data['L']))
 # %%
 plt.plot(lambdas,Ls)
-plt.xlim([750,775])
+plt.xlim([310,875])
 plt.ylim([0,8*10**14])
 # %%
 
@@ -68,5 +68,13 @@ IR1_m = np.sum(filter1*Lsi)/filter1.sum()
 IR2_m = np.sum(filter2*Lsi)/filter2.sum()
 IR3_m = np.sum(filter3*Lsi)/filter3.sum()
 IR4_m = np.sum(filter4*Lsi)/filter4.sum()
+
+# %%
+
+# plot filter1*Lsi
+#plt.plot(grid,filter1*Lsi)
+plt.plot(grid,filter2*Lsi)
+#plt.plot(grid,filter3*Lsi)
+#plt.plot(grid,filter4*Lsi)
 
 # %%
