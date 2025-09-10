@@ -188,14 +188,14 @@ def xainvert(ch,retrival_heights, weight_0, weight_1, weight_2, xa=None):
 
 #%%
 # load images
-channels=['IR1', 'IR2']
+channels=['IR1']
 l1b_version="0.5"
 oned_version="0.1"
 # dayglow stuff
 ascending=True
 # end day
-start_day=5
-end_day=6
+start_day=1
+end_day=32
 # dayglow (ALL SZA)
 dmin,dmax = 0, 95
 tplat0, tplat1 = -70, 70
@@ -206,8 +206,8 @@ for channel in channels:
         print(f'------------------------------------------------------------')
         print(f'DAY: {day} -- CHANNEL: {channel} -- STARTING DAY {start_day} -- ENDING DAY {end_day}')
         print(f'------------------------------------------------------------')
-        starttime=datetime(2023,3,day,0,0)
-        stoptime=datetime(2023,3,day,23,59)
+        starttime=datetime(2023,4,day,0,0)
+        stoptime=datetime(2023,4,day,23,59)
         #stoptime=datetime(2023,3,day,2,0) ########### NOT 24 !!!!!!
         
         try:
@@ -225,7 +225,7 @@ for channel in channels:
 
             # absorption weights (TBD: call generation of these)
             abs=True #WRONG DATE  ---------------------------------------
-            tanz, splinedfactor=np.load(f"splinedlogfactors{channel}_sep1730_new.npy",allow_pickle=True)
+            tanz, splinedfactor=np.load(f"/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/1D_full/Abandabs/Factors/splinedlogfactors{channel}_mar1730_new.npy",allow_pickle=True)
 
             # select part of orbit
             offset = 10
@@ -273,7 +273,7 @@ for channel in channels:
             })
 
             # save the results
-            ch.to_netcdf(f'/media/waves/AVAGO/data/MATS/1D_inversions/v{oned_version}/IR_comparison/{channel}_Mar{day}_l1bv{l1b_version}_sepabs.nc')
+            ch.to_netcdf(f'/media/waves/AVAGO/data/MATS/1D_inversions/v{oned_version}/apr_w1/{channel}_Apr{day}_l1bv{l1b_version}.nc')
             
         except KeyboardInterrupt:
             sys.exit()  

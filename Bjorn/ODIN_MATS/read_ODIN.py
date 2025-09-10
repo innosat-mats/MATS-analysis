@@ -174,48 +174,54 @@ else:
     )
     
     if NIGHTGLOW:
-        ds_night_all=ds.where(ds.sza > 98)
-        ds_day_all=ds.where(ds.sza > 98)
+        ds_night_all=ds.where(ds.sza > 100)
+        ds_day_all=ds.where(ds.sza > 100)
     if DAYGLOW:
-        ds_night_all=ds.where(ds.sza > 90)
-        ds_day_all=ds.where(ds.sza < 90)
+        ds_night_all=ds.where(ds.sza > 100,drop=True)
+        ds_day_all=ds.where(ds.sza < 90,drop=True)
 
 if NLC:
     ds_day_all=ds_day_all.sel(time = slice("2022-02-01", "2023-04-01")).dropna(dim='time')
 
 else:
-    ds_night_all=ds_night_all.sel(time = slice("2022-02-01", "2023-04-01")).dropna(dim='time')
-    ds_day_all=ds_day_all.sel(time = slice("2022-02-01", "2023-04-01")).dropna(dim='time')
+    ds_night_all=ds_night_all.sel(time = slice("2023-01-01", "2023-03-01")).dropna(dim='time')
+    ds_day_all=ds_day_all.sel(time = slice("2023-01-01", "2023-03-01")).dropna(dim='time')
 
 
 #%%
 ## COVERAGE MAP
-fig, axs = pplt.subplots(figwidth='15cm',ncols=1, nrows=1,abc='a.',sharex=0,proj='cyl')
-axs.format(coast=True,landzorder=5)
-axs.scatter(ds_day_all.lon,ds_day_all.lat, s=0.3, c='red')
+fig, axs = pplt.subplots(figwidth='15cm',ncols=1, nrows=1,sharex=0,proj='cyl')
+
+axs.scatter(ds_day_all.lon,ds_day_all.lat, c='red', s=1,zorder=4)
+
+axs.format(coast=True,land=True,landcolor='white',landzorder=2,facecolor='cloudy blue',coastcolor='black')
+axs.format(latlines=30, lonlines=30,labels=True)
 if not NLC:
-    axs.scatter(ds_night_all.lon,ds_night_all.lat, s=0.3, c='blue')
-    axs.format(title='OSIRIS 22/23 airglow coverage --- red: dayglow; blue: nightglow')
+    axs.scatter(ds_night_all.lon,ds_night_all.lat, c='blue', s=2, zorder=4)
+    axs.format(title='OSIRIS MLT coverage (December 2022 - February 2023)')
+    lgd=axs.legend([r'SZA $< 90^\circ$',r'SZA $> 100^\circ$'])
+    lgd.legendHandles[0]._sizes = [20]
+    lgd.legendHandles[1]._sizes = [20]
     fig.savefig('/home/waves/projects/MATS/MATS-analysis/Bjorn/ODIN_MATS/figures/dayglow_nightglow_map.png',format='png')
 else:
     axs.format(title='OSIRIS 22/23 NLC coverage')
     fig.savefig('/home/waves/projects/MATS/MATS-analysis/Bjorn/ODIN_MATS/figures/nlc_map.png',format='png')
-
+#%%
 ### NLC DAYGLOW AIRGLOW COVERAGE
-fig, axs = pplt.subplots(figwidth='20cm',ncols=3, nrows=1,abc='a.',sharex=0)
-axs.format(coast=True,landzorder=5)
+fig, axs = pplt.subplots(figwidth='20cm',ncols=3, nrows=1,sharex=0)
+
 
 
 if not NLC:
     #m=axs[0].scatter(ds.time,ds.lat, c='red', s=1,alpha=1,cmap='viridis',vmax=360,vmin=0)
     #fig.colorbar(m,loc='r',title='longitude')
     axs[0].scatter(ds_night_all.time,ds_night_all.lat, c='blue', s=1,alpha=1,cmap='viridis',vmax=360,vmin=0)
-    axs[0].scatter(ds_day_all.time,ds_day_all.lat, c='red', s=1,alpha=1,cmap='viridis',vmax=360,vmin=0)
+    axs[0].scatter(ds_day_all.time,ds_day_all.lat, c='red', s=6,alpha=1,cmap='viridis',vmax=360,vmin=0)
     
     axs[1].scatter(ds_night_all.time,ds_night_all.lat, c='blue', s=1,alpha=1,cmap='viridis',vmax=360,vmin=0)
-    axs[2].scatter(ds_day_all.time,ds_day_all.lat, c='red', s=1,alpha=1,cmap='viridis',vmax=360,vmin=0)
+    axs[2].scatter(ds_day_all.time,ds_day_all.lat, c='red', s=6,alpha=1,cmap='viridis',vmax=360,vmin=0)
     axs[0].format(title='Airglow')
-    axs[1].format(title='Nightglow (SZA > 98)')
+    axs[1].format(title='Nightglow SZA > 98')
     axs[2].format(title='Dayglow (SZA < 90)')
     fig.format(suptitle='OSIRIS MLT airglow coverage')
     fig.savefig('/home/waves/projects/MATS/MATS-analysis/Bjorn/ODIN_MATS/figures/glow_emissions.png',format='png')
@@ -227,15 +233,15 @@ else:
 
 # %% 
 # example of a single pass
-starttime=datetime(2023,2,1,0,0)
-stoptime=datetime(2023,3,1,0,0)
+#starttime=datetime(2023,2,1,0,0)
+#stoptime=datetime(2023,3,1,0,0)
 
 for ddd in [1]:
-    starttime=datetime(2022,12,1,0,0)
+    starttime=datetime(2022,12,20,0,0)
     stoptime=datetime(2023,1,1,0,0)
     l1b_version="0.6"
 
-    download=False
+    download=True
     run=True
 
     if download:
