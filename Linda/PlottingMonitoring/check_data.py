@@ -17,19 +17,24 @@ data_folder = '/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output
 
 # times for start and stop
 
-start_time = DT.datetime(2023, 2, 12, 4, 50, 0)
-stop_time = DT.datetime(2023, 2, 12, 4, 54, 0)
-#start_time = DT.datetime(2022, 12, 16, 18, 50, 0)
-#stop_time = DT.datetime(2022, 12, 16, 19, 0, 0)
+#start_time = DT.datetime(2023, 2, 12, 4, 50, 0)
+#stop_time = DT.datetime(2023, 2, 12, 4, 54, 0)
+start_time = DT.datetime(2025, 1, 24, 0, 0, 0)
+stop_time = DT.datetime(2025, 1, 25, 0, 0, 0)
 
 # filter
 filter={'CCDSEL': [5,6]}
 
 #%%
 # read in measurements
-df09 = read_MATS_data(start_time, stop_time,level='1b',version='0.9')
+df1 = read_MATS_data(start_time, stop_time,level='1b',version='1.0.1')
+#df09 = read_MATS_data(start_time, stop_time,level='1b',version='0.9')
 #df06 = read_MATS_data(start_time, stop_time,level='1b',version='0.6')
 #df05 = read_MATS_data(start_time, stop_time,level='1b',version='0.5')
+#%%
+
+# check the unique channels
+print(df1.flipped.unique())
 
 #%%
 #df.iloc
@@ -58,3 +63,5 @@ for i in range(1,7):
 
     generate_gif('/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/reprocessingfeb/CCDSEL'+str(i)+'/', data_folder+'orbit_feb_CCDSEL'+str(i)+'.gif')
 # %%
+
+#plot lat

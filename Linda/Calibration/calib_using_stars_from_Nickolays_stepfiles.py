@@ -332,6 +332,7 @@ allstarsdf['calcoeff_corrected']=allstarsdf['flux']/allstarsdf['count_corrected'
 # plot the calibration coefficients for each channel, as a function of the star number
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.stats import linregress
 import matplotlib.dates as mdates
 allstarsdf = allstarsdf.dropna(subset=['calcoeff_corrected'])
 
@@ -362,6 +363,25 @@ for channel in allstarsdf['channel'].unique():
     ax[0,0].set_xlabel('Star number')
     ax[0,0].set_ylabel('Calibration coefficient')
     ax[0,0].legend()
+    # plot the calibration coefficients as a function of strenght of the star
+    fig10, ax10 = plt.subplots(1, 1, figsize=(10, 6))
+    ax10.plot(df['flux'], df['calcoeff_corrected'], 'o', color='r', alpha=0.2, label='flatfield corrected')
+    #set ylimis on y-axis to mean + 3*std
+    meancalcoeff = df['calcoeff_corrected'].mean()
+    stdcalcoeff = df['calcoeff_corrected'].std()
+    ax10.set_ylim(meancalcoeff-3*stdcalcoeff, meancalcoeff+3*stdcalcoeff)
+   
+
+    
+    #calculate mean and std of the calibration coefficients for each flux, and plot the mean and std against the flux
+    #ax10.errorbar(df['flux'], df['calcoeff_corrected'], yerr=df['calcoeff_corrected'].std(), fmt='o', color='r', alpha=0.2, label='flatfield corrected')
+    #calculate the mean and std of the calibration coefficients for each flux
+    #df['calcoeff_corrected'].groupby(df['flux']).agg(['mean', 'std'])
+    #ax10.errorbar(df['flux'], df['calcoeff_corrected'].groupby(df['flux']).mean(), yerr=df['calcoeff_corrected'].groupby(df['flux']).std(), fmt='o', color='r', alpha=0.2, label='flatfield corrected')
+
+    #ax10.set_title(channel)
+    #ax10.set_xlabel('Flux')
+    #ax10.set_ylabel('Calibration coefficient')
 
 
 
@@ -418,9 +438,108 @@ for channel in allstarsdf['channel'].unique():
     ax[1,0].set_ylim(1-2*stdcalcoeff/meancalcoeff, 1+2*stdcalcoeff/meancalcoeff)
     plt.colorbar(scatter, ax=ax[1,0], label='Starnumber')
     plt.tight_layout()
+    # Plot the calibration coefficient corrected for flatfield as a function of date,
+    # labelling the different stars in distinct colors (star 1 red, star 2 blue, etc.)
+    import matplotlib.colors as mcolors
+
+    # Define a list of colors for the first N stars
+    star_colors = [
+        'red', 'blue', 'green', 'orange', 'purple', 'brown', 'pink', 'gray', 'olive', 'cyan',
+        'magenta', 'yellow', 'teal', 'navy', 'maroon', 'lime', 'gold', 'indigo', 'coral', 'turquoise'
+    ]
+    unique_stars = sorted(df['starnumber'].unique())
+    color_map = {star: star_colors[i % len(star_colors)] for i, star in enumerate(unique_stars)}
+
+    # Create a new figure for this plot
+    fig_star, ax_star = plt.subplots(figsize=(8, 6))
+
+    for star in unique_stars:
+        star_df = df[df['starnumber'] == star].copy()
+        xvals = star_df['date']
+        yvals = star_df['calcoeff_corrected'] / df['calcoeff_corrected'].mean()
+        # Linear fit
+        if len(xvals) > 10000000:
+            # Convert dates to ordinal for fitting
+            x_ord = xvals.map(pd.Timestamp.toordinal)
+            slope, intercept, r_value, p_value, std_err = linregress(x_ord, yvals)
+            fit_label = f'Star {star} (slope={slope:.3g}±{std_err:.2g})'
+            # Plot fit line
+            xfit = np.linspace(x_ord.min(), x_ord.max(), 100)
+            yfit = intercept + slope * xfit
+            ax_star.plot(
+                [pd.Timestamp.fromordinal(int(xx)) for xx in xfit],
+                yfit,
+                color=color_map[star],
+                linestyle='--',
+                alpha=0.7
+            )
+        else:
+            fit_label = f'Star {star}'
+        ax_star.scatter(
+            xvals,
+            yvals,
+            color=color_map[star],
+            label=fit_label,
+            alpha=0.6
+        )
+
+    ax_star.set_xlabel('Date')
+    ax_star.set_ylabel('Normalised calibration coefficient (corrected)')
+    ax_star.set_title(f'{channel} - Normalised calcoeff vs date')
+    ax_star.set_ylim(1-2*stdcalcoeff/meancalcoeff, 1+2*stdcalcoeff/meancalcoeff)
+    ax_star.legend(title='Starnumber', bbox_to_anchor=(1.05, 1), loc='upper left')
+    fig_star.autofmt_xdate()
+    plt.tight_layout()
 
 
-
+    # --- Additional figure: Relative calibration coefficient UV1/UV2 vs time ---
+    if channel == 'UV1':
+        # Only do this for UV1, since we want UV1/UV2
+        fig_rel, ax_rel = plt.subplots(figsize=(8, 6))
+        uv2_df = allstarsdf[allstarsdf['channel'] == 'UV2']
+        for star in unique_stars:
+            star_uv1 = df[(df['starnumber'] == star)].copy()
+            star_uv2 = uv2_df[(uv2_df['starnumber'] == star)].copy()
+            # Merge on date (inner join, only keep dates present in both)
+            merged = pd.merge(
+                star_uv1[['date', 'calcoeff_corrected']],
+                star_uv2[['date', 'calcoeff_corrected']],
+                on='date',
+                suffixes=('_uv1', '_uv2')
+            )
+            if len(merged) == 0:
+                continue
+            xvals = merged['date']
+            yvals = merged['calcoeff_corrected_uv1'] / merged['calcoeff_corrected_uv2']
+            # Linear fit
+            if len(xvals) > 10000000:
+                x_ord = xvals.map(pd.Timestamp.toordinal)
+                slope, intercept, r_value, p_value, std_err = linregress(x_ord, yvals)
+                fit_label = f'Star {star} (slope={slope:.3g}±{std_err:.2g})'
+                xfit = np.linspace(x_ord.min(), x_ord.max(), 100)
+                yfit = intercept + slope * xfit
+                ax_rel.plot(
+                    [pd.Timestamp.fromordinal(int(xx)) for xx in xfit],
+                    yfit,
+                    color=color_map[star],
+                    linestyle='--',
+                    alpha=0.7
+                )
+            else:
+                fit_label = f'Star {star}'
+            ax_rel.scatter(
+                xvals,
+                yvals,
+                color=color_map[star],
+                label=fit_label,
+                alpha=0.6
+            )
+        ax_rel.set_xlabel('Date')
+        ax_rel.set_ylabel('Relative calibration coefficient UV1/UV2')
+        ax_rel.set_title('UV1/UV2 relative calibration vs date')
+        ax_rel.legend(title='Starnumber', bbox_to_anchor=(1.05, 1), loc='upper left')
+        fig_rel.autofmt_xdate()
+        plt.tight_layout()
 
 #remove all instances with outliers
 #allstarsdf = allstarsdf[allstarsdf['outlier'] == False]
@@ -503,7 +622,7 @@ for index in starsdf.index:
         #starsdf['relcal_error'].loc[index] = np.sqrt((starsdf.loc[index, 'calcoeffmean_error']/starsdf.loc[index, 'calcoeffmean'])**2 + (error_in_refcoeff/refcoeff)**2)
         starsdf['relcal_error'].loc[index] = np.sqrt((starsdf.loc[index, 'calcoeffstd']/starsdf.loc[index, 'calcoeffmean'])**2 + (error_in_refcoeff/refcoeff)**2)
 
-
+#%%
 #loop through the channels in figdict and axdict and plot the relative calibration coefficients
 for channel in figdict.keys():
     fig = figdict[channel]
@@ -607,7 +726,6 @@ print('*********** FINAL RELATIVE CALIBRATION COEFFICIENT ERRORS ***********')
 print(relcalerrordict)
 
 
-# %%
 #Investigate flatfield correction
 for channel in allstarsdf['channel'].unique():
     df = allstarsdf[allstarsdf['channel'] == channel]
@@ -646,12 +764,3 @@ for channel in starsdf['channel'].unique():
     print('Mean_ivw:', mean_ivw, 'Error of mean_ivw:', err_of_mean_ivw, 'Std in %:', std/mean_ivw*100, 'Error of mean in %:', err_of_mean_ivw/mean_ivw*100)
  
 
-
-#%%
-
-plt.plot(allstarsdf[(allstarsdf['channel'] == 'IR2') & (allstarsdf['starnumber'] == 1)]['count_corrected'], 'ro')
-
-# %%
-allstarsdf[(allstarsdf['channel'] == 'UV1')].starnumber.unique()
-
-# %%

@@ -102,10 +102,21 @@ stop_time = DT.datetime(2023, 5, 5, 20, 15)
 start_time = DT.datetime(2023, 2, 9, 18, 54, 39) 
 stop_time = DT.datetime(2023, 2, 9, 19, 3, 44)
 
+# # #%% Select on explicit time nadir
+start_time = DT.datetime(2023, 4, 6, 0, 6, 0) 
+stop_time = DT.datetime(2023, 4, 6, 0, 7, 0)
+
+
 #start_time = DT.datetime(2023, 2, 12, 1, 10)
 #stop_time = DT.datetime(2023, 2, 12, 1, 15)
-df = read_MATS_data(start_time,stop_time,version='0.9',level='1a',dev=False)
-CCDitems = dataframe_to_ccd_items(df)
+df = read_MATS_data(start_time,stop_time,version='1.0',level='1a',dev=False)
+
+#%%
+#select only nadir
+dfnadir = df[df['channel']=='NADIR'] 
+CCDitems = dataframe_to_ccd_items(dfnadir)
+
+
 #%%
 
 # # #%% Select on explicit time NLC

@@ -75,7 +75,7 @@ clim = sp.get_clim()
 sp=plot_CCDimage(df[df.channel=='UV2'].iloc[n].ImageCalibrated,fig=fig, axis=axs[2,1], title='UV2', clim=clim)
 
 
-fig.suptitle('Observation of dayglow and NLC from 2023-02-02)')
+fig.suptitle('Observation of dayglow and NLC ')
 plt.tight_layout()
 #fig.savefig('../output/observation_dayglow_NLC_20230202.png')
 
@@ -85,7 +85,7 @@ plt.tight_layout()
 #                nstd=2, cmap='inferno', ranges=None,
 #                optimal_range=False, format='png', save=True,
 #                fontsize=10, TPheights=True, image_field='None')
-n=25
+n=42
 fig, axs = plt.subplots(3, 2, figsize=(8, 7))
 ax, subfig, im=plot_image(df[df.channel=='IR1'].iloc[n],ax=axs[0,0],fig=fig,  save=False, image_field='ImageCalibrated', title='IR1')
 clim = im.get_clim()
@@ -109,7 +109,7 @@ fig.colorbar(im, ax=axs[1,1])
 axs[1,1].set_xlabel('Column number')
 axs[1,1].set_ylabel('Row number')
 
-ax, subfig, im=plot_image(df[df.channel=='UV2'].iloc[n],ax=axs[2,1],fig=fig,  save=False, image_field='ImageCalibrated', ranges=[0, 2000], title='UV2') 
+ax, subfig, im=plot_image(df[df.channel=='UV2'].iloc[n],ax=axs[2,1],fig=fig,  save=False, image_field='ImageCalibrated', ranges=[0, 1000], title='UV2') 
 fig.colorbar(im, ax=axs[2,1])
 axs[2,1].set_xlabel('Column number')
 axs[2,1].set_ylabel('Row number')
@@ -123,7 +123,7 @@ axs[2,0].set_ylabel('Row number')
 
 fig.suptitle('Example of dayglow and NLC observation [10¹² photons m⁻² sr⁻¹ s⁻¹ nm⁻¹]')
 plt.tight_layout()
-fig.savefig('../output/observation_dayglow_NLC_20230202.png')
+fig.savefig('../output/observation_dayglow_NLC_20230209.png')
 
 ## %%
 

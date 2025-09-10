@@ -16,8 +16,12 @@ from mats_utils.rawdata.calibration import calibrate_dataframe
 # # #%% Select on explicit time NLC
 #start_time = DT.datetime(2023, 3, 14, 19, 38, 0) 
 #stop_time = DT.datetime(2023, 3, 14, 19, 40, 0)
-start_time = DT.datetime(2023, 2, 9, 18, 59, 39) 
-stop_time = DT.datetime(2023, 2, 9, 19, 3, 44)
+start_time = DT.datetime(2023, 2, 19, 18, 59, 39) 
+stop_time = DT.datetime(2023, 2, 19, 19, 3, 44)
+
+# # #%% Select on explicit time nadir
+start_time = DT.datetime(2023, 4, 6, 0, 0, 0) 
+stop_time = DT.datetime(2023, 4, 6, 0, 30, 0)
 
 
 df_loc_l1a = read_MATS_data(start_time,stop_time,version='1.0',level='1a',dev=False)
@@ -42,6 +46,7 @@ ir3_loc=df_loc[df_loc.channel=='IR3']
 ir4_loc=df_loc[df_loc.channel=='IR4']
 uv1_loc=df_loc[df_loc.channel=='UV1']
 uv2_loc=df_loc[df_loc.channel=='UV2']
+nadir_loc=df_loc[df_loc.channel=='NADIR']
 
 ir1_aws=df_aws[df_aws.channel=='IR1']
 ir2_aws=df_aws[df_aws.channel=='IR2']
@@ -49,6 +54,7 @@ ir3_aws=df_aws[df_aws.channel=='IR3']
 ir4_aws=df_aws[df_aws.channel=='IR4']
 uv1_aws=df_aws[df_aws.channel=='UV1']
 uv2_aws=df_aws[df_aws.channel=='UV2']
+nadir_aws=df_aws[df_aws.channel=='NADIR']
 #create tuples with the dataframes
 ir1=(ir1_loc,ir1_aws)
 ir2=(ir2_loc,ir2_aws)
@@ -56,12 +62,14 @@ ir3=(ir3_loc,ir3_aws)
 ir4=(ir4_loc,ir4_aws)
 uv1=(uv1_loc,uv1_aws)
 uv2=(uv2_loc,uv2_aws)
+nadir=(nadir_loc,nadir_aws)
 
 
 
 #%%
 #Plot and compare the two versions
 channels = [ir1, ir2, ir3, ir4, uv1, uv2]
+channels = [nadir]
 fig, axs = plt.subplots(6, 4, figsize=(18, 10))
 for ind, channel in enumerate(channels):
     dfentry_loc = channel[0].iloc[0] 

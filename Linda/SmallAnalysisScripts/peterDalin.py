@@ -15,19 +15,22 @@ Jag antar att NLC syns ganska bra på bilder den 25 juni vid 10:47:14:261947 (UV
 Och vi ser starka NLC från ballongen mellan kl. 10:00 och 12:00 UT den 25 juni som ligger över Greenland.
 
 """
+#%%
 
-import matplotlib.pyplot as plt
 from mats_utils.rawdata.read_data import read_MATS_data
 import datetime as DT
 
 # times for start and stop
 start_time = DT.datetime(2024, 6, 25, 10, 47, 0)
-stop_time = DT.datetime(2023, 6, 25, 10, 48, 0)
+stop_time = DT.datetime(2024, 6, 25, 10, 48, 0)
 
 # filter
 filter={'channel': ['IR1','UV1'] }
 
-#%%
 # read in measurements
 
-df = read_MATS_data(start_time, stop_time,filter, level='1b',version='1.0')
+df = read_MATS_data(start_time, stop_time,filter, level='1b',version='0.9')
+df.head()
+
+
+# %%

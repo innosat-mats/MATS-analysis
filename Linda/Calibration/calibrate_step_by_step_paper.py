@@ -11,7 +11,8 @@ import matplotlib.pyplot as plt
 from database_generation.experimental_utils import plot_CCDimage
 from mats_utils.rawdata.calibration import calibrate_dataframe
 from mats_l1_processing.L1_calibration_functions import calculate_flatfield
-from all_channels_figure_calibpaper import converttostarcal
+from mats_utils.retrieval.error_flags import count_error_flags
+#from all_channels_figure_calibpaper import converttostarcal
 #%%
 def plot_calib_step(dfentry, step1name,step2name,title,divide=False, clim1=None, clim2=None,clim3=None,fig=None, ax=None, textcolor='white'):
 
@@ -51,7 +52,7 @@ def plot_calib_step(dfentry, step1name,step2name,title,divide=False, clim1=None,
 
 
     return
-
+#%%
 
 
 # # #%% Select on explicit time NLC
@@ -77,18 +78,29 @@ else:
     raise Exception('dayornight not defined')
 
 # # #%% Select on explicit time NLC
-start_time = DT.datetime(2023, 2, 9, 18, 59, 39) 
-stop_time = DT.datetime(2023, 2, 9, 19, 3, 44)
+nlc=False
+if nlc:
+    start_time = DT.datetime(2023, 2, 9, 18, 59, 39) 
+    stop_time = DT.datetime(2023, 2, 9, 19, 3, 44)
 
+# # #%% Test if calibration is the reason we sometimes get stripy images LM250223
+teststripy=False
+if teststripy:
+    start_time = DT.datetime(2023, 4, 18, 9, 17, 0)
+    stop_time = DT.datetime(2023, 4, 19, 9, 18, 0)
 
-df = read_MATS_data(start_time,stop_time,version='0.7',level='1a',dev=False)
+df = read_MATS_data(start_time,stop_time,version='1.0',level='1a',dev=False)
 
 
 #%%
-if dayornight=='nightglow':
+if dayornight=='dayglow':
     b=15
 else:
     b=10
+
+if teststripy:
+    b=0
+    
 n=b+10
 uv1=df[df.channel=='UV1'][b:n].reset_index()
 uv2=df[df.channel=='UV2'][b:n].reset_index()
@@ -97,18 +109,46 @@ ir2=df[df.channel=='IR2'][b:n].reset_index()
 ir3=df[df.channel=='IR3'][b:n].reset_index()
 ir4=df[df.channel=='IR4'][b:n].reset_index()
 
-
-# pickle.dump(CCDitemsuv1, open('testdata/CCD_items_in_orbit_NLCuv1.pkl', 'wb'))
-# pickle.dump(CCDitemsuv2, open('testdata/CCD_items_in_orbit_NLCuv2.pkl', 'wb'))
-
+#%%
+if teststripy:
+    uv1=df[df.channel=='UV1'].reset_index()
+    uv2=df[df.channel=='UV2'].reset_index()
+    ir1=df[df.channel=='IR1'].reset_index()
+    ir2=df[df.channel=='IR2'].reset_index()
+    ir3=df[df.channel=='IR3'].reset_index()
+    ir4=df[df.channel=='IR4'].reset_index()
+#%%
+pickle.dump(uv1, open('../output/CCD_items_in_orbit_NLCuv1.pkl', 'wb'))
+pickle.dump(uv2, open('../output/CCD_items_in_orbit_NLCuv2.pkl', 'wb'))
+pickle.dump(ir1, open('../output/CCD_items_in_orbit_NLCir1.pkl', 'wb'))
+pickle.dump(ir2, open('../output/CCD_items_in_orbit_NLCir2.pkl', 'wb'))
+pickle.dump(ir3, open('../output/CCD_items_in_orbit_NLCir3.pkl', 'wb'))
+pickle.dump(ir4, open('../output/CCD_items_in_orbit_NLCir4.pkl', 'wb'))
 # #%%
 # #with open('testdata/CCD_items_in_orbit_UVIR.pkl', 'rb') as f:
-# with open('testdata/CCD_items_in_orbit_NLCuv1.pkl', 'rb') as f:
-#     CCDitems = pickle.load(f)
+#%%
+#read from pickle
+for channel in ['uv1','uv2','ir1','ir2','ir3','ir4']:
+    with open('../output/CCD_items_in_orbit_NLC'+channel+'.pkl', 'rb') as f:
+        if channel=='uv1':
+            uv1 = pickle.load(f)
+        elif channel=='uv2':
+            uv2 = pickle.load(f)
+        elif channel=='ir1':
+            ir1 = pickle.load(f)
+        elif channel=='ir2':
+            ir2 = pickle.load(f)
+        elif channel=='ir3':
+            ir3 = pickle.load(f)
+        elif channel=='ir4':
+            ir4 = pickle.load(f)
+
+
 #%%
 if not 'instrument' in locals():
     instrument = Instrument('/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/calibration_data_MATSinstrument.toml')
     #instrument= Instrument('/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/calibration_data_linda.toml')
+#%%
 uv1cal=calibrate_dataframe(uv1, instrument, debug_outputs=True)
 uv2cal=calibrate_dataframe(uv2, instrument, debug_outputs=True)
 #%%
@@ -117,15 +157,17 @@ ir1cal=calibrate_dataframe(ir1, instrument, debug_outputs=True)
 ir2cal=calibrate_dataframe(ir2, instrument, debug_outputs=True)
 #%%
 ir3cal=calibrate_dataframe(ir3, instrument, debug_outputs=True)
+#%%
 ir4cal=calibrate_dataframe(ir4, instrument, debug_outputs=True)
 
 #%%
 # plot all the different calibration steps
 #
 #ir2cal=converttostarcal(ir2cal, field='image_flatfielded')
-dfentry=uv2cal.iloc[0]
+dfentry=ir1cal.iloc[2]
+if teststripy: dfentry=ir3cal.iloc[13]
 print('conversion of calibration is not needed since this if this says IR2: ', dfentry.channel)
-
+print(str(dfentry['TMHeaderTime'])+ ' '+dfentry['channel'])
 
 plot_calib_step(dfentry, 'image_lsb','image_se_corrected','SE correction')
 plot_calib_step(dfentry, 'image_se_corrected','image_hot_pixel_corrected','hot-pixel correction')
@@ -136,11 +178,14 @@ plot_calib_step(dfentry, 'image_desmeared','image_dark_sub','dark subtraction')
 plot_calib_step(dfentry, 'image_dark_sub','image_flatfielded','flatfielding',divide=True)
 plot_calib_step(dfentry, 'image_flatfielded','image_flipped','flipping')
 
+#%%
 
+if teststripy:
+    ir3cal.apply(lambda dfentry: plot_calib_step(dfentry, 'image_linear','image_desmeared','desmear'), axis=1)
 
 #%%
 #
-#plot the middle columns for all the different calibration steps
+#plot the mean of the columns for all the different calibration steps
 fig, ax = plt.subplots(1, 1, figsize=(10,18))
 plt.plot(dfentry['image_lsb'].mean(axis=1), range(dfentry['image_lsb'].shape[0]), label='image_lsb')
 plt.plot(dfentry['image_se_corrected'].mean(axis=1), range(dfentry['image_se_corrected'].shape[0]), label='image_se_corrected')
@@ -264,7 +309,7 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
 # Create a figure with a custom layout using GridSpec
-fig = plt.figure(figsize=(10, 10))
+fig = plt.figure(figsize=(13, 13))
 gs = gridspec.GridSpec(nmax*2, 2)
 
 # Display the images in the left column and their differences in the right column
@@ -276,6 +321,8 @@ for i in range(nmax-1):
     cbar = fig.colorbar(sc1, ax=ax1, orientation='vertical')
     ax1.set_title(stepnames[i])
     ax1.set_aspect('auto')
+    ax1.set_xlabel('Column number')
+    ax1.set_ylabel('Row number')
 
     # Display dfentry[substeps[i]] - dfentry[substeps[i+1]] in the right column
     ax2 = fig.add_subplot(gs[2*i+1:2*i+3, 1])
@@ -308,6 +355,8 @@ for i in range(nmax-1):
     ax2.set_title(processnames[i])    
     ax2.set_aspect('auto')
     cbar = fig.colorbar(sc2, ax=ax2, orientation='vertical')
+    ax2.set_xlabel('Column number')
+    ax2.set_ylabel('Row number')
 
 # Display dfentry[substeps[8]] in the last row of the left column
 ax3 = fig.add_subplot(gs[-2:, 0])
@@ -316,6 +365,8 @@ sc3 = ax3.imshow(dfentry[substeps[nmax-1]], origin='lower', interpolation="none"
 ax3.set_title(stepnames[nmax-1])
 ax3.set_aspect('auto')
 cbar = fig.colorbar(sc3, ax=ax3, orientation='vertical')
+ax3.set_xlabel('Column number')
+ax3.set_ylabel('Row number')
 
 # Adjust the space between the subplots
 plt.tight_layout()
@@ -325,7 +376,54 @@ plt.subplots_adjust(top=.93)
 # Display the figure
 plt.show()
 
-#fig.savefig('../output/calibration_steps_' + dayornight + '.png')
+fig.savefig('../output/calibration_steps_' + dayornight + '.png')
 
 
+# %%
+def count_error_flags_old(df, xpix, ypix, bit=9, outputallindices=False, printinfo=False):
+    """
+    Count the number of error flags for a specific bit in the CalibrationErrors field of the DataFrame.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        DataFrame containing the calibration data.
+    xpix : int
+        Pixel x-coordinate.
+    ypix : int
+        Pixel y-coordinate.
+    bit : int
+        Bit number to check for errors.
+    """
+    if bit == 8:
+        info = 'Flag to indicate that the desmear subtraction rendered negative result'
+    elif bit == 9:
+        info = 'Flag to indicate that the desmear subtraction could not estimate realistic atmospheric parameters needed for desmearing, and thus no desmearing has been done'
+    else:
+        raise ValueError("Unsupported bit provided")
+
+    index = bit - 1
+    if printinfo:
+        print('Error flag bit:', bit, 'Info:', info)
+    
+    # Check the specified bit for pixel xpix, ypix across all images
+    mask = df['CalibrationErrors'].apply(lambda x: x[ypix, xpix] & (1 << index) != 0)
+    
+    # Get the indices (rows) where the error occurs
+    error_indices = df.index[mask].tolist()
+    
+    length = len(mask)
+    if outputallindices:
+        return mask.sum(), length, mask.sum() / length * 100, error_indices
+    else:
+        return mask.sum(), length, mask.sum() / length * 100
+
+#%%
+
+
+
+
+
+# %%
+flagpositionmask, total_flags=count_error_flags(ir3cal, xpix=2,ypix=3, bit=9, printinfo=True)
 # %%

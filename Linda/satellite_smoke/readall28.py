@@ -108,6 +108,26 @@ for i in range(100000):
 #This should be the smoke radius size used - check this [ in m] 
 r =1.e-2* np.array([2.000E-08, 2.520E-08, 3.175E-08, 4.000E-08, 5.040E-08, 6.350E-08, 8.000E-08, 1.008E-07, 1.270E-07, 1.600E-07, 2.016E-07, 2.540E-07, 3.200E-07, 4.032E-07, 5.080E-07, 6.400E-07, 8.063E-07, 1.016E-06, 1.280E-06, 1.613E-06, 2.032E-06, 2.560E-06, 3.225E-06, 4.064E-06, 5.120E-06, 6.451E-06, 8.127E-06, 1.024E-05])
 
+def calculate_volume_density(r,outnd):
+    """
+    r(nsize): radius
+    outnd(nlat, nlon,nsize,nday): the number density of particles of a certain radius
+
+    Returns:
+    volume_density(nlat, nlon,nday): the total volume density of particles of all sizes 
+    
+    """
+   
+    for ri in r:
+        voli=4/3*np.pi*ri**3
+        volume_density=voli*
+    
+
+
+
+
+
+
 #Plot the smallest smoke partice radius
 plt.figure()
 plt.pcolormesh(lat, z, outnd[:, :, 1, 1].T)
@@ -115,7 +135,7 @@ plt.colorbar()
 plt.xlabel('Latitude')
 plt.ylabel('Altitude [km]')
 
-
+ 
 figure, axes = plt.subplots(2, 2, figsize=(10, 5))
 irad = 1 #smallest smoke particle radius
 iday=30
