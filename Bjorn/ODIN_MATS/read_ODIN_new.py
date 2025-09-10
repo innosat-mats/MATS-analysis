@@ -134,10 +134,12 @@ for i in range(len(sza)):
 #OSheights = np.arange(61.25,111.25,0.25) # SHIFT
 OSheights = np.arange(60,110,0.25)
 
+
 # messy OSIRIS stuff
 # Initialize OSIRIS output arrays
 n_mjd = len(data['sm']['mjd'])
 OSinter = np.zeros((n_mjd, len(OSheights)))
+OSinter2 = np.zeros((n_mjd, len(OSheights)))
 OSinter3 = np.zeros((n_mjd, len(OSheights)))
 OSinter4 = np.zeros((n_mjd, len(OSheights)))
 
@@ -153,15 +155,16 @@ for i in range(n_mjd):
         zt = zt[::-1]
 
     # SELECT CHANNEL FROM ODIN
-    Li = data['sm'][f'L{1 if chan_str == "IR1" else 2}'][i]
-    Li = flatten_and_reverse(Li, flip)
+    Li1 = flatten_and_reverse(data['sm']['L1'][i], flip)
+    Li2 = flatten_and_reverse(data['sm']['L1'][i], flip)
 
     # BACKGROUND CHANNELS
     Li3 = flatten_and_reverse(data['sm']['L3'][i], flip)
     Li4 = flatten_and_reverse(data['sm']['L4'][i], flip)
 
     # Interpolate to OSheights
-    OSinter[i, :] = np.interp(OSheights, zt, Li)
+    OSinter[i, :] = np.interp(OSheights, zt, Li1)
+    OSinter2[i, :] = np.interp(OSheights, zt, Li2)
     OSinter3[i, :] = np.interp(OSheights, zt, Li3)
     OSinter4[i, :] = np.interp(OSheights, zt, Li4)
 
@@ -172,13 +175,15 @@ for i in range(n_mjd):
 
 # SUBTRACT BACKGROUND
 #OSheights = OSheights - 1.25 # SHIFT
+common_heights = OSheights*1000
 
 ds = xr.Dataset(
     data_vars=dict(
         lat=(["time"], lat),
         lon=(["time"], lon),
         sza=(["time"], sza),
-        Li=(["time", "altitude"], OSinter),
+        L1=(["time", "altitude"], OSinter),
+        L2=(["time", "altitude"], OSinter2),
         L3=(["time", "altitude"], OSinter3),
         L4=(["time", "altitude"], OSinter4),
 
@@ -193,7 +198,7 @@ ds = xr.Dataset(
 #%%
 # Apply conditions for NIGHTGLOW and DAYGLOW
 if NIGHTGLOW:
-    ds = ds.where(ds.sza > 98)
+    ds = ds.where(ds.sza > 100)
 if DAYGLOW:
     ds = ds.where(ds.sza < 90)
 
@@ -236,13 +241,14 @@ endcut=-25
 
 #CCDs = CCDs[(CCDs['TPlocaltime'].dt.time > midday)]
 for dayi in range(1,30): # for every day 
-    MATS_times, ODIN_times = [], []
     
+    MATS_times, ODIN_times = [], []
     day0 = starttime + DT.timedelta(dayi)
     day1 = day0 + DT.timedelta(1) 
     ds_day=ds.sel(time=slice(day0,day1))
     dftop=dftop_all.loc[str(day0)[0:-9]:str(day1)[0:-9]]
 
+    # if there are any measurements this day
     if (len(dftop.index) > 0) and (len(ds_day.time) > 0):
 
         # convert to common (epoch) time
@@ -314,6 +320,8 @@ for dayi in range(1,30): # for every day
                         dis=calc_distance(coord_ODIN, coord_MATS) # calculate distance
                         if dis < mindis: # if below limit
                             distance_bool[i,j] = 1
+
+
 
             MATS_meas = MATSi.where(np.sum(distance_bool,axis=0) > 0) # within any 
             ODIN_meas = ds_day.time.where(np.sum(distance_bool,axis=1) > 0) # within any
@@ -415,7 +423,6 @@ for dayi in range(1,30): # for every day
 
             #  GENERATE MEANS FROM THE ISOLATED DATA
             # OSIRIS NEEDS TO BE PUT ON A COMMON GRID
-
             dstest=ds.sel(time=ODIN_times) # xarray
 
             # compute means encounter by encounter (MATS)

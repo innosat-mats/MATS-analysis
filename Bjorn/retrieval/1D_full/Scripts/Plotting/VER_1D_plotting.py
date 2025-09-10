@@ -3,43 +3,136 @@ import numpy as np
 import pandas as pd
 from datetime import datetime, timezone
 import datetime as DT
-
 import xarray as xr
 from numpy.linalg import inv
 from fast_histogram import histogramdd
 from bisect import bisect_left
 import matplotlib.pyplot as plt
-
 import proplot as pplt
 
-
 #%%
-result_1d = xr.open_dataset("/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/1D_full/w1_march.nc")
-result_1d = xr.open_dataset('/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/1D_full/IR1_MarW1_l1bv0.5_VER.nc')
+#result_1d = xr.open_dataset("/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/1D_full/w1_march.nc")
+#result_1d = xr.open_dataset('/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/1D_full/Data/Early/IR1_MarW1_l1bv0.5_VER.nc')
+#result_1d = xr.open_dataset('/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/1D_full/Scripts/IR1_MarW2_l1bv0.5_VER.nc')
+result_1d = xr.open_dataset('/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/1D_full/Data/fromLukas/IR2_2023-03d.nc')
 #%%
 ir1band=result_1d
-ir1band=ir1band.where((ir1band.latitude < 70) & (ir1band.latitude > -70),drop=True)
+ir1band=ir1band.where(ir1band.TPsza < 90,drop=True)
+ir1band=ir1band.where((ir1band.TPlat < 50) & (ir1band.TPlon > -50),drop=True)
+#%%
+list_remove=[]
+# if TPlat is decreasing, remove from ir1band
+for i in range(0,len(ir1band.TPlat)-1):
+    if ir1band.TPlat[i] > ir1band.TPlat[i+1]:
+        # save to list of indices to remove
+        list_remove.append(ir1band.TPlat[i])
+
+#%%
+# where TPlat is not in list_remove
+ir1band=ir1band.where(~ir1band.TPlat.isin(list_remove),drop=True)
+#remove from ir1band
+#ir1band=ir1band.where(~ir1band.TPlat.isin(list_remove),drop=True)
+ir1band["VER"]=ir1band.VER/1e4
+#ir1band=ir1band.where((ir1band.latitude < 70) & (ir1band.latitude > -70),drop=True)
 #ir1band=ir1band.where((ir1band.longitude < 220) & (ir1band.longitude > 200),drop=True)
 #ir1band=ir1band.where((ir1band.latitude < -15) & (ir1band.latitude > -50))
+
+#%% # bin ir1band ver in 1x1 bins based on TPlat and TPlon using groupby xarray
+
+#%%
+
+result_1d = xr.open_dataset('/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/1D_full/Data/fromLukas/IR2_2023-03f.nc')
+
+ir1band=result_1d
+ir1band=ir1band.where(ir1band.TPsza < 90,drop=True)
+ir1band=ir1band.where((ir1band.TPlat < 50) & (ir1band.TPlon > -50),drop=True)
+
+list_remove=[]
+# if TPlat is decreasing, remove from ir1band
+for i in range(0,len(ir1band.TPlat)-1):
+    if ir1band.TPlat[i] > ir1band.TPlat[i+1]:
+        # save to list of indices to remove
+        list_remove.append(ir1band.TPlat[i])
+
+ir1band=ir1band.where(~ir1band.TPlat.isin(list_remove),drop=True)
+ir1band["VER"]=ir1band.VER/1e4
+#%%
+
+plot_cross = ir1band.isel(img_time=slice(15150,15300))
+plot_cross = plot_cross.where((72000 < plot_cross.alt) & (plot_cross.alt < 101000),drop=True)
+
+fig, axs = pplt.subplots(ncols=1, nrows=4,figwidth='12cm', 
+                         abcloc='ul', titleloc='ur',figheight='7.5cm')
+fig.format(fontsize=6)
+
+plot_cross = ir1band.isel(img_time=slice(15150,15310))
+plot_cross = plot_cross.where((72000 < plot_cross.alt) & (plot_cross.alt < 101000),drop=True)
+axs[0].pcolormesh(plot_cross.TPlat[:,0], plot_cross.alt/1e3, plot_cross.VER.T, cmap='Sunset',vmin=5,vmax=20,extend='both')
+axs[0].format(title=str(plot_cross.img_time[0].values)[0:19])
+print(plot_cross.TPlon[75,0])
+
+plot_cross = ir1band.isel(img_time=slice(16170,16350))
+plot_cross = plot_cross.where((72000 < plot_cross.alt) & (plot_cross.alt < 101000),drop=True)
+axs[1].pcolormesh(plot_cross.TPlat[:,0], plot_cross.alt/1e3, plot_cross.VER.T, cmap='Sunset',vmin=5,vmax=20,extend='both')
+axs[1].format(title=str(plot_cross.img_time[0].values)[0:19])
+print(plot_cross.TPlon[75,0])
+
+plot_cross = ir1band.isel(img_time=slice(22260,22500))
+plot_cross = plot_cross.where((72000 < plot_cross.alt) & (plot_cross.alt < 101000),drop=True)
+axs[2].pcolormesh(plot_cross.TPlat[:,0], plot_cross.alt/1e3, plot_cross.VER.T, cmap='Sunset',vmin=5,vmax=20,extend='both')
+axs[2].format(title=str(plot_cross.img_time[0].values)[0:19])
+print(plot_cross.TPlon[75,0])
+
+plot_cross = ir1band.isel(img_time=slice(26010,26250))
+plot_cross = plot_cross.where((72000 < plot_cross.alt) & (plot_cross.alt < 101000),drop=True)
+m=axs[3].pcolormesh(plot_cross.TPlat[:,0], plot_cross.alt/1e3, plot_cross.VER.T, cmap='Sunset',vmin=5,vmax=20,extend='both')
+axs[3].format(title=str(plot_cross.img_time[0].values)[0:19])
+print(plot_cross.TPlon[75,0])
+
+# format horizontal axis as degrees 
+# set yticks to 80 90 100
+axs.format(xlim=(-30,30), yticks=([80,90,100]),ylim=(72,101))
+axs.format(xformatter='deglat',abc='a.',abcborder=True, xlabel='Latitude',
+           ylabel='Altitude [km]',suptitle='Examples of dayglow VER (~17:30 LST)', fontsize=6)
+
+# colorbar with label with fontsize 6
+cbar=fig.colorbar(m,loc='r',length=0.6, width=0.1)
+cbar.set_label(label="VER [$10^{4}$ ph/cm$^3$/s]",size=6,weight='bold')
+#label=r"$10^{4}$ ph/cm$^3$/s"
+
+# change tick sizes
+cbar.ax.tick_params(labelsize=6)
+
+fig.savefig('VER_dayglow_examples_IR2_verf_v1.png',format='png')
+
 #%% 
+
 
 fig = pplt.figure(figwidth='12cm')
 axs = fig.subplots(ncols=1, nrows=1, proj='cyl')
-fig.format(suptitle='Peak emission (Full band) IR1 (~17:30 LT)',abc='a.',abcborder=False)
+fig.format(suptitle='Peak emission (Full band) IR1 (~17:30 LT)',abc='a.',abcborder=False,fontsize=6)
 axs.format(coast=True,landzorder=4,latlines=30, lonlines=60)
 
 # plot max emission of profile
-plotd=ir1band.ver.max(dim='z_r')
+#plotd=ir1band.ver.max(dim='z_r')
+plotd=ir1band.VER.max(dim='alt')
+
 #plotd=ir1band.ver[:,10:-10].idxmax('z_r')
 vmean=np.mean(plotd)
 vstd=np.std(plotd)
-vmax,vmin=1.4e5,8e4
+vmax,vmin=20e4,10e4
 
-m=axs.scatter(ir1band.longitude,ir1band.latitude,c=plotd ,s=0.2,cmap='Thermal',vmin=vmin,vmax=vmax)
+# isolate lat and lon in axs[0]
+axs[0].format(latlim=(-50, 50))
+
+m=axs.scatter(ir1band.TPlon,ir1band.TPlat,c=plotd ,s=0.2,cmap='sunset',vmin=vmin,vmax=vmax,extend='both')
 #axs.format(latlim=(-10, 50))
-fig.colorbar(m, label="1e4 ph/cm3/s",loc='r',length=0.8)
+fig.colorbar(m, label="1e4 ph/cm3/s",loc='r',length=0.6)
 
 #%% 
+
+plot_cross = ir1band
+plot_cross = plot_cross.where((72000 < plot_cross.alt) & (plot_cross.alt < 101000),drop=True)
 
 fig = pplt.figure(figwidth='12cm')
 axs = fig.subplots(ncols=1, nrows=1, proj='cyl')
@@ -47,12 +140,12 @@ fig.format(suptitle='Peak height IR1 (~17:30 LT)',abc='a.',abcborder=False)
 axs.format(coast=True,landzorder=4,latlines=30, lonlines=60)
 
 # plot peak height
-plotd=ir1band.ver[:,:].idxmax('z_r')
+plotd=ir1band.VER[:,:].idxmax('alt')
 vmean=np.mean(plotd)
 vstd=np.std(plotd)
-vmax,vmin=88,77
+vmax,vmin=88000,81000
 
-m=axs.scatter(ir1band.longitude,ir1band.latitude,c=plotd ,s=0.2,cmap='Thermal',vmin=vmin,vmax=vmax)
+m=axs.scatter(ir1band.TPlon,ir1band.TPlat,c=plotd ,s=0.2,cmap='Thermal',vmin=vmin,vmax=vmax)
 fig.colorbar(m, label="km",loc='r',length=0.8)
 
 #%% 
@@ -82,7 +175,7 @@ axs = fig.subplots(ncols=2, nrows=1, proj='cyl')
 fig.format(suptitle='IR1 (full band) - Mar 1st-7th')
 axs.format(coast=True,landzorder=4,latlines=30, lonlines=60)
 
-alts=[85,95]
+alts=[85,90]
 
 # plot a specific height
 for i in range(0,len(alts)):
@@ -102,36 +195,510 @@ fig.save('MarW1_85_95.png',format='png')
 
 # plot peak height
 #plotd=ir1band.sel(z_r=84).ver/1e6/5*4*np.pi
-plotd=ir1band.ver[:,:].idxmax('z_r')
+plotd=ir1band.VER[:,:].idxmax('alt')
 vmean=np.mean(plotd)
 vstd=np.std(plotd)
 vmax,vmin=87,70
 plt.figure(figsize=(8,3))
-plt.scatter(ir1band.longitude,ir1band.latitude, c=plotd, s=0.15,vmin=vmin,vmax=vmax)
+plt.scatter(ir1band.TPlon,ir1band.TPlat, c=plotd, s=0.15,vmin=vmin,vmax=vmax)
 plt.colorbar()
 #%%
+# plot using proplot
 
-plt.figure(figsize=(4,4))
-(ir1band.ver[30:-30:1,:]).plot.line(y='z_r',add_legend=False,xlim=([0,2e5]))
-#if xa is not None:
-#    plt.plot(xa/1e6,retrival_heights, linestyle='--', color='black')
-plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
-#plt.title(f'({channel}) A-band (full band)')
-plt.grid()
-plt.tight_layout()
-#plt.savefig(f'{channel}VERprofiles_sub.png',format='png')
+# proplot subplot array
 
-plt.figure(figsize=(12,4))
-(ir1band.ver[30:-30:1,:]).plot.pcolormesh(y='z_r',vmin=0,vmax=2e5,ylim=([60,110]))
-plt.title('A-band intensity (full band) photons cm-3 s-1')
-plt.tight_layout()
-#plt.savefig(f'{channel}.png',format='png')
 
-plt.figure(figsize=(12,4))
-#ch.profile[:,:].plot.pcolormesh(y='z',vmin=0,ylim=([60e3,110e3]))
-plt.tight_layout()
-#plt.savefig(f'{channel}LOS_sub.png',format='png')
+array = [  # the "picture" (0 == nothing, 1 == subplot A, 2 == subplot B, etc.)
+    [1, 1, 1, 1],
+    [1, 1, 1, 1],
+    [1, 1, 1, 1],
+    [2, 2, 2, 2],
+    [2, 2, 2, 2],
+]
 
+
+fig, axs = pplt.subplots(array,figwidth='12cm',abc='a.',sharex=0,sharey=0, proj=('cyl', None))
+ir1band_plot=ir1band.where((ir1band.latitude > -30) & (ir1band.latitude < 30)).dropna(dim='time')
+
+# apply div to ver 1e4
+ir1band_plot["ver"]=ir1band_plot.ver/1e4
+
+vmin=8.5
+vmax=15
+
+#calculate mean signal and std as functions of altitude
+mean_signal=ir1band_plot.ver.mean(dim='time')
+std_signal=ir1band_plot.ver.std(dim='time')
+
+# plot profiles of mean signal with std
+
+# panel to plot mean signal next to axs[1]
+
+
+# pcolormesh of ir1band ver
+# change facecolor of axs[2] to gray
+axs[1].format(facecolor='white')
+axs[1].contourf(ir1band_plot.time[30:-30], ir1band_plot.z_r,ir1band_plot.ver[30:-30:1,:].T,y='z_r',vmin=vmin,vmax=vmax, levels=100,cmap='viridis',extend='both')
+axs[1].format(ylim=[70,97],xlabel='',ylabel='Altitude [km]',title=r"VER between $30^{\circ}$N and $30^{\circ}$S")
+
+# scatter plot peak height
+for i in range(0,len(ir1band_plot.time),100):
+
+    # find altitude of max value
+    try:
+        max_alt=ir1band_plot.ver[i,:].argmax(dim='z_r')
+        axs[1].scatter(ir1band_plot.time.values[i],ir1band_plot.z_r[max_alt], color='red',s=2)
+    except:
+        pass
+
+# convert ver to 2d lat lon data in order to contour plot at 85 km
+# mesh grid
+
+# lat lim 
+axs[0].format(coast=True,landzorder=4,latlines=30, lonlines=60,latlabels=True, lonlabels=True)
+axs[0].format(latlim=(-60, 60))
+
+m=axs[0].scatter(ir1band_plot.longitude,ir1band_plot.latitude,c=ir1band_plot.ver.sel(z_r=85),s=0.4,cmap='viridis',extend='both',
+               vmin=vmin,vmax=vmax)
+
+axs[0].format(title='VER at 85 km')
+
+# rotate xlabels
+axs.format(xrotation=45, ylabel='Altitude [km]')
+fig.colorbar(m, label="1e4 ph/cm3/s",loc='r',length=0.8)
+
+fig.savefig('VER_1D_febw1.png',format='png')
+
+#%% mean and std figure
+
+#result_1d = xr.open_dataset("/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/1D_full/w1_march.nc")
+#result_1d = xr.open_dataset('/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/1D_full/Data/Early/IR1_MarW1_l1bv0.5_VER.nc')
+fig, axs = pplt.subplots(ncols=1, nrows=1,figwidth='8cm')
+
+#files =[#'/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/1D_full/Data/Early/IR1_MarW1_l1bv0.5_VER.nc',
+#        "/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/1D_full/Scripts/IR1_MarW2_l1bv0.5_VER.nc",
+#        "/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/1D_full/Scripts/IR1_FebW2_l1bv0.5_VER.nc",
+#        "/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/1D_full/Scripts/IR1_AprW1_l1bv0.5_VER.nc"]
+
+files = ['/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/1D_full/Data/fromLukas/IR2_2023-02f.nc',
+         '/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/1D_full/Data/fromLukas/IR2_2023-03f.nc',
+         '/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/1D_full/Data/fromLukas/IR2_2023-04f.nc']
+
+colors=['red','blue','green']
+labels=['Feb','March','April']
+i=0
+for file in files:
+
+    ir1band = xr.open_dataset(file)
+
+    ir1band=ir1band.where(ir1band.TPsza < 90,drop=True)
+
+    ir1band=ir1band.where((ir1band.TPlat > -10) & (ir1band.TPlat < 10)).dropna(dim='img_time')
+
+    list_remove=[]
+    # if TPlat is decreasing, remove from ir1band
+    for j in range(0,len(ir1band.TPlat)-1):
+        if ir1band.TPlat[j] > ir1band.TPlat[j+1]:
+            # save to list of indices to remove
+            list_remove.append(ir1band.TPlat[j])
+
+    ir1band_plot=ir1band.where(~ir1band.TPlat.isin(list_remove),drop=True)
+
+    # apply div to ver 1e4
+    ir1band_plot["VER"]=ir1band_plot.VER/1e4
+
+    #calculate mean signal and std as functions of altitude
+    mean_signal=ir1band_plot.VER.mean(dim='img_time')
+    std_signal=ir1band_plot.VER.std(dim='img_time')
+
+    axs[0].plot(mean_signal,mean_signal.alt/1e3, color=colors[i],label=labels[i])
+    
+    #axs[0].fill_betweenx(mean_signal.alt.values/1e3,mean_signal-std_signal,mean_signal+std_signal,alpha=0.1, color=colors[i], label='')
+
+    std_signal=ir1band_plot.VER.std(dim='img_time')/np.sqrt(30)
+
+    axs[0].fill_betweenx(mean_signal.alt.values/1e3,mean_signal-std_signal,mean_signal+std_signal,alpha=0.2, color=colors[i], label='')
+
+    i=i+1
+
+axs[0].format(title=r"VER between $10^{\circ}$N and $10^{\circ}$S",xlabel='$10^{4}$ ph/cm$^3$/s',ylabel='Altitude [km]',
+              ylim=[75,95], xlim=[3,19])
+axs[0].legend(ncol=1)
+
+
+fig.savefig('mean_std_VER_feb1w2march1_new1010.png',format='png')
+
+#%% 3x1 plot of EQUATORIAL emissions
+
+array = [  # the "picture" (0 == nothing, 1 == subplot A, 2 == subplot B, etc.)
+    [1, 1, 2, 2],
+    [0, 3, 3, 0],
+]
+
+binning=True
+
+fig, axs = pplt.subplots(array,figwidth='12cm',abc='a.',sharex=1,sharey=1, proj='cyl')
+fig.format(fontsize=6)
+# share longitude
+
+
+#files =["/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/1D_full/Scripts/IR1_FebW2_l1bv0.5_VER.nc",
+#        "/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/1D_full/Scripts/IR1_MarW2_l1bv0.5_VER.nc",
+#        "/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/1D_full/Scripts/IR1_AprW1_l1bv0.5_VER.nc"]
+
+files = ['/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/1D_full/Data/fromLukas/IR2_2023-02f.nc',
+         '/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/1D_full/Data/fromLukas/IR2_2023-03f.nc',
+         '/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/1D_full/Data/fromLukas/IR2_2023-04f.nc']
+
+#files = ['/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/1D_full/Data/fromLukas/IR1_2023-03d.nc']
+
+i=0
+for file in files:
+
+    ir1band = xr.open_dataset(file)
+
+    ir1band=ir1band.where(ir1band.TPsza < 90,drop=True)
+
+    ir1band=ir1band.where((ir1band.TPlat > -70) & (ir1band.TPlat < 70)).dropna(dim='img_time')
+
+    list_remove=[]
+    # if TPlat is decreasing, remove from ir1band
+    for j in range(0,len(ir1band.TPlat)-1):
+        if ir1band.TPlat[j] > ir1band.TPlat[j+1]:
+            # save to list of indices to remove
+            list_remove.append(ir1band.TPlat[j])
+
+    ir1band_plot=ir1band.where(~ir1band.TPlat.isin(list_remove),drop=True)
+
+    #remove from ir1band
+
+    # apply div to ver 1e4
+    ir1band_plot["VER"]=ir1band_plot.VER/1e4
+
+    ir1band_plot = ir1band_plot.where((ir1band_plot.alt < 100000) & (ir1band_plot.alt > 72000),drop=True)
+
+    vmin=9
+    vmax=20
+
+    axs[i].format(coast=True,landzorder=4,latlines=30, lonlines=60,latlabels=True, lonlabels=False)
+    axs[i].format(latlim=(-80, 80))
+
+    #axs.format(fontsize=5, ticklabelsize=5)
+    axs[i].format(lonlines=[-120, -60, 0, 60, 120], latlines=[-60, -30, 0, 30, 60])
+
+    axs[i].format(gridlabelsize=5, ticklabelsize=5)
+
+    
+    #plotd=ir1band_plot.VER.max(dim='alt').values
+    plotd=ir1band_plot.sel(alt=85000).VER.values
+
+    # bin in latitude and longitude bins
+    if binning:
+        # bin in 1 degree bins
+
+
+        latbins=np.arange(-60,60,1)
+        lonbins=np.arange(0,360,1)
+
+
+        nsamples, xx, yy = np.histogram2d(ir1band_plot.TPlon[:,0], ir1band_plot.TPlat[:,0], bins=(lonbins, latbins))
+        nl_sum, xx, yy = np.histogram2d(ir1band_plot.TPlon[:,0], ir1band_plot.TPlat[:,0], bins=(lonbins, latbins), weights=plotd)
+        nl_avg = nl_sum / nsamples
+
+        # proplot map
+        m=axs[i].pcolormesh(lonbins, latbins, nl_avg.T, cmap='Sunset',vmin=vmin,vmax=vmax,extend='both')
+        
+    else:  
+
+    #m=axs[i].scatter(ir1band_plot.longitude,ir1band_plot.latitude,c=ir1band_plot.ver.sel(z_r=85),s=0.6,cmap='sunset',extend='both',
+    #            vmin=vmin,vmax=vmax)
+
+        m=axs[i].scatter(ir1band_plot.TPlon.values[:,0],ir1band_plot.TPlat.values[:,0],c=plotd,s=0.6,cmap='sunset',extend='both',
+                    vmin=vmin,vmax=vmax)
+
+
+    #axs[i].format(title='VER at 85 km')
+
+    i=i+1
+
+axs[0].format(title='February')
+axs[1].format(title='March')
+axs[2].format(title='April')
+
+axs[0].format(lonlabels='b')
+axs[1].format(lonlabels='b')
+axs[2].format(lonlabels='b')
+
+
+# manually draw longitude lines at 0, 60, -60, 120, -120 and latitude lines at 0, 60, -60 (in black, alpha 0.5)
+axs.axhline(0, color='black', alpha=0.25, linewidth=0.5)
+axs.axvline(0, color='black', alpha=0.25, linewidth=0.5)
+axs.axhline(60, color='black', alpha=0.25, linewidth=0.5)
+axs.axhline(-60, color='black', alpha=0.25, linewidth=0.5)
+axs.axhline(30, color='black', alpha=0.25, linewidth=0.5)
+axs.axhline(-30, color='black', alpha=0.25, linewidth=0.5)
+axs.axvline(60, color='black', alpha=0.25, linewidth=0.5)
+axs.axvline(-60, color='black', alpha=0.25, linewidth=0.5)
+axs.axvline(120, color='black', alpha=0.25, linewidth=0.5)
+axs.axvline(-120, color='black', alpha=0.25, linewidth=0.5)
+
+# colorbar with label with fontsize 6
+cbar=fig.colorbar(m,loc='r',length=0.6, width=0.1)
+cbar.set_label(label="VER [$10^{4}$ ph/cm$^3$/s]",size=6,weight='bold')
+#label=r"$10^{4}$ ph/cm$^3$/s"
+
+# change tick sizes
+cbar.ax.tick_params(labelsize=6)
+
+# fontsizes
+#fig.colorbar(m, label="VER [$10^{4}$ ph/cm3/s]",loc='b',length=0.6, width=0.1)
+
+fig.savefig('VER_1D_eqmaps_IR2_verf_v1.png',format='png')
+
+#%% 3x1 plot of EQUATORIAL emissions
+
+array = [  # the "picture" (0 == nothing, 1 == subplot A, 2 == subplot B, etc.)
+    [1, 1],
+    [2, 2], 
+    [3, 3],
+]
+
+binning=True
+
+fig, axs = pplt.subplots(array,figwidth='12cm',abc='a.', sharex=1,sharey=1,figheight='9cm', titleloc='ul',abcloc='ll')
+fig.format(fontsize=6)
+# share longitude
+
+
+#files =["/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/1D_full/Scripts/IR1_FebW2_l1bv0.5_VER.nc",
+#        "/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/1D_full/Scripts/IR1_MarW2_l1bv0.5_VER.nc",
+#        "/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/1D_full/Scripts/IR1_AprW1_l1bv0.5_VER.nc"]
+
+files = ['/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/1D_full/Data/fromLukas/IR2_2023-02f.nc',
+         '/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/1D_full/Data/fromLukas/IR2_2023-03f.nc',
+         '/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/1D_full/Data/fromLukas/IR2_2023-04f.nc']
+
+#files = ['/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/1D_full/Data/fromLukas/IR1_2023-03d.nc']
+
+
+i=0
+for file in files:
+
+    ir1band = xr.open_dataset(file)
+
+    ir1band=ir1band.where(ir1band.TPsza < 95,drop=True)
+
+    ir1band=ir1band.where((ir1band.TPlat > -10) & (ir1band.TPlat < 10)).dropna(dim='img_time')
+
+    list_remove=[]
+    # if TPlat is decreasing, remove from ir1band
+    for j in range(0,len(ir1band.TPlat)-1):
+        if ir1band.TPlat[j] > ir1band.TPlat[j+1]:
+            # save to list of indices to remove
+            list_remove.append(ir1band.TPlat[j])
+
+    ir1band_plot=ir1band.where(~ir1band.TPlat.isin(list_remove),drop=True)
+
+    #remove from ir1band
+
+    # apply div to ver 1e4
+    ir1band_plot["VER"]=ir1band_plot.VER/1e4
+
+    ir1band_plot = ir1band_plot.where((ir1band_plot.alt < 92000) & (ir1band_plot.alt > 78000),drop=True)
+
+    vmin=8
+    vmax=19
+    
+
+
+    # bin in latitude and longitude bins
+        # bin in 1 degree bins
+
+
+    lonbins=np.linspace(0,360,80)
+    latitude_means = np.zeros([len(ir1band_plot.alt), len(lonbins)])
+    l = 0
+    for alt in ir1band_plot.alt:
+        plotd=ir1band_plot.sel(alt=alt).VER.values
+        nsamples, xx, yy = np.histogram2d(ir1band_plot.TPlon[:,0], ir1band_plot.TPlat[:,0], bins=[80, 1], range=[[0, 360], [-10, 10]])
+        nl_sum, xx, yy = np.histogram2d(ir1band_plot.TPlon[:,0], ir1band_plot.TPlat[:,0],bins=[80, 1], range=[[0, 360], [-10, 10]], weights=plotd)
+        latitude_means[l,:] = (nl_sum/nsamples).T
+        l = l + 1
+
+    # proplot map
+    #m=axs[i].pcolormesh(lonbins, nl_avg.T, cmap='sunset',vmin=vmin,vmax=vmax,extend='both')
+
+    # read in wind data 
+    winds = xr.open_dataset(f'/home/waves/projects/MATS/global_patterns/notebooks/paper_analysis/tides_eq/alt85_febmarapr_2LST_{i+2}_eqmean.nc')
+
+    # sort data to new longitude format
+    lon_shifted = np.where(lonbins[0:-1] > 180, lonbins[0:-1] - 360, lonbins[0:-1])
+    sort_idx = np.argsort(lon_shifted)
+    lon_sorted = lon_shifted[sort_idx]
+    data_sorted = latitude_means[:, sort_idx]
+
+
+    m = axs[i].contourf(lon_sorted, ir1band_plot.alt/1e3, data_sorted, cmap='sunset',vmin=vmin,vmax=vmax,extend='both')
+
+    # horizontal line at 85 km
+    #axs[i].hlines(85,-180,180,linestyle='dashed',color='black',linewidth=0.6)
+    # text at line
+    #axs[i].text(150,82.5,'85 km',color='black',fontsize=5, weight='bold')
+    # ticks at 80, 85 and 90 km
+    axs[i].format(yticks=[80, 85, 90], yticklabels=['80', '85', '90'], ylim=[79, 91])
+
+    # plot winds._w vs winds.lon (with winds._w as axis on right side)
+    ax2 = axs[i].twinx()
+    ax2.plot(winds.lon, winds._w.values, linewidth=0.6, color='green')
+    
+    ax2.tick_params(axis='y', labelcolor='green', labelsize=6)
+    
+    # set ticks at 0, -0.06, -0.12
+    ax2.set_yticks([0, -0.06, -0.12])
+    ax2.set_yticklabels(['0', '-0.06', '-0.12'])
+
+    ax2.set_ylim(-0.14, 0.01)  # Adjust y-limits as needed
+
+    if i == 1:
+        ax2.set_ylabel('Vertical wind [m/s]', color='green', fontsize=6)
+
+    i=i+1
+
+axs[0].format(title='February')
+axs[1].format(title='March')
+axs[2].format(title='April')
+
+
+
+# format x axis to be longitude
+axs.format(xformatter='deglon',xlabel='Longitude',ylabel='Altitude [km]')
+axs[2].set_ylabel('')
+axs[0].set_ylabel('')
+
+
+# colorbar with label with fontsize 6
+cbar=fig.colorbar(m,loc='b',length=0.6, width=0.1)
+cbar.set_label(label=r"VER [$10^{4}$ ph/cm$^3$/s]",size=6,weight='bold')
+#label=r"$10^{4}$ ph/cm$^3$/s"
+
+# change tick sizes
+cbar.ax.tick_params(labelsize=6)
+
+# title
+fig.format(suptitle=r"Mean equatorial VER emissions ($10^{\circ}$N to $10^{\circ}$S)",titleloc='l')
+# fontsizes
+#fig.colorbar(m, label="VER [$10^{4}$ ph/cm3/s]",loc='b',length=0.6, width=0.1)
+
+fig.savefig('VER_1D_longitude_IR2_verf_v1.png',format='png')
+
+#%%#%% 3x1 plot of 30N emissions
+
+array = [  # the "picture" (0 == nothing, 1 == subplot A, 2 == subplot B, etc.)
+    [1, 1],
+    [2, 2], 
+    [3, 3],
+]
+
+binning=True
+
+fig, axs = pplt.subplots(array,figwidth='12cm',abc='a.',sharex=1,sharey=1,figheight='9cm', titleloc='ul',abcloc='ul')
+fig.format(fontsize=6)
+# share longitude
+
+
+#files =["/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/1D_full/Scripts/IR1_FebW2_l1bv0.5_VER.nc",
+#        "/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/1D_full/Scripts/IR1_MarW2_l1bv0.5_VER.nc",
+#        "/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/1D_full/Scripts/IR1_AprW1_l1bv0.5_VER.nc"]
+
+files = ['/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/1D_full/Data/fromLukas/IR2_2023-02d.nc',
+         '/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/1D_full/Data/fromLukas/IR2_2023-03d.nc',
+         '/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/1D_full/Data/fromLukas/IR2_2023-04d.nc']
+
+#files = ['/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/1D_full/Data/fromLukas/IR1_2023-03d.nc']
+
+i=0
+for file in files:
+
+    ir1band = xr.open_dataset(file)
+
+    ir1band=ir1band.where(ir1band.TPsza < 95,drop=True)
+
+    ir1band=ir1band.where((ir1band.TPlat > 40) & (ir1band.TPlat < 50)).dropna(dim='img_time')
+
+    list_remove=[]
+    # if TPlat is decreasing, remove from ir1band
+    for j in range(0,len(ir1band.TPlat)-1):
+        if ir1band.TPlat[j] > ir1band.TPlat[j+1]:
+            # save to list of indices to remove
+            list_remove.append(ir1band.TPlat[j])
+
+    ir1band_plot=ir1band.where(~ir1band.TPlat.isin(list_remove),drop=True)
+
+    #remove from ir1band
+
+    # apply div to ver 1e4
+    ir1band_plot["VER"]=ir1band_plot.VER/1e4
+
+    ir1band_plot = ir1band_plot.where((ir1band_plot.alt < 92000) & (ir1band_plot.alt > 78000),drop=True)
+
+    vmin=8
+    vmax=15
+    
+
+
+    # bin in latitude and longitude bins
+        # bin in 1 degree bins
+
+
+    lonbins=np.linspace(0,360,80)
+    latitude_means = np.zeros([len(ir1band_plot.alt), len(lonbins)])
+    l = 0
+    for alt in ir1band_plot.alt:
+        plotd=ir1band_plot.sel(alt=alt).VER.values
+        nsamples, xx, yy = np.histogram2d(ir1band_plot.TPlon[:,0], ir1band_plot.TPlat[:,0], bins=[80, 1], range=[[0, 360], [40, 50]])
+        nl_sum, xx, yy = np.histogram2d(ir1band_plot.TPlon[:,0], ir1band_plot.TPlat[:,0],bins=[80, 1], range=[[0, 360], [40, 50]], weights=plotd)
+        latitude_means[l,:] = (nl_sum/nsamples).T
+        l = l + 1
+
+    # proplot map
+    #m=axs[i].pcolormesh(lonbins, nl_avg.T, cmap='sunset',vmin=vmin,vmax=vmax,extend='both')
+    m = axs[i].contourf(lonbins, ir1band_plot.alt/1e3, latitude_means[:,:], cmap='sunset',vmin=vmin,vmax=vmax,extend='both')
+
+    # horizontal line at 85 km
+    axs[i].hlines(85,0,360,linestyle='dashed',color='red',linewidth=0.6)
+    # text at line
+    axs[i].text(180,85.5,'85 km',color='red',fontsize=5)
+
+    #axs[i].format(title='VER at 85 km')
+
+    i=i+1
+
+axs[0].format(title='February')
+axs[1].format(title='March')
+axs[2].format(title='April')
+
+#axs[2].format(lonlabels='b')
+
+# format x axis to be longitude
+axs.format(xformatter='deg',xlabel='Longitude',ylabel='Altitude [km]')
+
+# format longitude axis to be 180E to 180W
+
+
+# colorbar with label with fontsize 6
+cbar=fig.colorbar(m,loc='b',length=0.6, width=0.1)
+cbar.set_label(label=r"VER $10^{4}$ ph/cm$^3$/s",size=6,weight='bold')
+#label=r"$10^{4}$ ph/cm$^3$/s"
+
+# change tick sizes
+cbar.ax.tick_params(labelsize=6)
+
+# title
+fig.format(suptitle=r"Mean equatorial VER emissions ($40^{\circ}$N to $50^{\circ}$N)",titleloc='l')
+# fontsizes
+#fig.colorbar(m, label="VER [$10^{4}$ ph/cm3/s]",loc='b',length=0.6, width=0.1)
+
+fig.savefig('VER_1D_40N50Nlongitude.png',format='png')
 #%%
 
 channels=['IR1','IR2']
@@ -411,8 +978,10 @@ heightind=6
 # common scale
 common=False
 
-y_bins=np.arange(0,380,20)
-days=np.arange(12,28)
+y_bins=np.arange(0,380,15)
+
+# old
+y_bins=np.arange(0,360,15)
 
 remove_zm=False
 x_bins = np.arange(-70,70,0.5)
@@ -420,46 +989,65 @@ pplt.rc.axesfacecolor = 'gray4'
 pplt.rc['grid.color'] ='white'
 pplt.rc['grid.alpha'] = 0.5 
 
-fig = pplt.figure(figwidth='8.3cm',figheight='10cm',suptitle='Dayglow (full band) VER (February)')
-ax = fig.subplots(ncols=2, nrows=1,xlabel='Longitude [deg]',abc='a.')
-height=80
+fig = pplt.figure(figwidth='8.3cm',figheight='10cm',suptitle='VER at 85 km (February)',sharey=0)
+ax = fig.subplots(ncols=1, nrows=1,xlabel='Longitude')
+height=85000
 
-for k in range(1,2):
+files=['/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/1D_full/Data/fromLukas/IR2_2023-02f.nc',
+       '/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/1D_full/Data/fromLukas/IR2_2023-03f.nc']
+
+for k in range(0,1):
     loadbool = 1
     meanz=[]
     timez=[]
 
 
-    CCDmeans=xr.open_dataset(f'/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/1D_full/{monthstrings[0]}.nc')
-    CCDmeans=CCDmeans.sel(z_r=height)
+    CCDmeans=xr.open_dataset(files[k])
+    
+    CCDmeans=CCDmeans.sel(alt=height)
+    CCDmeans=CCDmeans.where(CCDmeans.TPlat > 60,drop=True)
+
+    list_remove=[]
+    # if TPlat is decreasing, remove from CCDmeans
+    for j in range(0,len(CCDmeans.TPlat)-1):
+        if CCDmeans.TPlat[j] > CCDmeans.TPlat[j+1]:
+            # save to list of indices to remove
+            list_remove.append(CCDmeans.TPlat[j])
+
+    CCDmeans=CCDmeans.where(~CCDmeans.TPlat.isin(list_remove),drop=True)
+
+
+
+    # convert img_time to datetime
+    CCDmeans['img_time'] = pd.to_datetime(CCDmeans['img_time'].values)
 
     #if remove_zm:
     #    CCDmeans=CCDmeans.groupby_bins("latitude", x_bins) - CCDmeans.groupby_bins("latitude", x_bins).mean(dim='time').rolling(latitude_bins=2).mean()
 
+    if k == 0:
+        days=np.arange(1,28)
+    if k == 1:
+        days=np.arange(1,32)
+
     for i in range(0,len(days)):
 
-        if (days[i] > 14) and (loadbool == 1):
-            CCDmeans=xr.open_dataset(f'/home/waves/projects/MATS/MATS-analysis/Bjorn/retrieval/1D_full/{monthstrings[1]}.nc')
-            CCDmeans=CCDmeans.sel(z_r=height)
-            loadbool = 0
+        #if days[i] != 13:
+        y=CCDmeans.where(CCDmeans['img_time.day'] == days[i], drop=True)
+        
+        if (len(y.TPlon) > 0):
 
-        if days[i] != 13:
-            y=CCDmeans.where(CCDmeans['time.day'] == days[i], drop=True)
+            timez.append(f"{int(y['img_time.day'][0])}/{int(y['img_time.month'][0])}")
 
-            if (len(y.longitude) > 0):
+            if k == 0 or k == 1:
+                means=y.where((y.TPlat<lat12) & (y.TPlat>lat11)).groupby_bins("TPlon", y_bins).mean(dim='img_time')
+                y=y.where((y.TPlat<lat12) & (y.TPlat>lat11))
 
-                timez.append(f"{int(y['time.day'][0])}/{int(y['time.month'][0])}")
+            #if k == 1:
 
-                if k == 0:
-                    means=y.where((y.latitude<lat12) & (y.latitude>lat11)).groupby_bins("longitude", y_bins).mean(dim='time')
-                    y=y.where((y.latitude<lat12) & (y.latitude>lat11))
+            #    means=y.where((y.TPlat>lat21) & (y.TPlat<lat22)).groupby_bins("TPlon", y_bins).mean(dim='img_time')
+            #    y=y.where((y.TPlat>lat21) & (y.TPlat<lat22))
 
-                if k == 1:
-
-                    means=y.where((y.latitude>lat21) & (y.latitude<lat22)).groupby_bins("longitude", y_bins).mean(dim='time')
-                    y=y.where((y.latitude>lat21) & (y.latitude<lat22))
-
-                meanz.append(means.ver.values)
+            meanz.append(means.VER.values)
 
             #x = y.longitude
             #y = y.ver
@@ -480,27 +1068,46 @@ for k in range(1,2):
             std_cl=np.nanstd(np.array(meanz))
     else:
     """
-    meanz=np.array(meanz)*4*np.pi/1e6/5
-    if k == 1:
-        
+    meanz=np.array(meanz)/1e4
+    if k == 0:
 
         mean_cl=np.nanmean(np.array(meanz))
         std_cl=np.nanstd(np.array(meanz))
 
 
-    m=ax[k].contourf(y_bins[1:]-10,np.arange(0,len(meanz)),np.array(meanz),vmin=mean_cl-1.5*std_cl,vmax=mean_cl+1.5*std_cl,cmap='BR',levels=15,extend='both')
+    # instead of plotting 0 to 360 plot -180 to 180
+    y_bins_shifted = np.where(y_bins[:-1] > 180, y_bins[:-1] - 360, y_bins[:-1])
+    sort_idx = np.argsort(y_bins_shifted)
+    y_bins_sorted = y_bins_shifted[sort_idx]
+    data_sorted = np.array(meanz)[:, sort_idx]
+
+    # plot the data
+    m=ax.contourf(y_bins_sorted, np.arange(0, len(meanz)), data_sorted, vmin=mean_cl-1.5*std_cl, vmax=mean_cl+1.5*std_cl, cmap='sunset', levels=15, extend='both')
+
+    # old
+    #m=ax[k].contourf(y_bins[1:]-10,np.arange(0,len(meanz)),np.array(meanz),vmin=mean_cl-1.5*std_cl,vmax=mean_cl+1.5*std_cl,cmap='sunset',levels=15,extend='both')
 
 
     ax[k].format(yticks=pplt.arange(0, len(meanz),3),yticklabels=timez[0:-1:3],grid=True)
 
-ax[0].set_ylabel('Day of measurement [dd/mm]')
+ax[0].set_ylabel('Day of measurement')
 
-ax[0].set_title(f'{lat11}N-{lat12}N')    
-ax[1].set_title(f'{-lat22}S-{-lat21}S')
-fig.colorbar(m,loc='b',title='VER [ph/s/cm3]')
+ax[0].set_title(r'60$^\circ$N - 70$^\circ$N')    
+#ax[1].set_title(f'{-lat22}S-{-lat21}S')
+cbar=fig.colorbar(m,loc='r', length=0.6, width=0.1)
 
+cbar.set_label(label='VER [10$^{4}$ ph/cm$^{3}/s$]',size=8,weight='bold')
+# ticks on colorbar to 5, 7.5, 10, 12.5, 15
+cbar.set_ticks([4.8, 6.4, 8, 9.6, 11.2, 12.8, 14.4])
+cbar.set_ticklabels(['4.8', '6.4', '8', '9.6', '11.2', '12.8', '14.4'])
 
-fig.save('hovemoller.png', format='png')
+# set x-axis ticks at 0 -90 and 90
+ax.set_xticks([-90, 0, 90])
+
+# degrees on x-axis
+ax.format(xformatter='deglon',xlabel='Longitude')
+
+fig.save('hovemoller_IR2_verf_v1.png', format='png')
 
 #%%
 import xarray as xr
