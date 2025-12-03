@@ -105,7 +105,7 @@ def extrapolate_intensities(angles, intensities, new_angle_min, new_angle_max, p
 # CONFIGURATION
 # -----------------------------
 input_csv = "/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/zemax/source_intensity_vs_angle_L3.csv" # Input CSV file
-output_dat = "/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/zemax_sourcefile_atmosphere_to_-1deg.dat"            # Output DAT file
+output_dat = "/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/data/zemax_sourcefile_atmosphere_to_-1deg.dat"            # Output DAT file
 ypos_range = range(-40, 41,2)          # Y positions from -40 to 40
 xpos_value = 0                       # X position always zero
 
