@@ -17,7 +17,8 @@ def unit_vector_from_angles(yangle_deg, xangle_deg):
     Returns
     -------
     (vx, vy, vz) : tuple of floats
-        Components of the unit vector.
+        Components of the unit vector.      
+        
     """
     # Convert to radians
     yangle = np.radians(yangle_deg)
@@ -31,7 +32,7 @@ def unit_vector_from_angles(yangle_deg, xangle_deg):
     return vx, vy, vz
 
 
-def generate_dat_file(output_dat, new_angles, new_intensities, ypos_range, xpos_range, xangle_range):
+def generate_dat_file(output_dat, new_angles, new_intensities, ypos_range, xpos_range, xangle_range, Earthcurvature=False):
     """
     Generate .dat file with atmospheric intensity data.
     
@@ -58,12 +59,13 @@ def generate_dat_file(output_dat, new_angles, new_intensities, ypos_range, xpos_
         f.write("0 80\n")
         f.write("    ! xpos ypos zpos xcomp ycomp zcomp intensity\n")
         
-        for ypos in ypos_range:
-            for xpos in xpos_range:
-                for zangle_deg, intensity in zip(new_angles, new_intensities):
+        for xpos in xpos_range:
+            for ypos in ypos_range:
+                for yangle_deg, intensity in zip(new_angles, new_intensities):
+                    intensity_Tera=intensity*1e-12
                     for xangle_deg in xangle_range:
-                        [xv, yv, zv] = unit_vector_from_angles(zangle_deg, 0)
-                        f.write(f"{xpos} {ypos} {zpos} {xv:.6f} {yv:.6f} {zv:.6f} {intensity:.6e}\n")
+                        [xv, yv, zv] = unit_vector_from_angles(yangle_deg, xangle_deg)
+                        f.write(f"{xpos} {ypos} {zpos} {xv:.6f} {yv:.6f} {zv:.6f} {intensity_Tera:.6e}\n")
                         line_count += 1
         
         f.seek(0)
@@ -75,8 +77,8 @@ def generate_dat_file(output_dat, new_angles, new_intensities, ypos_range, xpos_
     return line_count
 
 
-def extrapolate_intensities(angles, intensities, new_angle_min, new_angle_max, plot=False):
-    diff_angles = -np.diff(angles).mean()
+def extrapolate_intensities(angles, intensities, new_angle_min, new_angle_max, plot=False,red_resol_fact=1.):
+    diff_angles = -np.diff(angles).mean()*red_resol_fact # Determine and Adjust resolution if needed
     # Define new angle grid from min(filtered) to +2 degrees
     new_angles =np.arange(new_angle_min,new_angle_max,diff_angles)
 
@@ -90,7 +92,7 @@ def extrapolate_intensities(angles, intensities, new_angle_min, new_angle_max, p
     if plot:
         plt.figure(figsize=(8,6))
         plt.plot(intensities, angles, 'bo', label="Original Data")
-        plt.plot(new_intensities, new_angles, 'r-', label="Extrapolated (angles > -1.2° to +2°)")
+        plt.plot(new_intensities, new_angles, 'r-', label="Extrapolated")
         plt.xlabel("Intensity")
         plt.ylabel("Angle (degrees)")
         plt.title("Intensity vs Angle of Incidence")
@@ -98,14 +100,14 @@ def extrapolate_intensities(angles, intensities, new_angle_min, new_angle_max, p
         plt.legend()
         plt.grid(True)
         plt.show()
-    return new_angles, new_intensities    
+    return -new_angles, new_intensities # Return negative angles for Zemax convention (up is negative angle)   
 #%%
 
 # -----------------------------
 # CONFIGURATION
 # -----------------------------
-input_csv = "/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/zemax/source_intensity_vs_angle_L3.csv" # Input CSV file
-output_dat = "/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/data/zemax_sourcefile_atmosphere_to_-1deg.dat"            # Output DAT file
+input_csv = "/Users/lindamegner/MATS/MATS-retrieval/data/source_intensity_vs_angle_L3.csv"
+output_dat = "/Users/lindamegner/MATS/MATS-retrieval/data/zemax_sourcefile_atmosphere_to_-1deg.dat"            # Output DAT file
 ypos_range = range(-40, 41,2)          # Y positions from -40 to 40
 xpos_value = 0                       # X position always zero
 
@@ -182,7 +184,6 @@ print(f"✅ Plot displayed and .dat file '{output_dat}' generated successfully."
 print(f"📊 The output file contains {line_count} data lines (excluding header).")
 # %%
 
-#%%
 #This generates a 3D unit vector from two angles
 
 import numpy as np
@@ -192,7 +193,7 @@ from scipy.interpolate import interp1d
 # -----------------------------
 # CONFIGURATION
 # -----------------------------
-input_csv = "/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/zemax/source_intensity_vs_angle_L3.csv" # Input CSV file
+input_csv = "/Users/lindamegner/MATS/MATS-retrieval/data/source_intensity_vs_angle_L3.csv" # Input CSV file
 
 
 
@@ -220,21 +221,48 @@ intensities = np.array(intensities)
 # STEP 3: GENERATE .DAT FILES
 # -----------------------------
 
-
+#%%
 # Call the function
 ypos_range = range(-40, 50,20)        
 xpos_range = range(-6*40, 6*50,6*20)
 zpos = 0
 xangle_range = np.arange(-3, 3, 0.36)  # X angles from -3 to 3 degrees
-new_angles, new_intensities = extrapolate_intensities(angles, intensities, -2., -1., plot=True)
+new_angles, new_intensities = extrapolate_intensities(angles, intensities, -2, -1, plot=True)
 output_dat = "/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/atmosphere2Droom2Dang_to_-1deg.dat"          
 line_count_tominus1 = generate_dat_file(output_dat, new_angles, new_intensities, ypos_range, xpos_range, xangle_range)
-new_angles, new_intensities = extrapolate_intensities(angles, intensities, -2., 1., plot=True)
+#plot new angles and intensities
+plt.figure(figsize=(8,6))
+plt.plot(intensities, angles, 'bo', label="Original Data")
+plt.plot(new_intensities, new_angles, 'r-', label="Extrapolated to -1deg")
+plt.xlabel("Intensity")
+plt.ylabel("Angle (degrees)")
+plt.title("Intensity vs Angle of Incidence")
+plt.legend()
+plt.grid(True)
+plt.show()
+
+new_angles, new_intensities = extrapolate_intensities(angles, intensities, -2, 1, plot=True)
 output_dat = "/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/atmosphere2Droom2Dang_to_1deg.dat"  
 line_count_toplus1 = generate_dat_file(output_dat, new_angles, new_intensities, ypos_range, xpos_range, xangle_range)
 ratio=line_count_toplus1/line_count_tominus1
 print(f"Lines to +1deg: {line_count_toplus1}, Lines to -1deg: {line_count_tominus1}, Ratio: {ratio:.2f}")
 
+#%%
+#Generate files with 2d grid of positions and angles but reduced resolution in angles
+ypos_range = range(-40, 50,20)        
+xpos_range = range(-6*40, 6*50,6*20)
+zpos = 0
+xangle_range = np.arange(-3, 3, 0.15)  # X angles from -3 to 3 degrees
+ycutoffangle = -0.6
+reduced_resoltion_factor=3.
+new_angles, new_intensities = extrapolate_intensities(angles, intensities, -2, ycutoffangle, plot=True,red_resol_fact=reduced_resoltion_factor)
+output_dat = "/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/atmosphere2Droom2Dang_to_-0p6deg_reducedresol.dat"
+line_count_tominus1 = generate_dat_file(output_dat, new_angles, new_intensities, ypos_range, xpos_range, xangle_range)
+new_angles, new_intensities = extrapolate_intensities(angles, intensities, -2, 1, plot=True,red_resol_fact=reduced_resoltion_factor)
+output_dat = "/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/atmosphere2Droom2Dang_to_1deg_reducedresol.dat"  
+line_count_toplus1 = generate_dat_file(output_dat, new_angles, new_intensities, ypos_range, xpos_range, xangle_range)
+ratio=line_count_toplus1/line_count_tominus1
+print(f"Lines to +1deg: {line_count_toplus1}, Lines to -1deg: {line_count_tominus1}, Ratio: {ratio:.2f}")   
 
 #%%
 #Generate files with only one ypos
@@ -252,11 +280,46 @@ ratio=line_count_toplus1/line_count_tominus1
 print(f"Lines to +1deg: {line_count_toplus1}, Lines to -1deg: {line_count_tominus1}, Ratio: {ratio:.2f}")
 
 #%%
+#Generate files with only one xpos but several ypos, no xangle variation
+ypos_range = range(-40, 50,1)       
+xpos_range = [0]
+zpos = 0
+xangle_range = [0]
+ycutoffangle = -0.6
+new_angles, new_intensities = extrapolate_intensities(angles, intensities, -2., ycutoffangle, plot=True)
+output_dat = "/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/atmosphere1Droom1Dang_to_-0p6deg.dat"
+line_count_tominus1 = generate_dat_file(output_dat, new_angles, new_intensities, ypos_range, xpos_range, xangle_range)
+new_angles, new_intensities = extrapolate_intensities(angles, intensities, -2., 1., plot=True)
+output_dat = "/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/atmosphere1Droom1Dang_to_1deg.dat"  
+line_count_toplus1 = generate_dat_file(output_dat, new_angles, new_intensities, ypos_range, xpos_range, xangle_range)
+ratio=line_count_toplus1/line_count_tominus1
+print(f"Lines to +1deg: {line_count_toplus1}, Lines to {ycutoffangle} deg: {line_count_tominus1}, Ratio: {ratio:.2f}")
+
+#%%
+#Generate files with only one xpos but several ypos, a few steps in xangle variation
+ypos_range = range(-40, 50,1)       
+xpos_range = [0]
+zpos = 0
+xangle_range = np.arange(-2, 3, 2)  # X angles from -2 to 2 degrees in steps of 1
+ycutoffangle = -0.6
+new_angles, new_intensities = extrapolate_intensities(angles, intensities, -2., ycutoffangle, plot=True)
+output_dat = "/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/atmosphere1Droom2Dangy3_to_-0p6deg.dat"
+line_count_tominus1 = generate_dat_file(output_dat, new_angles, new_intensities, ypos_range, xpos_range, xangle_range)
+new_angles, new_intensities = extrapolate_intensities(angles, intensities, -2., 1., plot=True)
+output_dat = "/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/atmosphere1Droom2Dangy3_to_1deg.dat"  
+line_count_toplus1 = generate_dat_file(output_dat, new_angles, new_intensities, ypos_range, xpos_range, xangle_range)
+ratio=line_count_toplus1/line_count_tominus1
+print(f"Lines to +1deg: {line_count_toplus1}, Lines to {ycutoffangle} deg: {line_count_tominus1}, Ratio: {ratio:.2f}")
+
+
+
+
+#%%
 #Generate files with only one ypos and one xpos
 ypos_range = [0]        
 xpos_range = [0]
 zpos = 0
-xangle_range = np.arange(-3, 3, 0.015)  # X angles from -3 to 3 degrees
+xangle_range = np.arange(-3, 3, 0.1)  # X angles from -3 to 3 degrees
 new_angles, new_intensities = extrapolate_intensities(angles, intensities, -2., -1., plot=True)
 output_dat = "/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/atmosphere0Droom2Dang_to_-1deg.dat"
 line_count_tominus1 = generate_dat_file(output_dat, new_angles, new_intensities, ypos_range, xpos_range, xangle_range)
@@ -266,7 +329,7 @@ line_count_toplus1 = generate_dat_file(output_dat, new_angles, new_intensities, 
 ratio=line_count_toplus1/line_count_tominus1
 print(f"Lines to +1deg: {line_count_toplus1}, Lines to -1deg: {line_count_tominus1}, Ratio: {ratio:.2f}")
 
-
+#%%
 
 
 
@@ -282,6 +345,7 @@ with open(output_dat, 'w') as f:
     for yangle in np.arange(-2, 2, 0.01):
         xangle=yangle  
         [xv, yv, zv] = unit_vector_from_angles(yangle, xangle)
+        
         f.write(f"{xpos} {ypos} {zpos} {xv:.6f} {yv:.6f} {zv:.6f} {intensity:.6e}\n")
         line_count += 1
     f.write(f"{line_count} 4\n")
@@ -356,4 +420,66 @@ with open(output_dat, 'w') as f:
     f.write(f"{line_count} 4\n")
     print(f"📊 The output file contains {line_count} data lines (excluding header)")
     
+# %%
+# ray fan with  1 degree steps in x direction 
+# for several xpos and ypos positions
+output_dat = "/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/raytest5.dat" 
+with open(output_dat, 'w') as f:
+    f.write("! xpos ypos zpos xcomp ycomp zcomp intensity\n")
+    zpos = 0
+    intensity = 1.
+    line_count = 0
+    for xpos in range(-40*6, 40*6+1, 20):
+        for ypos in range(-20, 21, 20):
+            for xangle in np.arange(-4, 4, 1):
+                yangle=0
+                [xv, yv, zv] = unit_vector_from_angles(yangle, xangle)
+                f.write(f"{xpos} {ypos} {zpos} {xv:.6f} {yv:.6f} {zv:.6f} {intensity:.6e}\n")
+                line_count += 1
+            
+    f.write(f"{line_count} 4\n")
+    print(f"📊 The output file contains {line_count} data lines (excluding header)")
+
+
+# %%
+# ray fan with  1 degree steps in x direction 
+# for ONE xpos and ypos positions
+output_dat = "/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/raytest7.dat" 
+with open(output_dat, 'w') as f:
+    f.write("! xpos ypos zpos xcomp ycomp zcomp intensity\n")
+    zpos = 0
+    ypos=0
+
+    intensity = 1.
+    line_count = 0
+    for xpos in range(-20*6, 20*6+1, 20):
+            for xangle in np.arange(-3, 1, 1):
+                yangle=0
+                [xv, yv, zv] = unit_vector_from_angles(yangle, xangle)
+                f.write(f"{xpos} {ypos} {zpos} {xv:.6f} {yv:.6f} {zv:.6f} {intensity:.6e}\n")
+                line_count += 1
+            
+    f.write(f"{line_count} 4\n")
+    print(f"📊 The output file contains {line_count} data lines (excluding header)")
+
+# ray fan with  1 degree steps in x direction 
+# for ONE xpos and ypos positions
+output_dat = "/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/raytest8.dat" 
+with open(output_dat, 'w') as f:
+    f.write("! xpos ypos zpos xcomp ycomp zcomp intensity\n")
+    zpos = 0
+    xpos=0  
+    ypos=0
+    intensity = 1.
+    line_count = 0
+    for hej in range(-20*6, 20*6+1, 20):
+            for xangle in np.arange(-3, 1, 1):
+                yangle=0
+                [xv, yv, zv] = unit_vector_from_angles(yangle, xangle)
+                f.write(f"{xpos} {ypos} {zpos} {xv:.6f} {yv:.6f} {zv:.6f} {intensity:.6e}\n")
+                line_count += 1
+            
+    f.write(f"{line_count} 4\n")
+    print(f"📊 The output file contains {line_count} data lines (excluding header)")
+
 # %%

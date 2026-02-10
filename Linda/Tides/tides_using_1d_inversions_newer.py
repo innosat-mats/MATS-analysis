@@ -348,9 +348,117 @@ ds3d = xr.open_dataset(file_path)
 print(ds3d)
 
 
-
 # Usage
 ds3d = add_node_labels(ds3d)
+
+#Select only ascending node data
+ds3d=ds3d.where(ds3d['node']=='ascending', drop=True)
+
+
+
+#%%
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# --- Inputs from your dataset ---
+# ds3d: xarray.Dataset
+# - ds3d['VER']: DataArray (img_time, alt_coord)
+# - ds3d['latitude']: DataArray (img_time, alt_coord)
+# - ds3d['alt_coord']: Coordinate (alt_coord)
+
+# 1) Define 1° latitude bins covering the dataset range
+lat_min = float(np.floor(ds3d['latitude'].min().item()))
+lat_max = float(np.ceil(ds3d['latitude'].max().item()))
+lat_bins = np.arange(lat_min, lat_max + 1, 1)  # edges
+lat_bin_centers = 0.5 * (lat_bins[:-1] + lat_bins[1:])  # for plotting
+
+# 2) Prepare output array: (alt_coord, latitude_bin)
+n_alt = ds3d['alt_coord'].size
+n_bins = lat_bin_centers.size
+VER_mean = np.full((n_alt, n_bins), np.nan)
+
+# 3) For each altitude level, bin VER by latitude across img_time
+#    Use groupby_bins on 1D arrays along img_time to avoid stacked dims issues.
+for i, alt in enumerate(ds3d['alt_coord'].values):
+    lat_i = ds3d['latitude'].sel(alt_coord=alt)  # (img_time,)
+    ver_i = ds3d['VER'].sel(alt_coord=alt)       # (img_time,)
+
+    # Mask invalid values so groupby_bins doesn't choke on NaNs
+    valid = np.isfinite(lat_i) & np.isfinite(ver_i)
+    lat_i_valid = lat_i.where(valid, drop=True)
+    ver_i_valid = ver_i.where(valid, drop=True)
+
+    # Group VER by latitude bins for this altitude
+    gb = ver_i_valid.groupby_bins(lat_i_valid, bins=lat_bins)
+
+    # Compute mean per bin and align to the full bin index (to keep consistent ordering)
+    # Create a full IntervalIndex to reindex results
+    full_bins = pd.IntervalIndex.from_breaks(lat_bins, closed='right')
+    ver_mean_da = gb.mean()
+    ver_mean_da = ver_mean_da.reindex(latitude_bins=full_bins)
+
+    # Store in output (convert to plain numpy)
+    VER_mean[i, :] = ver_mean_da.values
+
+# 4) Coordinates for plotting
+y_alt = ds3d['alt_coord'].values  # altitude levels
+x_lat = lat_bin_centers           # latitude bin centers
+
+# 5) Plot
+plt.figure(figsize=(10, 6))
+mesh = plt.pcolormesh(x_lat, y_alt, VER_mean, shading='auto', cmap='viridis')
+cbar = plt.colorbar(mesh)
+cbar.set_label('Mean VER')
+
+plt.xlabel('Latitude (deg)')
+plt.ylabel('Altitude')
+plt.title('Mean VER binned by latitude (1°) and altitude')
+plt.tight_layout()
+plt.show()
+
+#%%
+
+
+
+#%%
+# take the mean of VER and plot as function of latitude and altitude
+# first bin latitude in 1 degree bins
+# Create latitude bins
+lat_bins = np.arange(-90, 91, 1)
+lat_labels = (lat_bins[:-1] + lat_bins[1:]) / 2
+#%%
+# Bin according to latitude 
+ds3d = ds3d.assign_coords(lat_bin=xr.DataArray(pd.cut(ds3d['latitude'], bins=lat_bins, labels=lat_labels)))
+
+
+#%%
+
+# Step 1: Define latitude bins
+lat_bins = np.arange(ds3d.latitude.min(), ds3d.latitude.max() + 1, 1)
+
+# Step 2: Group VER by latitude bins
+# VER has dimensions (img_time, alt_coord)
+VER_binned = ds3d['VER'].groupby_bins(ds3d['latitude'], lat_bins).mean(dim='img_time')
+
+# Step 3: Convert to 2D array (latitude_bin vs altitude)
+# latitude_bins are categorical, so convert to numeric midpoints
+lat_bin_centers = [interval.mid for interval in VER_binned.latitude_bins.values]
+
+# Create 2D array: (alt_coord, lat_bin)
+VER_matrix = VER_binned.transpose('alt_coord', 'latitude_bins')
+
+# Step 4: Plot
+plt.figure(figsize=(10,6))
+plt.pcolormesh(lat_bin_centers, ds3d['alt_coord'], VER_matrix, shading='auto', cmap='viridis')
+plt.colorbar(label='Mean VER')
+plt.xlabel('Latitude (deg)')
+plt.ylabel('Altitude')
+plt.title('Mean VER binned by latitude and altitude')
+plt.show()
+
+
+
 
 #%%
 
@@ -470,162 +578,223 @@ time_max = ds3d['img_time'].max().values
 
 dsair = dsairIR1.sortby('img_time').sel(img_time=slice(time_min, time_max))
 
-usebjornsdata=False
 
-if usebjornsdata:
-    ds=dsair.sel(alt_coord=slice(altitude[0]*1000, altitude[-1]*1000)).mean(dim='alt_coord')
-else:
-    ds=ds3d.sel(alt_coord=slice(altitude[0]*1000, altitude[-1]*1000)).mean(dim='alt_coord')
 
-CMTMds=CMTMds3d.sel(lev=slice(altitude[0], altitude[-1])).mean(dim='lev')
-CMTMds['w'] = -CMTMds['w']  #invert winds to be able to directly compare with signal strenght
+
+
 #dstry=ds3d.sel(alt_coord=slice(altitude[0], altitude[-1]))
 
 
 #%%
 
-for s in range(-4,3,1):
-    # Example parameters
-    #s = 1# zonal wavenumber
-    n = 2  # harmonic of solar day
+# loop through different range of altitudes
+altituderanges=[[80, 83], [83, 86], [86,89], [89, 92]]
 
 
-    # Compute phase
-    ds['phase'] = compute_phase(s, n, ds['GMT'], ds['longitude'])
-    CMTMds['phase']=compute_phase(s, n, CMTMds['GMT'],  CMTMds['lon'])
+altituderanges=[[80, 90]]
 
 
+usebjornsdata=False
+#create dataframes for storing results
+results_mats = pd.DataFrame()
+results_cmtm = pd.DataFrame()
 
-    # # Select MATS data
-    # ds_sel = ds.sel(time=slice("2023-02-11", "2023-02-13"))
-    # ds_selected=ds_sel.where((ds_sel['TPlat'] >= 59) & (ds_sel['TPlat'] <= 60), drop=True)
-    # ds_selected['signal'] = ds_selected['ImageCalibrated'].isel(im_row=140, im_col=22)
-
-
-    # Set plot dimension mode
-    plotdim = 2
-
-    # Define phase bins
-    bins = np.linspace(0, 360, 73)  # 72 bins of 5 degrees
-    labels = (bins[:-1] + bins[1:]) / 2
-
-    # Define latitude bins for MATS
-    minlat=-90
-    maxlat=90
-    lat_bins = np.linspace(minlat, maxlat, int((maxlat-minlat)/5))
-    lat_labels = (lat_bins[:-1] + lat_bins[1:]) / 2
-
-
-    # --- Select data ---
-    if plotdim == 1:
-        mylat=60
-        CMTMds_sel = CMTMds.sel(lat=mylat)
-        ds_selected = ds.where((ds['latitude'] >= mylat-1) & (ds['latitude'] <= mylat+1), drop=True).copy()
-        signal_raw = ds_selected['VER'] #.sel(alt_coord=altitude * 1000)
-    elif plotdim==2:
-        CMTMds_sel = CMTMds
-        ds_selected = ds.where((ds['latitude'] >= minlat) & (ds['latitude'] <= maxlat), drop=True).copy()
-        signal_raw = ds_selected['VER']
+for altitude in altituderanges:
+    CMTMds=CMTMds3d.sel(lev=slice(altitude[0], altitude[-1])).mean(dim='lev')
+    CMTMds['w'] = -CMTMds['w']  #invert winds to be able to directly compare with signal strenght
+    if usebjornsdata:
+        ds=dsair.sel(alt_coord=slice(altitude[0]*1000, altitude[-1]*1000)).mean(dim='alt_coord')
     else:
-        Exception('Set plotdim to 1 or 2!')
+        ds=ds3d.sel(alt_coord=slice(altitude[0]*1000, altitude[-1]*1000)).mean(dim='alt_coord')
 
-    # --- Normalize to zero mean and unit std (same std for both) ---
-    ds_selected['signal'] = (signal_raw - signal_raw.mean(skipna=True)) / signal_raw.std(skipna=True)
-    CMTMds_sel['signal'] = (CMTMds_sel[var] - CMTMds_sel[var].mean(skipna=True)) / CMTMds_sel[var].std(skipna=True)
-  
 
-    # --- Create Figure ---
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 10), constrained_layout=True)
+    for s in range(-3, 4, 1):
+        # Example parameters
+        #s = 1# zonal wavenumber
+        n = 1  # harmonic of solar day
 
-    # --- MATS Plot ---
-    if plotdim == 1:
-        print('Note 1d is not the demeaned with regards to latitude yet as 2d is')
-        phase_mats = ds_selected['phase'].sel(alt_coord=altitude * 1000)
-        mean_by_phase_mats = ds_selected['signal'].groupby_bins(phase_mats, bins=bins, labels=labels).mean()
-        mean_by_phase_mats = mean_by_phase_mats.reindex({'phase_bins': labels})
-        ax1.plot(labels, mean_by_phase_mats, marker='o', color='tab:blue')
-        ax1.set_xlabel("Phase (degrees)")
-        ax1.set_ylabel("Signal")
-        ax1.set_title("MATS: Signal vs Phase, s=" +str(s)+ ' n = '+str(n))
-        ax1.grid(True)
+
+        # Compute phase
+        ds['phase'] = compute_phase(s, n, ds['GMT'], ds['longitude'])
+        CMTMds['phase']=compute_phase(s, n, CMTMds['GMT'],  CMTMds['lon'])
 
 
 
-    elif plotdim == 2:
-        # Flatten arrays
-        phase_flat = ds_selected['phase'].values.flatten()
-        signal_flat = ds_selected['signal'].values.flatten()
-        lat_flat = ds_selected['latitude'].values.flatten()
-        lon_flat = ds_selected['longitude'].values.flatten()
-
-        # Create DataFrame
-        df_mats = pd.DataFrame({
-            'phase': phase_flat,
-            'signal': signal_flat,
-            'latitude': lat_flat,
-            'longitude': lon_flat
-        }).dropna()
-
-        # Bin phase and latitude
-        df_mats['phase_bin'] = pd.cut(df_mats['phase'], bins=bins, labels=labels)
-        df_mats['lat_bin'] = pd.cut(df_mats['latitude'], bins=lat_bins, labels=lat_labels)
+        # # Select MATS data
+        # ds_sel = ds.sel(time=slice("2023-02-11", "2023-02-13"))
+        # ds_selected=ds_sel.where((ds_sel['TPlat'] >= 59) & (ds_sel['TPlat'] <= 60), drop=True)
+        # ds_selected['signal'] = ds_selected['ImageCalibrated'].isel(im_row=140, im_col=22)
 
 
+        # Set plot dimension mode
+        plotdim = 2
 
-        # Remove mean signal per latitude bin
-        df_mats['signal_demeaned'] = df_mats.groupby('lat_bin')['signal'].transform(lambda x: x - x.mean())
+        # Define phase bins
+        bins = np.linspace(0, 360, 73)  # 72 bins of 5 degrees
+        labels = (bins[:-1] + bins[1:]) / 2
+
+        # Define latitude bins for MATS
+        minlat=-90
+        maxlat=90
+        lat_bins = np.linspace(minlat, maxlat, int((maxlat-minlat)/5))
+        lat_labels = (lat_bins[:-1] + lat_bins[1:]) / 2
+
+
+        # --- Select data ---
+        if plotdim == 1:
+            mylat=60
+            CMTMds_sel = CMTMds.sel(lat=mylat)
+            ds_selected = ds.where((ds['latitude'] >= mylat-1) & (ds['latitude'] <= mylat+1), drop=True).copy()
+            signal_raw = ds_selected['VER'] #.sel(alt_coord=altitude * 1000)
+        elif plotdim==2:
+            CMTMds_sel = CMTMds
+            ds_selected = ds.where((ds['latitude'] >= minlat) & (ds['latitude'] <= maxlat), drop=True).copy()
+            signal_raw = ds_selected['VER']
+        else:
+            Exception('Set plotdim to 1 or 2!')
+
         # --- Normalize to zero mean and unit std (same std for both) ---
-        df_mats['signal_scaled'] = (df_mats['signal_demeaned'] - df_mats['signal_demeaned'].mean(skipna=True)) / df_mats['signal_demeaned'].std(skipna=True)
+        ds_selected['signal'] = (signal_raw - signal_raw.mean(skipna=True)) / signal_raw.std(skipna=True)
+        CMTMds_sel['signal'] = (CMTMds_sel[var] - CMTMds_sel[var].mean(skipna=True)) / CMTMds_sel[var].std(skipna=True)
+    
 
-        # Group and pivot the demeaned signal
-        mean_by_phase_lat = df_mats.groupby(['lat_bin', 'phase_bin'])['signal_scaled'].mean().unstack()
-        #mean_by_phase_lat = df_mats.groupby(['lat_bin', 'phase_bin'])['signal'].mean().unstack()
-        Z_mats = mean_by_phase_lat.values
-        X_mats, Y_mats = np.meshgrid(labels, lat_labels)
+        # --- Create Figure ---
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 10), constrained_layout=True)
 
-        # Plot
-        # Compute standard deviation
-        sigma = np.nanstd(Z_mats)
-        # Plot with fixed color scale
-        pcm1 = ax1.pcolor(X_mats, Y_mats, Z_mats, cmap='viridis', vmin=-3*sigma, vmax=3*sigma)
-        fig.colorbar(pcm1, ax=ax1)
-
-        # Axis labels and title
-        ax1.set_title(f"MATS: Signal vs Phase and Latitude, s={s} n={n}")
-        ax1.set_xlabel("Phase (degrees)")
-        ax1.set_ylabel("Latitude")
-
-    # --- CMTM Plot ---
-    phase_cmtm = CMTMds_sel['phase']
-    mean_by_phase_cmtm = CMTMds_sel['signal'].groupby_bins(phase_cmtm, bins=bins, labels=labels).mean()
-    mean_by_phase_cmtm = mean_by_phase_cmtm.reindex({'phase_bins': labels})
-
-    if plotdim == 1:
-        ax2.plot(labels, mean_by_phase_cmtm, marker='o', color='tab:blue')
-        ax2.set_xlabel("Phase (degrees)")
-        ax2.set_ylabel("Signal")
-        ax2.set_title("CMTM: Signal vs Phase")
-        ax2.grid(True)
-
-    elif plotdim == 2:
-
-        # Convert phase_bins and lat to numeric values for axis ticks
-        phase_ticks = mean_by_phase_cmtm['phase_bins'].values.astype(float)
-        lat_ticks = mean_by_phase_cmtm['lat'].values.astype(float)
-
-        # Create meshgrid for plotting
-        X_cmtm, Y_cmtm = np.meshgrid(phase_ticks, lat_ticks)
-
-        pcm2 = ax2.pcolor(X_cmtm, Y_cmtm, mean_by_phase_cmtm.values, cmap='viridis')
-        fig.colorbar(pcm2, ax=ax2)
-        ax2.set_title("CMTM: Signal vs Phase")
-        ax2.set_xlabel("Phase (degrees)")
-        ax2.set_ylabel("Latitude")
-        ax2.set_xticks(phase_ticks[::8])  # Show every 8th tick for clarity
-        ax2.set_yticks(lat_ticks[::4])    # Show every 4th tick for clarity
+        # --- MATS Plot ---
+        if plotdim == 1:
+            print('Note 1d is not the demeaned with regards to latitude yet as 2d is')
+            phase_mats = ds_selected['phase'].sel(alt_coord=altitude * 1000)
+            mean_by_phase_mats = ds_selected['signal'].groupby_bins(phase_mats, bins=bins, labels=labels).mean()
+            mean_by_phase_mats = mean_by_phase_mats.reindex({'phase_bins': labels})
+            ax1.plot(labels, mean_by_phase_mats, marker='o', color='tab:blue')
+            ax1.set_xlabel("Phase (degrees)")
+            ax1.set_ylabel("Signal")
+            ax1.set_title("MATS: Signal vs Phase, s=" +str(s)+ ' n = '+str(n))
+            ax1.grid(True)
 
 
-    plt.show()
+
+        elif plotdim == 2:
+            # Flatten arrays
+            phase_flat = ds_selected['phase'].values.flatten()
+            signal_flat = ds_selected['signal'].values.flatten()
+            lat_flat = ds_selected['latitude'].values.flatten()
+            lon_flat = ds_selected['longitude'].values.flatten()
+
+            # Create DataFrame
+            df_mats = pd.DataFrame({
+                'phase': phase_flat,
+                'signal': signal_flat,
+                'latitude': lat_flat,
+                'longitude': lon_flat
+            }).dropna()
+
+            # Bin phase and latitude
+            df_mats['phase_bin'] = pd.cut(df_mats['phase'], bins=bins, labels=labels)
+            df_mats['lat_bin'] = pd.cut(df_mats['latitude'], bins=lat_bins, labels=lat_labels)
+
+
+
+            # Remove mean signal per latitude bin
+            df_mats['signal_demeaned'] = df_mats.groupby('lat_bin')['signal'].transform(lambda x: x - x.mean())
+            # --- Normalize to zero mean and unit std (same std for both) ---
+            df_mats['signal_scaled'] = (df_mats['signal_demeaned'] - df_mats['signal_demeaned'].mean(skipna=True)) / df_mats['signal_demeaned'].std(skipna=True)
+
+            # Group and pivot the demeaned signal
+            mean_by_phase_lat = df_mats.groupby(['lat_bin', 'phase_bin'])['signal_scaled'].mean().unstack()
+            #mean_by_phase_lat = df_mats.groupby(['lat_bin', 'phase_bin'])['signal'].mean().unstack()
+            Z_mats = mean_by_phase_lat.values
+            X_mats, Y_mats = np.meshgrid(labels, lat_labels)
+
+            # Plot
+            # Compute standard deviation
+            sigma = np.nanstd(Z_mats)
+            # Plot with fixed color scale
+            pcm1 = ax1.pcolor(X_mats, Y_mats, Z_mats, cmap='viridis', vmin=-3*sigma, vmax=3*sigma)
+            fig.colorbar(pcm1, ax=ax1)
+
+            # Axis labels and title
+            ax1.set_title(f"MATS: Signal vs Phase and Latitude, s={s} n={n}")
+            ax1.set_xlabel("Phase (degrees)")
+            ax1.set_ylabel("Latitude")
+            results_mats = pd.concat([results_mats, pd.DataFrame({
+                'altitude_range': [altitude],
+                's': [s],
+                'n': [n],
+                'mats_std': [sigma],
+                'X': [X_mats],
+                'Y': [Y_mats],
+                'Z': [Z_mats]
+            })], ignore_index=True)
+            
+
+        # --- CMTM Plot ---
+        phase_cmtm = CMTMds_sel['phase']
+        mean_by_phase_cmtm = CMTMds_sel['signal'].groupby_bins(phase_cmtm, bins=bins, labels=labels).mean()
+        mean_by_phase_cmtm = mean_by_phase_cmtm.reindex({'phase_bins': labels})
+
+        if plotdim == 1:
+            ax2.plot(labels, mean_by_phase_cmtm, marker='o', color='tab:blue')
+            ax2.set_xlabel("Phase (degrees)")
+            ax2.set_ylabel("Signal")
+            ax2.set_title("CMTM: Signal vs Phase")
+            ax2.grid(True)
+
+        elif plotdim == 2:
+
+            # Convert phase_bins and lat to numeric values for axis ticks
+            phase_ticks = mean_by_phase_cmtm['phase_bins'].values.astype(float)
+            lat_ticks = mean_by_phase_cmtm['lat'].values.astype(float)
+
+            # Create meshgrid for plotting
+            X_cmtm, Y_cmtm = np.meshgrid(phase_ticks, lat_ticks)
+
+            pcm2 = ax2.pcolor(X_cmtm, Y_cmtm, mean_by_phase_cmtm.values, cmap='viridis')
+            fig.colorbar(pcm2, ax=ax2)
+            ax2.set_title("CMTM: Signal vs Phase")
+            ax2.set_xlabel("Phase (degrees)")
+            ax2.set_ylabel("Latitude")
+            ax2.set_xticks(phase_ticks[::8])  # Show every 8th tick for clarity
+            ax2.set_yticks(lat_ticks[::4])    # Show every 4th tick for clarity
+
+            results_cmtm = pd.concat([results_cmtm, pd.DataFrame({
+                'altitude_range': [altitude],
+                's': [s],
+                'n': [n],
+                'cmtm_std': [np.nanstd(mean_by_phase_cmtm.values)],
+                'X': [X_cmtm],
+                'Y': [Y_cmtm],
+                'Z': [mean_by_phase_cmtm.values]
+            })], ignore_index=True) 
+
+
+        plt.show()
+#%%
+#plot results for different altitude ranges as subplots, mats in one figure and cmtm in one figure
+#select s=1, n=2
+
+
+figM, axsM = plt.subplots(len(results_mats), 1, figsize=(10, 10), tight_layout=True)
+figC, axsC = plt.subplots(len(results_cmtm), 1, figsize=(10, 10), tight_layout=True)
+
+results_to_plotM=results_mats[(results_mats['s']==s) & (results_mats['n']==n)]
+results_to_plotC=results_cmtm[(results_cmtm['s']==s) & (results_cmtm['n']==n)]
+for i, row in results_to_plotM.iterrows():
+    pcm = axsM[i].pcolor(row['X'], row['Y'], row['Z'], cmap='viridis')
+    axsM[i].set_title('MATS Signal vs Phase and Latitude, s='+str(row['s'])+' n='+str(row['n'])+' Altitude range: '+str(row['altitude_range']))
+    axsM[i].set_xlabel('Phase (degrees)')
+    axsM[i].set_ylabel('Latitude')
+    figM.colorbar(pcm, ax=axsM[i])
+for i, row in results_to_plotC.iterrows():
+    pcm = axsC[i].pcolor(row['X'], row['Y'], row['Z'], cmap='viridis')
+    axsC[i].set_title('CMTM Signal vs Phase and Latitude, s='+str(row['s'])+' n='+str(row['n'])+' Altitude range: '+str(row['altitude_range']))
+    axsC[i].set_xlabel('Phase (degrees)')
+    axsC[i].set_ylabel('Latitude')
+    figC.colorbar(pcm, ax=axsC[i])  
+
+
+plt.show()
 
 # %%
 
