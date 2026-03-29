@@ -1,4 +1,6 @@
 #%%
+import os
+import math
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -98,7 +100,7 @@ def mayhit(pos, angle_deg, x_or_y):
     if x_or_y == "x":
         M1_radius_mm=64.5/2.+5 #radius of M1 mirror plus some margin from 1704_PRE.4 MATS M1 CAH04
     elif x_or_y == "y":
-        M1_radius_mm=39./2.+5 #radius of M2 mirror plus some margin from 1704_PRE.4 MATS M1 CAH04
+        M1_radius_mm=39./2.+5 #radius of M1 mirror plus some margin from 1704_PRE.4 MATS M1 CAH04
     else:
         raise ValueError("x_or_y must be 'x' or 'y'")    
 
@@ -253,8 +255,11 @@ def plot_positions_and_angles_df(df):
 def extrapolate_intensities(angles, intensities, new_angle_min, new_angle_max, plot=False, diff_angles=0.003):
     #diffangles of 0.003 is the step size of Donals original data
 
-    # Define new angle grid from min(filtered) to +2 degrees
-    new_angles =np.arange(new_angle_min,new_angle_max,diff_angles)
+    # Define new angle grid: use integer indices to avoid floating-point accumulation
+    # that can cause np.arange to accidentally include the endpoint (new_angle_max),
+    # which would create duplicate/overlapping boundary values across files.
+    n_steps = int(round((new_angle_max - new_angle_min) / diff_angles))
+    new_angles = new_angle_min + np.arange(n_steps) * diff_angles
 
     # Logarithmic interpolation with extrapolation
     log_intensities = np.log(intensities)
@@ -364,6 +369,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import csv
 from scipy.interpolate import interp1d
+import math
+import os
 # -----------------------------
 # CONFIGURATION
 # -----------------------------
@@ -391,44 +398,6 @@ intensities = np.array(intensities)
 
 
 
-# -----------------------------
-# STEP 3: GENERATE .DAT FILES
-# -----------------------------
-
-
-
-#%%
-# # Call the function
-
-# margin=0
-# ypos_range = range(-45-margin, 45+1+margin,7)        
-# xpos_range = range(-95-margin, 95+1+margin,7)
-# zpos = 0
-# xangle_range = np.arange(-3, 3.1, 0.07)  # X angles from -3 to 3 degrees
-# deltayangle=0.07
-# new_angles, new_intensities = extrapolate_intensities(angles, intensities, -3., -1., plot=True, diff_angles=deltayangle)
-# output_dat = "/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/atmos2Dr2Da_to_-1deg_dah0p07dav0p07_pos7.dat"          
-# line_count_tominus1 = generate_dat_file(output_dat, new_angles, new_intensities, ypos_range, xpos_range, xangle_range, no_hit_cut=True)
-# #plot new angles and intensities
-# plt.figure(figsize=(8,6))
-# plt.plot(intensities, angles, 'bo', label="Original Data")
-# plt.plot(new_intensities, new_angles, 'r-', label="Extrapolated to -1deg")
-# plt.xlabel("Intensity")
-# plt.ylabel("Angle (degrees)")
-# plt.title("Intensity vs Angle of Incidence")
-# plt.legend()
-# plt.grid(True)
-# plt.show()
-
-# new_angles, new_intensities = extrapolate_intensities(angles, intensities, -3., 0.66, plot=True, diff_angles=deltayangle)
-# output_dat = "/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/atmos2Dr2Da_to_0p66deg_dah0p08dav0p08_pos7.dat"  #dah=delta angle in horizontal direction, dav=delta angle in vertical direction
-# line_count_toplus1 = generate_dat_file(output_dat, new_angles, new_intensities, ypos_range, xpos_range, xangle_range, no_hit_cut=True)
-# ratio=line_count_toplus1/line_count_tominus1
-# print(f"Lines to +1deg: {line_count_toplus1}, Lines to -1deg: {line_count_tominus1}, Ratio: {ratio:.2f}")
-
-# #plot_positions_and_angles(output_dat)
-
-
 
 #%%
 # Generate fiels with reduces angular spread, only the angles from which straylight comes from
@@ -436,15 +405,15 @@ intensities = np.array(intensities)
 # below the line of sight in the vertical direction,
 
 margin=1
-deltapos=10
+deltapos=3
 ypos_range = range(-45-margin, 45+1+margin,deltapos)        
 xpos_range = range(-95-margin, 95+1+margin,deltapos)
 zpos = 0
-delataxangle=0.1
+delataxangle=0.12
 xangle_start=-6.
 xangle_stop=6.+delataxangle
 xangle_range = np.arange(xangle_start, xangle_stop, delataxangle)  # X angles from xangle_start to xangle_stop degrees
-deltayangle=0.1
+deltayangle=0.12
 
 yangle_start=-3.4
 yangle_stop=-0.1+deltayangle
@@ -466,305 +435,262 @@ plt.title("Intensity vs Angle of Incidence")
 plt.legend()
 plt.grid(True)
 plt.show()
+#%%
+## Generate limited yangles at that time since there is a 1000000 ray maximum in Zemax 
+margin=1
+deltapos=2
+ypos_range = range(-45-margin, 45+1+margin,deltapos)
+xpos_range = range(-95-margin, 95+1+margin,deltapos)
+zpos = 0
+delataxangle=0.06
+xangle_start=-6.
+xangle_stop=6.+delataxangle
+xangle_range = np.arange(xangle_start, xangle_stop, delataxangle)  # X angles from xangle_start to xangle_stop degrees
+nohit_cut=False
 
-
-
-
-
-# #%%
-# #Generate files with 2d grid of positions and angles but reduced resolution in angles
-# ypos_range = range(-40, 50,20)        
-# xpos_range = range(-6*40, 6*50,6*20)
-# zpos = 0
-# xangle_range = np.arange(-3, 3, 0.15)  # X angles from -3 to 3 degrees
-# ycutoffangle = -0.6
-
-
-# new_angles, new_intensities = extrapolate_intensities(angles, intensities, -2, ycutoffangle, plot=True, diff_angles=yangle_resolution)
-# output_dat = "/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/atmosphere2Droom2Dang_to_-0p6deg_reducedresol.dat"
-# line_count_tominus1 = generate_dat_file(output_dat, new_angles, new_intensities, ypos_range, xpos_range, xangle_range)
-# new_angles, new_intensities = extrapolate_intensities(angles, intensities, -2, 1, plot=True, diff_angles=yangle_resolution)
-# output_dat = "/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/atmosphere2Droom2Dang_to_1deg_reducedresol.dat"  
-# line_count_toplus1 = generate_dat_file(output_dat, new_angles, new_intensities, ypos_range, xpos_range, xangle_range)
-# ratio=line_count_toplus1/line_count_tominus1
-# print(f"Lines to +1deg: {line_count_toplus1}, Lines to -1deg: {line_count_tominus1}, Ratio: {ratio:.2f}")   
-
-# #%%
-# #Generate files with only one ypos
-# ypos_range = [0]        
-# xpos_range = range(-6*40, 6*50,6*20)
-# zpos = 0
-# xangle_range = np.arange(-3, 3, 0.1)  # X angles from -3 to 3 degrees
-# new_angles, new_intensities = extrapolate_intensities(angles, intensities, -2., -1., plot=True)
-# output_dat = "/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/atmosphere1Droom2Dang_to_-1deg.dat"
-# line_count_tominus1 = generate_dat_file(output_dat, new_angles, new_intensities, ypos_range, xpos_range, xangle_range)
-# new_angles, new_intensities = extrapolate_intensities(angles, intensities, -2., 1., plot=True)
-# output_dat = "/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/atmosphere1Droom2Dang_to_1deg.dat"  
-# line_count_toplus1 = generate_dat_file(output_dat, new_angles, new_intensities, ypos_range, xpos_range, xangle_range)
-# ratio=line_count_toplus1/line_count_tominus1
-# print(f"Lines to +1deg: {line_count_toplus1}, Lines to -1deg: {line_count_tominus1}, Ratio: {ratio:.2f}")
-
-# #%%
-# #Generate files with only one xpos but several ypos, no xangle variation
-# ypos_range = range(-40, 50,1)       
-# xpos_range = [0]
-# zpos = 0
-# xangle_range = [0]
-# ycutoffangle = -0.6
-# new_angles, new_intensities = extrapolate_intensities(angles, intensities, -2., ycutoffangle, plot=True, diff_angles=0.08)
-# output_dat = "/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/atmosphere1Droom1Dang_to_-0p6deg_dang0p08.dat"
-# line_count_tominus1 = generate_dat_file(output_dat, new_angles, new_intensities, ypos_range, xpos_range, xangle_range)
-# new_angles, new_intensities = extrapolate_intensities(angles, intensities, -2., 1., plot=True, diff_angles=0.08)
-# output_dat = "/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/atmosphere1Droom1Dang_to_1deg_dang_0p08.dat"  
-# line_count_toplus1 = generate_dat_file(output_dat, new_angles, new_intensities, ypos_range, xpos_range, xangle_range)
-# ratio=line_count_toplus1/line_count_tominus1
-# print(f"Lines to +1deg: {line_count_toplus1}, Lines to {ycutoffangle} deg: {line_count_tominus1}, Ratio: {ratio:.2f}")
-
-# #%%
-# #Generate files with only one xpos but several ypos, a few steps in xangle variation
-# ypos_range = range(-40, 50,1)       
-# xpos_range = [0]
-# zpos = 0
-# xangle_range = np.arange(-2, 3, 2)  # X angles from -2 to 2 degrees in steps of 1
-# ycutoffangle = -0.6
-# new_angles, new_intensities = extrapolate_intensities(angles, intensities, -2., ycutoffangle, plot=True)
-# output_dat = "/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/atmosphere1Droom2Dangy3_to_-0p6deg.dat"
-# line_count_tominus1 = generate_dat_file(output_dat, new_angles, new_intensities, ypos_range, xpos_range, xangle_range)
-# new_angles, new_intensities = extrapolate_intensities(angles, intensities, -2., 1., plot=True)
-# output_dat = "/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/atmosphere1Droom2Dangy3_to_1deg.dat"  
-# line_count_toplus1 = generate_dat_file(output_dat, new_angles, new_intensities, ypos_range, xpos_range, xangle_range)
-# ratio=line_count_toplus1/line_count_tominus1
-# print(f"Lines to +1deg: {line_count_toplus1}, Lines to {ycutoffangle} deg: {line_count_tominus1}, Ratio: {ratio:.2f}")
-
-
-
-
-# #%%
-# #Generate files with only one ypos and one xpos
-# ypos_range = [0]        
-# xpos_range = [0]
-# zpos = 0
-# xangle_range = np.arange(-3, 3, 0.1)  # X angles from -3 to 3 degrees
-# new_angles, new_intensities = extrapolate_intensities(angles, intensities, -2., -1., plot=True)
-# output_dat = "/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/atmosphere0Droom2Dang_to_-1deg.dat"
-# line_count_tominus1 = generate_dat_file(output_dat, new_angles, new_intensities, ypos_range, xpos_range, xangle_range)
-# new_angles, new_intensities = extrapolate_intensities(angles, intensities, -2., 1., plot=True)
-# output_dat = "/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/atmosphere0Droom2Dang_to_1deg.dat"  
-# line_count_toplus1 = generate_dat_file(output_dat, new_angles, new_intensities, ypos_range, xpos_range, xangle_range)
-# ratio=line_count_toplus1/line_count_tominus1
-# print(f"Lines to +1deg: {line_count_toplus1}, Lines to -1deg: {line_count_tominus1}, Ratio: {ratio:.2f}")
-
-# #%%
-
-
-
-# # %%
-# output_dat = "/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/single_ray_fan_0p01deg.dat" 
-# with open(output_dat, 'w') as f:
-#     f.write("! xpos ypos zpos xcomp ycomp zcomp intensity\n")
-#     xpos = 0
-#     ypos = 0
-#     zpos = 0
-#     intensity = 1.
-#     line_count = 0
-#     for yangle in np.arange(-2, 2, 0.01):
-#         xangle=yangle  
-#         [xv, yv, zv] = unit_vector_from_angles(yangle, xangle)
-        
-#         f.write(f"{xpos} {ypos} {zpos} {xv:.6f} {yv:.6f} {zv:.6f} {intensity:.6e}\n")
-#         line_count += 1
-#     f.write(f"{line_count} 4\n")
-
-# # %%
-# # ray fan with 0.1 degree steps in x and y directions and denser steps along lower diagonal
-# # for several xpos and ypos positions
-# output_dat = "/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/raytest3.dat" 
-# with open(output_dat, 'w') as f:
-#     f.write("! xpos ypos zpos xcomp ycomp zcomp intensity\n")
-#     zpos = 0
-#     intensity = 1.
-#     line_count = 0
-#     for xpos in range(-40*6, 40*6+1, 20):
-#         for ypos in range(-40, 41, 20):
-#             for xangle in np.arange(-4, 4, 0.1):
-#                 yangle=0
-#                 [xv, yv, zv] = unit_vector_from_angles(yangle, xangle)
-#                 f.write(f"{xpos} {ypos} {zpos} {xv:.6f} {yv:.6f} {zv:.6f} {intensity:.6e}\n")
-#                 line_count += 1
-#             for yangle in np.arange(-1.5, 1.5, 0.1):
-#                 xangle=0 
-#                 [xv, yv, zv] = unit_vector_from_angles(yangle, xangle)
-#                 f.write(f"{xpos} {ypos} {zpos} {xv:.6f} {yv:.6f} {zv:.6f} {intensity:.6e}\n")
-#                 line_count += 1
-#             for yangle in np.arange(-1.5, 0, 0.1):
-#                 xangle=yangle  
-#                 [xv, yv, zv] = unit_vector_from_angles(yangle, xangle)
-#                 f.write(f"{xpos} {ypos} {zpos} {xv:.6f} {yv:.6f} {zv:.6f} {intensity:.6e}\n")
-#                 line_count += 1
-#             for yangle in np.arange(0, 1.5, 0.05): 
-#                 xangle=yangle  
-#                 [xv, yv, zv] = unit_vector_from_angles(yangle, xangle)
-#                 f.write(f"{xpos} {ypos} {zpos} {xv:.6f} {yv:.6f} {zv:.6f} {intensity:.6e}\n")
-#                 line_count += 1
-            
-#     f.write(f"{line_count} 4\n")
-#     print(f"📊 The output file contains {line_count} data lines (excluding header)")
+deltayangle=0.06
+increment=0.3
+filenumber=0
+line_count_list=[]
+all_yangles = []  # collect all generated y-angles across files
+all_yintensities = []  # collect all generated y-intensities across files
+yangle_edges = np.round(np.arange(-6., 1. + increment, increment), 10)
+for i in range(len(yangle_edges) - 1):
+    yangle_start = yangle_edges[i]
+    yangle_stop = yangle_edges[i + 1]
+    filenumber+=1
+    new_angles, new_intensities = extrapolate_intensities(angles, intensities, yangle_start, yangle_stop, plot=True, diff_angles=deltayangle)
+    all_yangles.extend(new_angles)
+    all_yintensities.extend(new_intensities)
+    if nohit_cut:
+        output_dat = f"/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/atmos_{filenumber:02d}_yang{yangle_start:.2f}-{yangle_stop:.2f}xang{xangle_start}-{xangle_stop}deg_dah{delataxangle:.2f}dav{deltayangle:.2f}_pos{deltapos}.dat"
+    else:
+        output_dat = f"/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/atmos_{filenumber:02d}_yang{yangle_start:.2f}-{yangle_stop:.2f}xang{xangle_start}-{xangle_stop}deg_dah{delataxangle:.2f}dav{deltayangle:.2f}_pos{deltapos}_M1cut.dat"
+    line_count = generate_dat_file(output_dat, new_angles, new_intensities, ypos_range, xpos_range, xangle_range, no_hit_cut=nohit_cut)
     
-# # %%
-# # ray fan with 0.1 degree steps in y directions and 0,2 degree steps in x direction 
-# # for several xpos and ypos positions
-# output_dat = "/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/raytest4.dat" 
-# with open(output_dat, 'w') as f:
-#     f.write("! xpos ypos zpos xcomp ycomp zcomp intensity\n")
-#     zpos = 0
-#     intensity = 1.
-#     line_count = 0
-#     for xpos in range(-40*6, 40*6+1, 20):
-#         for ypos in range(-40, 41, 20):
-#             for xangle in np.arange(-4, 4, 0.2):
-#                 yangle=0
-#                 [xv, yv, zv] = unit_vector_from_angles(yangle, xangle)
-#                 f.write(f"{xpos} {ypos} {zpos} {xv:.6f} {yv:.6f} {zv:.6f} {intensity:.6e}\n")
-#                 line_count += 1
-#             for yangle in np.arange(-1.5, 1.5, 0.1):
-#                 xangle=0 
-#                 [xv, yv, zv] = unit_vector_from_angles(yangle, xangle)
-#                 f.write(f"{xpos} {ypos} {zpos} {xv:.6f} {yv:.6f} {zv:.6f} {intensity:.6e}\n")
-#                 line_count += 1
-#             for yangle in np.arange(-1.5, 0, 0.1):
-#                 xangle=yangle  
-#                 [xv, yv, zv] = unit_vector_from_angles(yangle, xangle)
-#                 f.write(f"{xpos} {ypos} {zpos} {xv:.6f} {yv:.6f} {zv:.6f} {intensity:.6e}\n")
-#                 line_count += 1
-#             for yangle in np.arange(0, 1.5, 0.1): 
-#                 xangle=yangle  
-#                 [xv, yv, zv] = unit_vector_from_angles(yangle, xangle)
-#                 f.write(f"{xpos} {ypos} {zpos} {xv:.6f} {yv:.6f} {zv:.6f} {intensity:.6e}\n")
-#                 line_count += 1
-            
-#     f.write(f"{line_count} 4\n")
-#     print(f"📊 The output file contains {line_count} data lines (excluding header)")
+    print(f"Generated {line_count} rays for yangle range {yangle_start:.2f} to {yangle_stop:.2f} degrees.")
+    line_count_list.append(line_count)
+    print(f"First file yangle range: {yangle_start:.2f} to {yangle_stop:.2f} degrees, min(new_angles)={min(new_angles):.3f}, max(new_angles)={max(new_angles):.3f}")
+    print(f"Last file yangle range: {yangle_start:.2f} to {yangle_stop:.2f} degrees, min(new_angles)={min(new_angles):.3f}, max(new_angles)={max(new_angles):.3f}")
     
-# # %%
-# # ray fan with  1 degree steps in x direction 
-# # for several xpos and ypos positions
-# output_dat = "/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/raytest5.dat" 
-# with open(output_dat, 'w') as f:
-#     f.write("! xpos ypos zpos xcomp ycomp zcomp intensity\n")
-#     zpos = 0
-#     intensity = 1.
-#     line_count = 0
-#     for xpos in range(-40*6, 40*6+1, 20):
-#         for ypos in range(-20, 21, 20):
-#             for xangle in np.arange(-4, 4, 1):
-#                 yangle=0
-#                 [xv, yv, zv] = unit_vector_from_angles(yangle, xangle)
-#                 f.write(f"{xpos} {ypos} {zpos} {xv:.6f} {yv:.6f} {zv:.6f} {intensity:.6e}\n")
-#                 line_count += 1
-            
-#     f.write(f"{line_count} 4\n")
-#     print(f"📊 The output file contains {line_count} data lines (excluding header)")
-
-
-# # %%
-# # ray fan with  1 degree steps in x direction 
-# # for ONE xpos and ypos positions
-# output_dat = "/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/raytest7.dat" 
-# with open(output_dat, 'w') as f:
-#     f.write("! xpos ypos zpos xcomp ycomp zcomp intensity\n")
-#     zpos = 0
-#     ypos=0
-
-#     intensity = 1.
-#     line_count = 0
-#     for xpos in range(-20*6, 20*6+1, 20):
-#             for xangle in np.arange(-3, 1, 1):
-#                 yangle=0
-#                 [xv, yv, zv] = unit_vector_from_angles(yangle, xangle)
-#                 f.write(f"{xpos} {ypos} {zpos} {xv:.6f} {yv:.6f} {zv:.6f} {intensity:.6e}\n")
-#                 line_count += 1
-            
-#     f.write(f"{line_count} 4\n")
-#     print(f"📊 The output file contains {line_count} data lines (excluding header)")
-
-# # ray fan with  1 degree steps in x direction 
-# # for ONE xpos and ypos positions
-# output_dat = "/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/raytest8.dat" 
-# with open(output_dat, 'w') as f:
-#     f.write("! xpos ypos zpos xcomp ycomp zcomp intensity\n")
-#     zpos = 0
-#     xpos=0  
-#     ypos=0
-#     intensity = 1.
-#     line_count = 0
-#     for hej in range(-20*6, 20*6+1, 20):
-#             for xangle in np.arange(-3, 1, 1):
-#                 yangle=0
-#                 [xv, yv, zv] = unit_vector_from_angles(yangle, xangle)
-#                 f.write(f"{xpos} {ypos} {zpos} {xv:.6f} {yv:.6f} {zv:.6f} {intensity:.6e}\n")
-#                 line_count += 1
-            
-#     f.write(f"{line_count} 4\n")
-#     print(f"📊 The output file contains {line_count} data lines (excluding header)")
+    if yangle_start >=-0.9: # split into 3 sub-files by simply dividing the arrays into thirds
+        n_sub = 3
+        splits = np.array_split(np.arange(len(new_angles)), n_sub)
+        totline_count = 0
+        for suffixcounter, idx in enumerate(splits, start=1):
+            new_angles_j = new_angles[idx]
+            new_intensities_j = new_intensities[idx]
+            if nohit_cut:
+                output_dat_j = f"/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/atmos_{filenumber:02d}_{suffixcounter:02d}_yang{new_angles_j[0]:.2f}-{new_angles_j[-1]:.2f}xang{xangle_start}-{xangle_stop}deg_dah{delataxangle:.2f}dav{deltayangle:.2f}_pos{deltapos}.dat"
+            else:
+                output_dat_j = f"/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/atmos_{filenumber:02d}_{suffixcounter:02d}_yang{new_angles_j[0]:.2f}-{new_angles_j[-1]:.2f}xang{xangle_start}-{xangle_stop}deg_dah{delataxangle:.2f}dav{deltayangle:.2f}_pos{deltapos}_M1cut.dat"
+            line_count_j = generate_dat_file(output_dat_j, new_angles_j, new_intensities_j, ypos_range, xpos_range, xangle_range, no_hit_cut=nohit_cut)
+            totline_count += line_count_j
+            print(f"Sub-file {suffixcounter}: {len(new_angles_j)} y-angles, {line_count_j} rays (yangle {new_angles_j[0]:.3f} to {new_angles_j[-1]:.3f})")
+        print(f"Total sub-file rays {totline_count} should equal main file rays {line_count}.")
+print(f"number of rays generated per file: {line_count_list}")
 
 
 
-# # ray fan with  0.01 degree steps in x direction 
-# # for ONE xpos and ypos positions
-# output_dat = "/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/raytest9.dat" 
-# with open(output_dat, 'w') as f:
-#     f.write("! xpos ypos zpos xcomp ycomp zcomp intensity\n")
-#     zpos = 0
-#     xpos=0  
-#     ypos=0
-#     intensity = 1.
-#     line_count = 0
-#     for hej in range(-20*6, 20*6+1, 20):
-#             for xangle in np.arange(-3, 1, 0.01):
-#                 yangle=0
-#                 [xv, yv, zv] = unit_vector_from_angles(yangle, xangle)
-#                 f.write(f"{xpos} {ypos} {zpos} {xv:.6f} {yv:.6f} {zv:.6f} {intensity:.6e}\n")
-#                 line_count += 1
-            
-#     f.write(f"{line_count} 4\n")
-#     print(f"📊 The output file contains {line_count} data lines (excluding header)")
-# # %%
-# # ray fan with  0.1 degree steps in x direction 
-# # for several xpos
-# output_dat = "/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/raytest10.dat" 
-# with open(output_dat, 'w') as f:
-#     f.write("! xpos ypos zpos xcomp ycomp zcomp intensity\n")
-#     zpos = 0
-#     xpos=0  
-#     ypos=0
-#     xpos_range = range(-6*40, 6*40+1,10)
-#     intensity = 1.
-#     line_count = 0
-#     for xpos in xpos_range:
-#             for xangle in np.arange(-3, 3, 0.1):
-#                 yangle=0
-#                 [xv, yv, zv] = unit_vector_from_angles(yangle, xangle)
-#                 f.write(f"{xpos} {ypos} {zpos} {xv:.6f} {yv:.6f} {zv:.6f} {intensity:.6e}\n")
-#                 line_count += 1
-            
-#     f.write(f"{line_count} 4\n")
-#     print(f"📊 The output file contains {line_count} data lines (excluding header)")
+
+# Plot all generated y-angles to check for gaps or jumps
+all_yangles = np.array(all_yangles)
+all_yintensities = np.array(all_yintensities)
+fig, axes = plt.subplots(3, 1, figsize=(10, 10))
+
+axes[0].plot(all_yangles, 'o-', markersize=2)
+axes[0].set_xlabel("Index")
+axes[0].set_ylabel("Y Angle (degrees)")
+axes[0].set_title("All generated y-angles (should be equidistant)")
+axes[0].grid(True)
+
+axes[1].plot(np.diff(all_yangles), 'o-', markersize=2)
+axes[1].set_xlabel("Index")
+axes[1].set_ylabel("Δ Y Angle (degrees)")
+axes[1].set_title(f"Step size between consecutive y-angles (should be constant ≈ {deltayangle})")
+axes[1].grid(True)
+
+axes[2].plot(all_yintensities, all_yangles, 'o-', markersize=2)
+axes[2].set_xlabel("Intensity")
+axes[2].set_ylabel("Y Angle (degrees)")
+axes[2].set_title("Intensity vs Y Angle across all files")
+axes[2].set_xscale('log')
+axes[2].grid(True)
+
+plt.tight_layout()
+plt.show()
+
 # %%
-# #unit vector from angles function test
-# yangle=0.05
-# xangle=3.
-# [xv, yv, zv] = unit_vector_from_angles(yangle, xangle)
+# Generate file with only the relevant angles that will hit the edge of M2 as determined by the output 
+#/Users/lindamegner/MATS/MATS-retrieval/zemax_claude/zemaxfiles/lllatmos2Dr2Da_yang-3.40-0.00xang-6.0-6.1deg_dah0.10dav0.10_pos10_M1cut_w1.ZRD
+    #Generate Zemax ray files for a grid of source positions
+
+
+def get_phi_max(src_x, src_y):
+    """Return the maximum phi (degrees) for a source at (src_x, src_y).
+
+    Uses the empirical linear fit:  phi_max = 1.1 + 0.052 * r
+    where r = sqrt(src_x² + src_y²) is the radial distance from the optical axis.
+    """
+    r = math.sqrt(src_x**2 + src_y**2)
+    return 1.1 + 0.052 * r
+
+
+def generate_zemax_rays(src_x, src_y, src_z, phi_max,
+                        Dphi=1.0, dphi=0.1):
+    """Generate a Zemax source ray file for a single source position.
+
+    Produces rays with phi spanning [phi_max - Dphi, phi_max] in steps of dphi.
+    Each ray lies in the plane containing the optical axis (z) and the source
+    position vector, directed inward (converging toward the optical axis).
+
+    Direction cosines from phi and radial inward unit vector (-src_x/r, -src_y/r):
+        l = -sin(phi) * src_x / r
+        m = -sin(phi) * src_y / r
+        n =  cos(phi)
+
+    Parameters
+    ----------
+    src_x, src_y, src_z : float   Source position (mm).
+    phi_max             : float   Upper bound of phi range (degrees).
+    Dphi                : float   Width of phi range (degrees).  Default 1.0.
+    dphi                : float   Step size in phi (degrees).    Default 0.1.
+   
+
+    Returns
+    -------
+    rows : list of tuples  (xpos, ypos, zpos, xcomp, ycomp, zcomp, intensity)
+    """
+    r = math.sqrt(src_x**2 + src_y**2)
+    if r == 0:
+        raise ValueError("Source is on the optical axis (r=0); direction is undefined.")
+
+    phistart = max(0.0, phi_max - Dphi)
+    phis = np.arange(phistart, phi_max + 1e-9, dphi)
+
+    rows = []
+    for phi in phis:
+        phi_r = math.radians(phi)
+        l = -math.sin(phi_r) * src_x / r
+        m = -math.sin(phi_r) * src_y / r
+        n =  math.cos(phi_r)
+        if m < 0:
+          zangle_deg =-math.degrees(math.acos(n)) 
+        else:
+          zangle_deg = math.degrees(math.acos(n)) 
+
+        intensity=find_intensity(angles, intensities, zangle_deg)
+        rows.append((src_x, src_y, src_z, l, m, n, intensity, zangle_deg)) 
+
+
+    return rows
+
+
+def generate_zemax_ray_grid(xposrange, yposrange, deltapos, dphi=0.01, src_z=0.0,
+                           output_path=None, plotphi=False):
+    """Generate a Zemax source ray file for a 2-D grid of source positions.
+
+    For each position the phi range is determined by get_phi_max() and a
+    Dphi that depends on the radial distance from the optical axis.
+    All rays from every position are written to a single .dat file.
+
+    Parameters
+    ----------
+    xposrange   : (float, float)  [xmin, xmax] limits for x-positions (mm).
+    yposrange   : (float, float)  [ymin, ymax] limits for y-positions (mm).
+    deltapos    : int             Grid step size (mm).
+    dphi        : float           Angular step in phi (degrees).
+    src_z       : float           Source z-coordinate (mm).
+    output_path : str             Path for the output .dat file.  Required to save.
+    plotphi     : bool            If True, plot mean phi per grid position (default True).
+
+    Returns
+    -------
+    all_rows : list of tuples  (xpos, ypos, zpos, l, m, n, intensity)
+    """
+    xpos_range = range(xposrange[0], xposrange[1] + 1, deltapos)
+    ypos_range = range(yposrange[0], yposrange[1] + 1, deltapos)
+    xy_positions = [(x, y) for y in ypos_range for x in xpos_range]
+
+    all_rows = []
+    for src_x, src_y in xy_positions:
+        r = math.sqrt(src_x**2 + src_y**2)
+        if r == 0:
+            print(f"Skipping optical-axis position ({src_x}, {src_y})")
+            continue
+        phi_max = get_phi_max(src_x, src_y)
+        if r > 50:   Dphi = 0.5
+        elif r > 20: Dphi = 1.1
+        else:        Dphi = 2.0
+        all_rows.extend(generate_zemax_rays(
+            src_x, src_y, src_z=src_z, phi_max=phi_max,
+            Dphi=Dphi, dphi=dphi))
+
+    if output_path:
+        with open(output_path, "w") as f:
+            f.write(f"{len(all_rows)} 4\n")
+            f.write("! xpos ypos zpos xcomp ycomp zcomp intensity\n")
+            for xp, yp, zp, lc, mc, nc, inten in all_rows:
+                f.write(f"{xp} {yp} {zp} {lc:.8f} {mc:.8f} {nc:.8f} {inten:.6e}\n")
+        print(f"Zemax ray file saved to: {output_path}  ({len(all_rows)} rays)")
+
+    if plotphi:
+        xs   = np.array([row[0] for row in all_rows])
+        ys   = np.array([row[1] for row in all_rows])
+        ns   = np.array([row[5] for row in all_rows])   # zcomp = n
+        phis = np.degrees(np.arccos(np.clip(ns, -1.0, 1.0)))
+
+        df_phi = pd.DataFrame({"x": xs, "y": ys, "phi": phis})
+        mean_phi = df_phi.groupby(["x", "y"])["phi"].mean().reset_index()
+        pivot = mean_phi.pivot(index="y", columns="x", values="phi")
+
+        fig, ax = plt.subplots(figsize=(10, 5))
+        im = ax.pcolormesh(pivot.columns.values, pivot.index.values,
+                           pivot.values, cmap="viridis")
+        cbar = fig.colorbar(im, ax=ax, fraction=0.03, pad=0.04)
+        cbar.set_label("Mean φ  (degrees)")
+        ax.set_xlabel("Source x  (mm)")
+        ax.set_ylabel("Source y  (mm)")
+        ax.set_title("Mean φ per source position")
+        ax.set_aspect("equal")
+        plt.tight_layout()
+
+        if output_path:
+            plot_path = output_path.replace(".dat", "_mean_phi.png")
+            plt.savefig(plot_path, dpi=150)
+            print(f"Plot saved to: {plot_path}")
+        else:
+            plt.show()
+
+    return all_rows
+
+def find_intensity(angles, intensities, zangle_deg):
+    """Find the intensity corresponding to a given zangle by interpolation.
+
+    Parameters
+    ----------
+    angles : array-like  Angles (degrees) corresponding to the intensities.
+    intensities : array-like  Intensities corresponding to the angles.
+    zangle_deg : float  The vertical angle (degrees) for which to find the intensity.
+
+    Returns
+    -------
+    intensity : float  The interpolated intensity at zangle_deg.
+    """
+    interp_func = interp1d(angles, intensities, kind='linear', fill_value=(intensities[0], intensities[-1]), bounds_error=False)
+    return interp_func(zangle_deg)
 
 
 
-#0.07415180 0.05930640 0.99548192
-xv=0.07415180
-yv=0.05930640
-zv=0.99548192
+base = os.path.dirname(__file__)
 
-#print(f"Unit vector for yangle={yangle} and xangle={xangle}: ({xv:.6f}, {yv:.6f}, {zv:.6f})")
-sum_of_squares = xv**2 + yv**2 + zv**2
-print(f"Sum of squares: {sum_of_squares:.6f} (should be close to 1 for a unit vector)")
-    # %%
+#base = "/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/"
+
+deltapos = 5
+dphi = 0.1
+output_path = os.path.join(base, f"zemax_rays_phicut_dpos{deltapos:.2f}_dphi{dphi:.3f}.dat")
+generate_zemax_ray_grid(xposrange=[-80, 80], yposrange=[-32, 32], deltapos=deltapos,
+                            dphi=dphi, output_path=output_path, plotphi=False)    
+        
 
 # %%
