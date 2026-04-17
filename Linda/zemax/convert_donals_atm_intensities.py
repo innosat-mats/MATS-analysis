@@ -116,7 +116,7 @@ def mayhit(pos, angle_deg, x_or_y):
      
 
 
-def generate_dat_file(output_dat, new_angles, new_intensities, ypos_range, xpos_range, xangle_range, Earthcurvature=False, no_hit_cut=True, debug=False):
+def generate_dat_file(output_dat, new_angles, new_intensities, ypos_range, xpos_range, xangle_range, Earthcurvature=False, no_hit_cut=True, debug=False, returntotint=False):
     """
     Generate .dat file with atmospheric intensity data.
     
@@ -144,7 +144,9 @@ def generate_dat_file(output_dat, new_angles, new_intensities, ypos_range, xpos_
     with open(output_dat, 'w') as f:
         f.write("0 80\n")
         f.write("    ! xpos ypos zpos xcomp ycomp zcomp intensity\n")
-        
+
+        totintensity=0
+        hitcut_totintensity=0
         for xpos in xpos_range:
             for ypos in ypos_range:
                 for xangle_deg in xangle_range:
@@ -155,8 +157,10 @@ def generate_dat_file(output_dat, new_angles, new_intensities, ypos_range, xpos_
                     
                     for yangle_deg, intensity in zip(new_angles, intensities_adj):
                         intensity_Tera=intensity*1e-12
+                        totintensity+=intensity_Tera
                         
                         if no_hit_cut or (mayhit(xpos, xangle_deg, x_or_y="x") and mayhit(ypos, yangle_deg, x_or_y="y")): #only include rays that would hit M1 mirror or come close to it
+                            hitcut_totintensity+=intensity_Tera
                             # Save in df
                             if debug: 
                                 df = pd.concat([df, pd.DataFrame([{"xpos": xpos, "ypos": ypos, "zpos": zpos, "xangle_deg": xangle_deg, "yangle_deg": yangle_deg, "intensity": intensity_Tera}])], ignore_index=True)
@@ -177,7 +181,10 @@ def generate_dat_file(output_dat, new_angles, new_intensities, ypos_range, xpos_
     print(f"✅ .dat file '{output_dat}' generated successfully.")
     print(f"📊 The output file contains {line_count} data lines (excluding header).")
 
-    return line_count
+    if returntotint:
+        return line_count, totintensity, hitcut_totintensity
+    else:
+        return line_count
 
 def plot_positions_and_angles_df(df):
         
@@ -252,7 +259,7 @@ def plot_positions_and_angles_df(df):
 
 
 
-def extrapolate_intensities(angles, intensities, new_angle_min, new_angle_max, plot=False, diff_angles=0.003):
+def extrapolate_intensities(angles, intensities, new_angle_min, new_angle_max, plot=False, diff_angles=0.003, const_intensity=False):
     #diffangles of 0.003 is the step size of Donals original data
 
     # Define new angle grid: use integer indices to avoid floating-point accumulation
@@ -267,6 +274,8 @@ def extrapolate_intensities(angles, intensities, new_angle_min, new_angle_max, p
                            kind='linear', fill_value="extrapolate")
     interp_logI = interp_func(new_angles)
     new_intensities = np.exp(interp_logI)
+    if const_intensity:
+        new_intensities = np.full_like(new_intensities, 1.)
 
     if plot:
         plt.figure(figsize=(8,6))
@@ -280,7 +289,79 @@ def extrapolate_intensities(angles, intensities, new_angle_min, new_angle_max, p
         plt.grid(True)
         plt.show()
     return -new_angles, new_intensities # Return negative angles for Zemax convention (up is negative angle)   
+
+def file_content(dat_file):
+    """Print the min/max of xpos, ypos, xangle, and yangle found in a .dat file.
+
+    The file is expected to have a two-token header line followed by an optional
+    comment line, then data rows of the form:
+        xpos ypos zpos xcomp ycomp zcomp intensity
+
+    Direction cosines (xcomp, ycomp, zcomp) are converted back to angles:
+        xangle = degrees(arctan(xcomp / zcomp))
+        yangle = degrees(arctan(ycomp / zcomp))
+    """
+    xpos_list, ypos_list, xangle_list, yangle_list = [], [], [], []
+
+    with open(dat_file, 'r') as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith('!'):
+                continue
+            parts = line.split()
+            if len(parts) == 2:  # header line "N M"
+                continue
+            if len(parts) < 7:
+                continue
+            xp, yp = float(parts[0]), float(parts[1])
+            xc, yc, zc = float(parts[3]), float(parts[4]), float(parts[5])
+            if zc == 0:
+                continue
+            xangle_list.append(np.degrees(np.arctan2(xc, zc)))
+            yangle_list.append(np.degrees(np.arctan2(yc, zc)))
+            xpos_list.append(xp)
+            ypos_list.append(yp)
+
+    print(f"File: {dat_file}")
+    print(f"  xpos   : min={min(xpos_list):.3f}  max={max(xpos_list):.3f}")
+    print(f"  ypos   : min={min(ypos_list):.3f}  max={max(ypos_list):.3f}")
+    print(f"  xangle : min={min(xangle_list):.4f}°  max={max(xangle_list):.4f}°")
+    print(f"  yangle : min={min(yangle_list):.4f}°  max={max(yangle_list):.4f}°")
+
+
+def print_yangle_range(dat_file):
+    """Print the minimum and maximum yangle found in a .dat file.
+
+    Reads direction cosines (xcomp, ycomp, zcomp) from each data row and
+    converts ycomp/zcomp back to yangle = degrees(arctan2(ycomp, zcomp)).
+    """
+    yangle_list = []
+
+    with open(dat_file, 'r') as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith('!'):
+                continue
+            parts = line.split()
+            if len(parts) == 2:  # header line "N M"
+                continue
+            if len(parts) < 7:
+                continue
+            yc, zc = float(parts[4]), float(parts[5])
+            if zc == 0:
+                continue
+            yangle_list.append(np.degrees(np.arctan2(yc, zc)))
+
+    print(f"File: {dat_file}")
+    print(f"  yangle : min={min(yangle_list):.4f}°  max={max(yangle_list):.4f}°")
+
+
+
+
+
 #%%
+
+
 
 # # -----------------------------
 # # CONFIGURATION
@@ -396,8 +477,86 @@ angles = np.array(angles)
 intensities = np.array(intensities)
 
 
+#%%
+# Generate fields with constant intensity for the angles from which straylight comes from
+constant_intensity=True
+margin=1
+deltapos=6
+ypos_range = range(-45-margin, 45+1+margin,deltapos)        
+xpos_range = range(-95-margin, 95+1+margin,deltapos)
+zpos = 0
+delataxangle=0.1
+xangle_start=-4
+xangle_stop=4.+delataxangle/2.
+xangle_range = np.arange(xangle_start, xangle_stop, delataxangle)  # X angles from xangle_start to xangle_stop degrees
+deltayangle=0.1
+
+yangle_start=-1.0
+yangle_stop=1.0
+
+nohit_cut=True
+new_angles, new_intensities = extrapolate_intensities(angles, intensities, yangle_start, yangle_stop, plot=True, diff_angles=deltayangle, const_intensity=constant_intensity)
+if nohit_cut:
+    output_dat = f"/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/atmosconst2Dr2Da_yang{yangle_start:.2f}-{yangle_stop:.2f}xang{xangle_start}-{xangle_stop}deg_dah{delataxangle:.3f}dav{deltayangle:.3f}_pos{deltapos}.dat"
+else:
+    output_dat = f"/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/atmosconst2Dr2Da_yang{yangle_start:.2f}-{yangle_stop:.2f}xang{xangle_start}-{xangle_stop}deg_dah{delataxangle:.3f}dav{deltayangle:.3f}_pos{deltapos}_M1cut.dat"
+line_count_tominus1 = generate_dat_file(output_dat, new_angles, new_intensities, ypos_range, xpos_range, xangle_range, no_hit_cut=nohit_cut)
+#plot new angles and intensities
+plt.figure(figsize=(8,6))
+plt.plot(intensities, angles, 'bo', label="Original Data")
+plt.plot(new_intensities, new_angles, 'r-', label="Extrapolated to -1deg")
+plt.xlabel("Intensity")
+plt.ylabel("Angle (degrees)")
+plt.title("Intensity vs Angle of Incidence")
+plt.legend()
+plt.grid(True)
+plt.show()
+
+#%%
+
+# Generate fields with constant intensity for ally positions and xangles but for one yangle only
+# in order to study how the ghost varies
+constant_intensity=True
+margin=1
+deltapos=5
+ypos_range = range(-45-margin, 45+1+margin,deltapos)        
+xpos_range = range(-95-margin, 95+1+margin,deltapos)
+zpos = 0
+delataxangle=0.02
+xangle_start=-6
+xangle_stop=6.+delataxangle/2.
+xangle_range = np.arange(xangle_start, xangle_stop, delataxangle)  # X angles from xangle_start to xangle_stop degrees
+
+deltayangle=0.02
+oneangle=-0.3 #oneangle=-0.3
+yangle_start=oneangle
+yangle_stop=oneangle+deltayangle/2
 
 
+
+nohit_cut=True
+new_angles, new_intensities = extrapolate_intensities(angles, intensities, yangle_start, yangle_stop, plot=True, diff_angles=deltayangle, const_intensity=constant_intensity)
+print(f"  yangle : min={min(new_angles):.4f}°  max={max(new_angles):.4f}°")
+print(f"  intensity : min={min(new_intensities):.4e}  max={max(new_intensities):.4e}")
+
+
+if nohit_cut:
+    output_dat = f"/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/atmcons2Dr1Da_yang{yangle_start:.2f}-{yangle_stop:.2f}xang{xangle_start}-{xangle_stop}deg_dah{delataxangle:.3f}dav{deltayangle:.3f}_pos{deltapos}.dat"
+else:
+    output_dat = f"/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/atmcons2Dr1Da_yang{yangle_start:.2f}-{yangle_stop:.2f}xang{xangle_start}-{xangle_stop}deg_dah{delataxangle:.3f}dav{deltayangle:.3f}_pos{deltapos}_M1cut.dat"
+line_count_tominus1 = generate_dat_file(output_dat, new_angles, new_intensities, ypos_range, xpos_range, xangle_range, no_hit_cut=nohit_cut)
+#plot new angles and intensities
+plt.figure(figsize=(8,6))
+plt.plot(intensities, angles, 'bo', label="Original Data")
+plt.plot(new_intensities, new_angles, 'r-', label="Extrapolated to -1deg")
+plt.xlabel("Intensity")
+plt.ylabel("Angle (degrees)")
+plt.title("Intensity vs Angle of Incidence")
+plt.legend()
+plt.grid(True)
+plt.show()
+
+file_content(output_dat) #check content of one of the generated files
 
 #%%
 # Generate fiels with reduces angular spread, only the angles from which straylight comes from
@@ -405,25 +564,25 @@ intensities = np.array(intensities)
 # below the line of sight in the vertical direction,
 
 margin=1
-deltapos=3
+deltapos=4
 ypos_range = range(-45-margin, 45+1+margin,deltapos)        
 xpos_range = range(-95-margin, 95+1+margin,deltapos)
 zpos = 0
-delataxangle=0.12
-xangle_start=-6.
-xangle_stop=6.+delataxangle
+delataxangle=0.075
+xangle_start=-5.99
+xangle_stop=6.+delataxangle/2.
 xangle_range = np.arange(xangle_start, xangle_stop, delataxangle)  # X angles from xangle_start to xangle_stop degrees
-deltayangle=0.12
+deltayangle=0.05
 
-yangle_start=-3.4
-yangle_stop=-0.1+deltayangle
+yangle_start=-0.3
+yangle_stop=-0.26
 
 nohit_cut=False
 new_angles, new_intensities = extrapolate_intensities(angles, intensities, yangle_start, yangle_stop, plot=True, diff_angles=deltayangle)
 if nohit_cut:
-    output_dat = f"/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/atmos2Dr2Da_yang{yangle_start:.2f}-{yangle_stop:.2f}xang{xangle_start}-{xangle_stop}deg_dah{delataxangle:.2f}dav{deltayangle:.2f}_pos{deltapos}.dat"
+    output_dat = f"/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/atmos2Dr2Da_yang{yangle_start:.2f}-{yangle_stop:.2f}xang{xangle_start}-{xangle_stop}deg_dah{delataxangle:.3f}dav{deltayangle:.3f}_pos{deltapos}.dat"
 else:
-    output_dat = f"/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/atmos2Dr2Da_yang{yangle_start:.2f}-{yangle_stop:.2f}xang{xangle_start}-{xangle_stop}deg_dah{delataxangle:.2f}dav{deltayangle:.2f}_pos{deltapos}_M1cut.dat"
+    output_dat = f"/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/atmos2Dr2Da_yang{yangle_start:.2f}-{yangle_stop:.2f}xang{xangle_start}-{xangle_stop}deg_dah{delataxangle:.3f}dav{deltayangle:.3f}_pos{deltapos}_M1cut.dat"
 line_count_tominus1 = generate_dat_file(output_dat, new_angles, new_intensities, ypos_range, xpos_range, xangle_range, no_hit_cut=nohit_cut)
 #plot new angles and intensities
 plt.figure(figsize=(8,6))
@@ -437,6 +596,9 @@ plt.grid(True)
 plt.show()
 #%%
 ## Generate limited yangles at that time since there is a 1000000 ray maximum in Zemax 
+intensityoutput_dat = f"/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/intensity_per_file_output.dat"
+
+
 margin=1
 deltapos=2
 ypos_range = range(-45-margin, 45+1+margin,deltapos)
@@ -455,24 +617,37 @@ line_count_list=[]
 all_yangles = []  # collect all generated y-angles across files
 all_yintensities = []  # collect all generated y-intensities across files
 yangle_edges = np.round(np.arange(-6., 1. + increment, increment), 10)
+
+fout_intensity = open(intensityoutput_dat, 'w')
+fout_intensity.write("filenumber lines totintensity hitcut_totintensity totalintensity_per_ray hitcut_totintensity_per_ray relscalingfactor yangle_start yangle_stop\n")
+
 for i in range(len(yangle_edges) - 1):
     yangle_start = yangle_edges[i]
     yangle_stop = yangle_edges[i + 1]
     filenumber+=1
     new_angles, new_intensities = extrapolate_intensities(angles, intensities, yangle_start, yangle_stop, plot=True, diff_angles=deltayangle)
+    
+    print(f"Minimum angle in file {filenumber}: {min(new_angles):.3f} degrees, maximum angle: {max(new_angles):.3f} degrees")
     all_yangles.extend(new_angles)
     all_yintensities.extend(new_intensities)
     if nohit_cut:
         output_dat = f"/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/atmos_{filenumber:02d}_yang{yangle_start:.2f}-{yangle_stop:.2f}xang{xangle_start}-{xangle_stop}deg_dah{delataxangle:.2f}dav{deltayangle:.2f}_pos{deltapos}.dat"
     else:
         output_dat = f"/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/atmos_{filenumber:02d}_yang{yangle_start:.2f}-{yangle_stop:.2f}xang{xangle_start}-{xangle_stop}deg_dah{delataxangle:.2f}dav{deltayangle:.2f}_pos{deltapos}_M1cut.dat"
-    line_count = generate_dat_file(output_dat, new_angles, new_intensities, ypos_range, xpos_range, xangle_range, no_hit_cut=nohit_cut)
+    line_count, totintensity, hitcut_totintensity = generate_dat_file(output_dat, new_angles, new_intensities, ypos_range, xpos_range, xangle_range, no_hit_cut=nohit_cut, returntotint=True)    
+    
     
     print(f"Generated {line_count} rays for yangle range {yangle_start:.2f} to {yangle_stop:.2f} degrees.")
-    line_count_list.append(line_count)
+    line_count_list.append(line_count)    
     print(f"First file yangle range: {yangle_start:.2f} to {yangle_stop:.2f} degrees, min(new_angles)={min(new_angles):.3f}, max(new_angles)={max(new_angles):.3f}")
     print(f"Last file yangle range: {yangle_start:.2f} to {yangle_stop:.2f} degrees, min(new_angles)={min(new_angles):.3f}, max(new_angles)={max(new_angles):.3f}")
-    
+    print(f"File {filenumber}: lines={line_count}, total intensity={totintensity:.2e}, hitcut total intensity={hitcut_totintensity:.2e}")
+    totintensity_per_row= totintensity/line_count if line_count > 0 else 0
+    hitcut_totintensity_per_row= hitcut_totintensity/line_count if line_count > 0 else 0
+    relscalingfactor = totintensity_per_row / hitcut_totintensity_per_row if hitcut_totintensity_per_row > 0 else 0
+    print(f"File {filenumber}: total intensity per ray={totintensity_per_row:.2e}, hitcut total intensity per ray={hitcut_totintensity_per_row:.2e}")
+    fout_intensity.write(f"{filenumber} {line_count} {totintensity:.6e} {hitcut_totintensity:.6e} {totintensity_per_row:.6e} {hitcut_totintensity_per_row:.6e} {relscalingfactor:.6e} {yangle_start:.4f} {yangle_stop:.4f}\n")
+
     if yangle_start >=-0.9: # split into 3 sub-files by simply dividing the arrays into thirds
         n_sub = 3
         splits = np.array_split(np.arange(len(new_angles)), n_sub)
@@ -484,10 +659,18 @@ for i in range(len(yangle_edges) - 1):
                 output_dat_j = f"/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/atmos_{filenumber:02d}_{suffixcounter:02d}_yang{new_angles_j[0]:.2f}-{new_angles_j[-1]:.2f}xang{xangle_start}-{xangle_stop}deg_dah{delataxangle:.2f}dav{deltayangle:.2f}_pos{deltapos}.dat"
             else:
                 output_dat_j = f"/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/atmos_{filenumber:02d}_{suffixcounter:02d}_yang{new_angles_j[0]:.2f}-{new_angles_j[-1]:.2f}xang{xangle_start}-{xangle_stop}deg_dah{delataxangle:.2f}dav{deltayangle:.2f}_pos{deltapos}_M1cut.dat"
-            line_count_j = generate_dat_file(output_dat_j, new_angles_j, new_intensities_j, ypos_range, xpos_range, xangle_range, no_hit_cut=nohit_cut)
+            line_count_j, totintensity_j, hitcut_totintensity_j = generate_dat_file(output_dat_j, new_angles_j, new_intensities_j, ypos_range, xpos_range, xangle_range, no_hit_cut=nohit_cut, returntotint=True)
             totline_count += line_count_j
             print(f"Sub-file {suffixcounter}: {len(new_angles_j)} y-angles, {line_count_j} rays (yangle {new_angles_j[0]:.3f} to {new_angles_j[-1]:.3f})")
+            print(f"Sub-file {suffixcounter}: lines={line_count_j}, total intensity={totintensity_j:.2e}, hitcut total intensity={hitcut_totintensity_j:.2e}")
+            totintensity_per_row_j = totintensity_j / line_count_j if line_count_j > 0 else 0
+            hitcut_totintensity_per_row_j = hitcut_totintensity_j / line_count_j if line_count_j > 0 else 0
+            relscalingfactor_j = totintensity_per_row_j / hitcut_totintensity_per_row_j if hitcut_totintensity_per_row_j > 0 else 0
+            fout_intensity.write(f"{filenumber}_{suffixcounter} {line_count_j} {totintensity_j:.6e} {hitcut_totintensity_j:.6e} {totintensity_per_row_j:.6e} {hitcut_totintensity_per_row_j:.6e} {relscalingfactor_j:.6e} {new_angles_j[0]:.4f} {new_angles_j[-1]:.4f}\n")
         print(f"Total sub-file rays {totline_count} should equal main file rays {line_count}.")
+
+fout_intensity.close()
+print(f"Intensity summary written to: {intensityoutput_dat}")
 print(f"number of rays generated per file: {line_count_list}")
 
 
@@ -664,6 +847,7 @@ def generate_zemax_ray_grid(xposrange, yposrange, deltapos, dphi=0.01, src_z=0.0
 
     return all_rows
 
+
 def find_intensity(angles, intensities, zangle_deg):
     """Find the intensity corresponding to a given zangle by interpolation.
 
@@ -693,4 +877,3 @@ generate_zemax_ray_grid(xposrange=[-80, 80], yposrange=[-32, 32], deltapos=delta
                             dphi=dphi, output_path=output_path, plotphi=False)    
         
 
-# %%
