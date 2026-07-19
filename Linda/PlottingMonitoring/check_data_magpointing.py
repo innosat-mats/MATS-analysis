@@ -19,8 +19,8 @@ data_folder = '/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output
 
 #start_time = DT.datetime(2023, 2, 12, 4, 50, 0)
 #stop_time = DT.datetime(2023, 2, 12, 4, 54, 0)
-start_time = DT.datetime(2024, 6, 25, 0, 0, 0)
-stop_time = DT.datetime(2024, 6, 26, 0, 0, 0)
+start_time = DT.datetime(2025, 7, 25, 0, 0, 0)
+stop_time = DT.datetime(2025, 7, 26, 0, 0, 0)
 
 # filter
 #filter={'channel': ['IR1', 'UV1', 'UV2']} 63 79

@@ -1,0 +1,26 @@
+MATS-CIPS/AWE conjunction scan
+==============================
+Time window:      2023-02-09  ..  2023-02-14  (UTC)
+Sampling step:    3 s
+Time-diff window: ±30 min (atmosphere assumed stationary)
+AWE swath width:  600.0 km @ 87.0 km altitude
+CIPS swath width: 800.0 km @ 83.0 km altitude
+MATS tangent:     3000.0 km ahead of MATS @ 85.0 km altitude
+
+Criterion A (MATS tangent point inside AWE swath):       0 events  [skipped — outside AWE observation window (2023-12-01 to 2025-12-31)]
+Criterion B (spacecraft <= 2000 km):                    0 events  [skipped]
+Criterion C (MATS satellite position inside AWE swath):  0 events  [skipped]
+Criterion D (MATS tangent point inside CIPS swath):      115 events
+Criterion E (MATS satellite position inside CIPS swath): 107 events
+
+Files:
+  criterion_A_tangent_in_awe_swath.csv   -- one row per event
+  criterion_A_raw_samples.csv            -- one row per timestep
+  criterion_B_spacecraft_proximity.csv
+  criterion_B_raw_samples.csv
+  criterion_C_satellite_in_awe_swath.csv
+  criterion_C_raw_samples.csv
+  criterion_D_tangent_in_cips_swath.csv  -- one row per event
+  criterion_D_raw_samples.csv            -- one row per timestep
+  criterion_E_satellite_in_cips_swath.csv
+  criterion_E_raw_samples.csv

@@ -17,45 +17,46 @@ data_folder = '/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output
 
 # times for start and stop
 
-#start_time = DT.datetime(2023, 2, 12, 4, 50, 0)
-#stop_time = DT.datetime(2023, 2, 12, 4, 54, 0)
-start_time = DT.datetime(2025, 1, 24, 0, 0, 0)
-stop_time = DT.datetime(2025, 1, 25, 0, 0, 0)
+start_time = DT.datetime(2023, 2, 22, 4, 50, 0)
+stop_time = DT.datetime(2023, 2, 22, 4, 54, 0)
+#start_time = DT.datetime(2025, 1, 24, 0, 0, 0)
+#stop_time = DT.datetime(2025, 1, 25, 0, 0, 0)
 
 # filter
 filter={'CCDSEL': [5,6]}
 
 #%%
 # read in measurements
-df1 = read_MATS_data(start_time, stop_time,level='1b',version='1.0.1')
+df101 = read_MATS_data(start_time, stop_time,level='1b',version='1.0.1')
+df102 = read_MATS_data(start_time, stop_time,level='1b',version='1.0.2')
 #df09 = read_MATS_data(start_time, stop_time,level='1b',version='0.9')
 #df06 = read_MATS_data(start_time, stop_time,level='1b',version='0.6')
 #df05 = read_MATS_data(start_time, stop_time,level='1b',version='0.5')
 #%%
 
 # check the unique channels
-print(df1.flipped.unique())
+print(df102.flipped.unique())
 
 #%%
 #df.iloc
 
-for index, CCD in df09[:6].iterrows():
+for index, CCD in df101[:6].iterrows():
     fig, ax=plt.subplots(3,1, figsize=(10,10))
-    plot_CCDimage(df09.iloc[index].ImageCalibrated, axis=ax[0],fig=fig, title=df09.iloc[index].channel+' v0.9')
+    plot_CCDimage(df101.iloc[index].ImageCalibrated, axis=ax[0],fig=fig, title=df101.iloc[index].channel+' v1.0.1')
     #unitfix=df05.iloc[index].TEXPMS/1000/10
     #plot_CCDimage(df06.iloc[index].ImageCalibrated/unitfix, axis=ax[1],fig=fig, title=str(unitfix)+' * v0.6 '+df05.iloc[index].channel)
-    plot_CCDimage(df06.iloc[index].ImageCalibrated, axis=ax[1],fig=fig, title='v0.6 '+df06.iloc[index].channel)
-    diff=df09.iloc[index].ImageCalibrated-df06.iloc[index].ImageCalibrated#/unitfix
+    plot_CCDimage(df102.iloc[index].ImageCalibrated, axis=ax[1],fig=fig, title='v1.0.2 '+df102.iloc[index].channel)
+    diff=df101.iloc[index].ImageCalibrated-df102.iloc[index].ImageCalibrated#/unitfix
     plot_CCDimage(diff, axis=ax[2],fig=fig, title='Difference')
 
-    plt.savefig('../output/version05to06'+ df09.iloc[index].channel +'.png')
+    plt.savefig('../output/version05to06'+ df102.iloc[index].channel +'.png')
     
 #%%
-simple_plot(df09,data_folder)
+simple_plot(df102,data_folder)
 
 #%% testing orbit_plot changes
 
-orbit_plot(df09,data_folder+'reprocessingfeb/',nbins=7)
+orbit_plot(df102,data_folder+'reprocessingfeb/',nbins=7)
 
 # %%
 #/Users/lindamegner/MATS/MATS-retrieval/MATS-analysis/Linda/output/test2
