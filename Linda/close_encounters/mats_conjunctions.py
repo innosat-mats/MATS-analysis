@@ -1,68 +1,82 @@
 """
-MATS - AWE conjunction finder
-=============================
+MATS - AWE/CIPS conjunction finder
+===================================
 
-Finds time windows when the MATS satellite (NORAD 54227) and the ISS-mounted
-AWE instrument (NORAD 25544) make coincident observations of the mesopause
-region (~85-90 km altitude).
+Finds time windows when the MATS satellite makes coincident observations of
+the mesopause region (~85-90 km altitude) with the ISS-mounted AWE instrument
+(NORAD 25544) or the AIM-mounted CIPS instrument (NORAD 31304).
 
-Two criteria are checked independently and reported in separate output files:
+MATS's own position and limb tangent point are read directly from the real
+MATS L1b product (satlat/satlon/satheight and TPlat/TPlon, attitude-derived)
+via `mats_l1b_tools.fetch_data.fetch_MATS_l1b_data` -- no TLE/SGP4 propagation
+or geometric approximation is used for MATS.  ISS and AIM have no equivalent
+real-telemetry source available here, so they are still propagated from TLEs
+with SGP4.
 
-  CRITERION A -- "MATS tangent point inside AWE swath"
-    Best science overlap.  AWE looks nadir from the ISS in a 600 km wide swath
-    centered on the sub-satellite ground track at ~87 km altitude.  MATS looks
-    at the limb; its tangent point sits ~3000 km ahead of MATS along the orbit
-    track at ~85 km altitude.  We flag every minute where the MATS tangent
-    point is INSIDE the AWE swath rectangle (across-track <= 300 km, and the
-    tangent point is on a portion of the AWE ground track that ISS occupied
-    within the time window).
+Two families of criteria are checked independently and reported in separate
+output files:
 
-  CRITERION B -- "Spacecraft proximity"
-    Distance between MATS and the ISS as 3-D points in space (ECEF) is below
-    a threshold (default 2000 km) and within the time window (default 30 min).
+  CRITERION A/D -- "MATS tangent point inside AWE/CIPS swath"
+    Best science overlap.  AWE/CIPS look nadir in a swath centered on the
+    sub-satellite ground track at mesopause altitude.  MATS looks at the
+    limb, using its real (L1b) tangent point.  We flag every sample where
+    the MATS tangent point is INSIDE the instrument's swath.
+
+  CRITERION B/E -- "Spacecraft proximity"
+    Distance between MATS (real position) and the other spacecraft (TLE) as
+    3-D points in space (ECEF) is below a threshold and within a time window.
     This is the looser "satellites near each other" criterion.
+
+  CRITERION C -- "MATS satellite position inside AWE swath"
+    Same as A, but using MATS's own sub-satellite point instead of its
+    tangent point.
+
+DEFAULT SCOPE
+-------------
+Only 2023-02-09 .. 2023-02-28 is currently needed (the CIPS/AIM mission ended
+2023-03-31, so this is the window of interest for criteria D/E), and MATS L1b
+data for that range is fetched on demand -- there is no need to pull the
+entire mission's worth of data.  Pass --start/--end to widen or narrow this.
 
 INPUTS
 ------
-TLE files in 3LE format (one TLE epoch per file or concatenated):
-  - ISS:  data/iss_tles.txt
-  - MATS: data/mats_tles.txt
+* MATS: fetched directly from the real L1b product for --mats-channel
+  (default IR1), restricted to --start/--end.
+* ISS / AIM: TLE files in 3LE format (one TLE epoch per file or concatenated):
+    - ISS:  data/iss_tles.txt   (only needed if --start/--end overlaps AWE ops)
+    - AIM:  data/aim_tles.txt   (only needed if --start/--end overlaps CIPS ops)
 
-Get historical TLEs from www.space-track.org (free account required):
-  Login -> Query Builder -> "GP History" -> filter by NORAD ID
-  -> select date range 2023-11-09 .. 2024-12-31
-  -> download as TLE (3LE).
-
-Save the two files to ./data/ before running.
+  Get historical TLEs from www.space-track.org (free account required):
+    Login -> Query Builder -> "GP History" -> filter by NORAD ID
+    -> select date range -> download as TLE (3LE).
+  Save the files to ./data/ before running.
 
 USAGE
 -----
-  python mats_awe_conjunctions.py \\
-      --start 2023-11-15 --end 2024-12-31 \\
+  python mats_conjunctions.py \\
+      --start 2023-02-09 --end 2023-02-28 \\
       --step 60 \\
       --proximity-km 2000 --proximity-min 30 \\
       --awe-swath-km 600 \\
-      --tangent-altitude 85 \\
-      --awe-altitude 87 \\
-      --tangent-distance 3000
+      --cips-swath-km 800
 
 OUTPUT
 ------
-  out/criterion_A_tangent_in_swath.csv
+  out/criterion_A_tangent_in_awe_swath.csv
   out/criterion_B_spacecraft_proximity.csv
+  out/criterion_C_satellite_in_awe_swath.csv
+  out/criterion_D_tangent_in_cips_swath.csv
+  out/criterion_E_satellite_in_cips_swath.csv
   out/summary.txt
 
 NOTES
 -----
-* The MATS tangent geometry assumes the limb-line-of-sight is along the
-  velocity vector (forward-looking).  In reality MATS points slightly
-  off the velocity vector and changes pointing during the mission; if you
-  have the actual attitude/pointing files from the MATS team, plug them in
-  in `compute_mats_tangent_point` for higher fidelity.
-* TLE accuracy degrades from epoch.  We auto-pick the TLE whose epoch is
-  closest to each evaluation time.
+* TLE accuracy degrades from epoch.  We auto-pick the ISS/AIM TLE whose
+  epoch is closest to each evaluation time.
 * Default time step 60 s is a reasonable trade-off; 30 s is safer if you
-  want to catch very brief overlaps.
+  want to catch very brief overlaps.  Real MATS samples are matched to the
+  nearest scan-grid instant within --mats-match-tol-s; grid instants with no
+  MATS data close enough (e.g. instrument off) are skipped.
 
 Author: drafted by Claude
 """
@@ -80,6 +94,8 @@ from typing import Iterable
 import numpy as np
 from sgp4.api import Satrec, jday, SGP4_ERRORS
 
+from mats_l1b_tools.fetch_data import fetch_MATS_l1b_data
+
 # ---------- Constants ----------
 EARTH_R_KM = 6378.137  # WGS-84 equatorial radius
 EARTH_F = 1.0 / 298.257223563  # WGS-84 flattening
@@ -87,7 +103,6 @@ EARTH_E2 = EARTH_F * (2 - EARTH_F)
 OMEGA_E = 7.2921150e-5  # Earth rotation rate, rad/s
 
 ISS_NORAD = 25544
-MATS_NORAD = 54227
 AIM_NORAD = 31304
 
 # ---------- Data classes ----------
@@ -135,6 +150,53 @@ def load_tles(path: Path) -> list[TLE]:
 def pick_tle(tles: list[TLE], when: datetime) -> TLE:
     """Pick the TLE whose epoch is closest to `when`."""
     return min(tles, key=lambda t: abs((t.epoch - when).total_seconds()))
+
+
+# ---------- Real MATS geolocation (position + tangent point) ----------
+def load_mats_track(channel: str, start: datetime, end: datetime) -> dict:
+    """Load MATS's real position and limb tangent point from the L1b product.
+
+    Pulls satlat/satlon/satheight (sub-satellite point) and TPlat/TPlon
+    (attitude-derived tangent point) for `channel`, restricted to
+    [start, end] -- no TLE/SGP4 involved for MATS.
+    """
+    ds = fetch_MATS_l1b_data(channel, start.replace(tzinfo=None), end.replace(tzinfo=None))
+    ds = ds[["TPlat", "TPlon", "satlat", "satlon", "satheight"]].load()
+    times = ds["time"].values
+    order = np.argsort(times)
+    return {
+        "time": times[order],
+        "tp_lat": np.radians(ds["TPlat"].values[order]),
+        "tp_lon": np.radians(ds["TPlon"].values[order]),
+        "sat_lat": np.radians(ds["satlat"].values[order]),
+        "sat_lon": np.radians(ds["satlon"].values[order]),
+        "sat_height_km": ds["satheight"].values[order] / 1000.0,
+    }
+
+
+def nearest_mats_index(track: dict, target: datetime, tol_s: float) -> int | None:
+    """Return the index of the real MATS sample nearest to `target`, or None
+    if the nearest sample is farther away than `tol_s` seconds."""
+    times = track["time"]
+    if len(times) == 0:
+        return None
+    target64 = np.datetime64(target.replace(tzinfo=None), "ns")
+    tol = np.timedelta64(int(tol_s * 1e9), "ns")
+    j = int(np.searchsorted(times, target64))
+    best, best_d = None, tol + np.timedelta64(1, "ns")
+    for c in (j - 1, j):
+        if 0 <= c < len(times):
+            d = abs(times[c] - target64)
+            if d < best_d:
+                best_d = d
+                best = c
+    return best
+
+
+def mats_track_time(track: dict, idx: int) -> datetime:
+    """Convert a real MATS sample's timestamp to a UTC-aware datetime."""
+    t = track["time"][idx].astype("datetime64[us]").astype(datetime)
+    return t.replace(tzinfo=timezone.utc)
 
 
 # ---------- Coordinate transforms ----------
@@ -207,20 +269,18 @@ def propagate(tle: TLE, dt: datetime) -> tuple[np.ndarray, np.ndarray]:
     return np.array(r), np.array(v)
 
 
-def compute_mats_tangent_point(
+def forward_ground_point(
     r_ecef: np.ndarray,
     v_ecef: np.ndarray,
     tangent_altitude_km: float,
     tangent_distance_km: float,
 ) -> tuple[float, float]:
-    """Compute the (lat, lon) of the MATS limb tangent point.
+    """Compute the (lat, lon) of a point `tangent_distance_km` ahead of a
+    spacecraft along its ground track (used for ISS/AIM, which have no real
+    telemetry source available here; MATS uses its real L1b tangent point
+    instead -- see `load_mats_track`).
 
-    Simplified model: tangent point lies along the velocity-vector horizon at
-    the requested altitude.  For MATS, the LOS is approximately along the
-    +V direction (forward-looking limb), and the tangent point at 85 km is
-    ~3000 km ahead of the spacecraft.
-
-    We construct the tangent point by:
+    We construct the point by:
       1. Moving from the satellite position by `tangent_distance_km` along the
          along-track horizontal direction projected onto the local horizontal
          plane.
@@ -329,10 +389,15 @@ def time_range(start: datetime, end: datetime, step_s: int) -> Iterable[datetime
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--iss-tles", default="data/iss_tles.txt")
-    ap.add_argument("--mats-tles", default="data/mats_tles.txt")
-    ap.add_argument("--start", required=True)  # YYYY-MM-DD
-    ap.add_argument("--end", required=True)
-    ap.add_argument("--step", type=int, default=60, help="Sampling step (s)")
+    ap.add_argument("--start", default="2023-02-09",
+                    help="YYYY-MM-DD. Default covers the only window currently needed "
+                         "(CIPS/AIM mission ended 2023-03-31).")
+    ap.add_argument("--end", default="2023-02-28")
+    ap.add_argument("--mats-channel", default="IR1",
+                    help="MATS L1b channel to source real satellite position & tangent point from.")
+    ap.add_argument("--mats-match-tol-s", type=float, default=30.0,
+                    help="Max gap (s) allowed when matching a scan-grid instant to a real MATS L1b sample.")
+    ap.add_argument("--step", type=int, default=60, help="Scan-grid sampling step (s)")
     ap.add_argument("--proximity-km", type=float, default=2000.0)
     ap.add_argument("--proximity-min", type=float, default=30.0,
                     help="Group nearby samples that are closer than this (min) into a single conjunction.")
@@ -340,10 +405,6 @@ def main():
                     help="Total cross-track width of AWE swath at airglow altitude.")
     ap.add_argument("--awe-altitude", type=float, default=87.0,
                     help="OH airglow altitude AWE images (km).")
-    ap.add_argument("--tangent-altitude", type=float, default=85.0,
-                    help="MATS limb tangent altitude (km).")
-    ap.add_argument("--tangent-distance", type=float, default=3000.0,
-                    help="Along-track distance from MATS to its tangent point (km).")
     ap.add_argument("--time-window-min", type=float, default=30.0,
                     help="Max time difference (min) between MATS and any instrument to count as a match.")
     ap.add_argument("--aim-tles", default="data/aim_tles.txt",
@@ -356,13 +417,27 @@ def main():
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
 
-    iss_tles = load_tles(Path(args.iss_tles))
-    mats_tles = load_tles(Path(args.mats_tles))
-    if not iss_tles or not mats_tles:
-        raise SystemExit("Missing TLEs.  See header docstring for download instructions.")
+    start = datetime.fromisoformat(args.start).replace(tzinfo=timezone.utc)
+    end = datetime.fromisoformat(args.end).replace(tzinfo=timezone.utc)
 
-    print(f"Loaded {len(iss_tles)} ISS TLEs spanning {iss_tles[0].epoch.date()} .. {iss_tles[-1].epoch.date()}")
-    print(f"Loaded {len(mats_tles)} MATS TLEs spanning {mats_tles[0].epoch.date()} .. {mats_tles[-1].epoch.date()}")
+    print(f"Fetching real MATS geolocation ({args.mats_channel}) for {start.date()} .. {end.date()} ...")
+    mats_track = load_mats_track(args.mats_channel, start, end)
+    n_mats = len(mats_track["time"])
+    if n_mats == 0:
+        raise SystemExit(
+            f"No real MATS L1b data found for {args.mats_channel} in "
+            f"{start.date()} .. {end.date()}."
+        )
+    print(f"Loaded {n_mats} real MATS samples spanning "
+          f"{mats_track_time(mats_track, 0)} .. {mats_track_time(mats_track, n_mats - 1)}")
+
+    iss_tles_path = Path(args.iss_tles)
+    if iss_tles_path.exists():
+        iss_tles = load_tles(iss_tles_path)
+        print(f"Loaded {len(iss_tles)} ISS TLEs spanning {iss_tles[0].epoch.date()} .. {iss_tles[-1].epoch.date()}")
+    else:
+        iss_tles = []
+        print(f"ISS TLE file not found ({args.iss_tles}) — AWE criteria (A/B/C) will be skipped.")
 
     aim_tles_path = Path(args.aim_tles)
     if aim_tles_path.exists():
@@ -372,14 +447,11 @@ def main():
         aim_tles = []
         print(f"AIM TLE file not found ({args.aim_tles}) — CIPS criteria (D/E) will be skipped.")
 
-    start = datetime.fromisoformat(args.start).replace(tzinfo=timezone.utc)
-    end = datetime.fromisoformat(args.end).replace(tzinfo=timezone.utc)
-
     # AWE science operations: 2023-12-01 through 2025-12-31
     AWE_OBS_START = datetime(2023, 12, 1, tzinfo=timezone.utc)
     AWE_OBS_END = datetime(2025, 12, 31, 23, 59, 59, tzinfo=timezone.utc)
-    run_awe = not (end < AWE_OBS_START or start > AWE_OBS_END)
-    if not run_awe:
+    run_awe = bool(iss_tles) and not (end < AWE_OBS_START or start > AWE_OBS_END)
+    if iss_tles and not run_awe:
         print(
             f"WARNING: AWE was not observing during {args.start} – {args.end} "
             f"(AWE operated 2023-12-01 to 2025-12-31). "
@@ -416,8 +488,7 @@ def main():
             r_ecef = teme_to_ecef(r_teme, t)
             v_ecef = teme_to_ecef(v_teme, t)
             lat, lon, _ = ecef_to_geodetic(r_ecef)
-            # 100-km forward point reuses the tangent-point helper (altitude arg unused there)
-            fwd_lat, fwd_lon = compute_mats_tangent_point(r_ecef, v_ecef, 0.0, 100.0)
+            fwd_lat, fwd_lon = forward_ground_point(r_ecef, v_ecef, 0.0, 100.0)
             iss_cache.append({"t": t, "lat": lat, "lon": lon, "r_ecef": r_ecef,
                               "fwd_lat": fwd_lat, "fwd_lon": fwd_lon})
             if i % 50000 == 0 and i > 0:
@@ -438,31 +509,31 @@ def main():
             r_ecef = teme_to_ecef(r_teme, t)
             v_ecef = teme_to_ecef(v_teme, t)
             lat, lon, _ = ecef_to_geodetic(r_ecef)
-            fwd_lat, fwd_lon = compute_mats_tangent_point(r_ecef, v_ecef, 0.0, 100.0)
+            fwd_lat, fwd_lon = forward_ground_point(r_ecef, v_ecef, 0.0, 100.0)
             aim_cache.append({"t": t, "lat": lat, "lon": lon, "r_ecef": r_ecef,
                               "fwd_lat": fwd_lat, "fwd_lon": fwd_lon})
             if i % 50000 == 0 and i > 0:
                 print(f"  AIM pre-compute: {i}/{n}")
 
-    # ----- Pass 2: MATS propagation + match against ±time-window ISS positions -----
-    print(f"Scanning {n} MATS samples, matching AWE within ±{args.time_window_min:.0f} min ...")
+    # ----- Pass 2: real MATS samples, matched against ±time-window ISS/AIM positions -----
+    print(f"Scanning {n} grid instants for real MATS matches "
+          f"(tol {args.mats_match_tol_s:.0f} s), within ±{args.time_window_min:.0f} min ...")
     rows_A: list[dict] = []
     rows_B: list[dict] = []
     rows_C: list[dict] = []  # satellite position inside AWE swath
     rows_D: list[dict] = []  # MATS tangent point inside CIPS swath
     rows_E: list[dict] = []  # MATS satellite position inside CIPS swath
 
-    for i, t in enumerate(all_times):
-        mats_tle = pick_tle(mats_tles, t)
-        try:
-            r_mats_teme, v_mats_teme = propagate(mats_tle, t)
-        except RuntimeError:
+    for i, t_grid in enumerate(all_times):
+        m = nearest_mats_index(mats_track, t_grid, args.mats_match_tol_s)
+        if m is None:
             continue
-        r_mats_ecef = teme_to_ecef(r_mats_teme, t)
-        v_mats_ecef = teme_to_ecef(v_mats_teme, t)
-        mats_lat, mats_lon, _ = ecef_to_geodetic(r_mats_ecef)
-        tan_lat, tan_lon = compute_mats_tangent_point(
-            r_mats_ecef, v_mats_ecef, args.tangent_altitude, args.tangent_distance)
+        t = mats_track_time(mats_track, m)
+        tan_lat = mats_track["tp_lat"][m]
+        tan_lon = mats_track["tp_lon"][m]
+        mats_lat = mats_track["sat_lat"][m]
+        mats_lon = mats_track["sat_lon"][m]
+        r_mats_ecef = geodetic_to_ecef(mats_lat, mats_lon, mats_track["sat_height_km"][m])
 
         j_lo = max(0, i - window_steps)
         j_hi = min(n, i + window_steps + 1)
@@ -771,7 +842,8 @@ def main():
         f"Time-diff window: ±{args.time_window_min:.0f} min (atmosphere assumed stationary)\n"
         f"AWE swath width:  {args.awe_swath_km} km @ {args.awe_altitude} km altitude\n"
         f"CIPS swath width: {args.cips_swath_km} km @ 83.0 km altitude\n"
-        f"MATS tangent:     {args.tangent_distance} km ahead of MATS @ {args.tangent_altitude} km altitude\n"
+        f"MATS position/tangent point: real L1b data ({args.mats_channel}), "
+        f"{n_mats} samples, matched within {args.mats_match_tol_s:.0f} s of each grid instant\n"
         f"\n"
         f"Criterion A (MATS tangent point inside AWE swath):       {len(events_A)} events"
         f"{'' if run_awe else '  [skipped — outside AWE observation window (2023-12-01 to 2025-12-31)]'}\n"
